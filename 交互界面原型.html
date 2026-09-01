@@ -1,0 +1,2076 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NUAA Ground Control Station</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<!-- AMap JS API loaded at bottom -->
+<style>
+/* ===== CGC Design Tokens (exact match) ===== */
+:root{
+  --primary:#f0a500; --accent-blue:#4b8bf5; --accent-light-blue:#7aabff;
+  --success:#22c55e; --warning:#f59e0b; --danger:#ef4444; --info:#8b949e;
+  --highlight-warning:#e3b341; --blue-highlight:#3b82f6;
+  --text-primary:#e6edf3; --text-secondary:#c9d1d9; --text-muted:#484f58; --text-link:#f0a500;
+  --border-default:#21262d; --border-hover:#30363d; --border-highlight:#f0a500;
+  --bg-base:#0d1117; --bg-panel:#161b22; --bg-hover:#1c2128; --bg-bar:#21262d;
+  --shadow-map:0 4px 16px #00000073; --shadow-joydot:0 0 6px #f0a50073; --shadow-drone:0 0 4px #3b82f6cc;
+  --font-mono:'JetBrains Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg-base);color:var(--text-primary);font-family:-apple-system,'Segoe UI','Microsoft YaHei',sans-serif;font-size:11px;line-height:1.5}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select{font-family:inherit;font-size:11px;color:var(--text-primary);background:var(--bg-base);border:1px solid var(--border-default);border-radius:4px;padding:4px 8px;outline:none}
+input:focus,select:focus{border-color:var(--primary)}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-hover);border-radius:3px}
+
+/* ===== Top Nav ===== */
+.topnav{height:48px;background:var(--bg-base);border-bottom:1px solid var(--border-default);display:flex;align-items:center;padding:0 16px;gap:24px;flex-shrink:0;z-index:100}
+.nav-brand{font-size:13px;font-weight:700;color:var(--text-primary);letter-spacing:.5px}
+.nav-tabs{display:flex;gap:0;height:100%;align-items:stretch}
+.nav-tab{display:flex;align-items:center;padding:0 16px;font-size:12px;color:var(--info);border-bottom:2px solid transparent;transition:color .15s,border-color .15s;cursor:pointer;gap:6px}
+.nav-tab:hover{color:var(--text-primary)}
+.nav-tab.active{color:var(--text-primary);border-bottom-color:var(--primary)}
+.nav-tab svg{width:14px;height:14px;flex-shrink:0}
+
+/* AMap dark theme overrides */
+.amap-container{background:#0d1117!important}
+.amap-logo,.amap-copyright{display:none!important}
+.amap-ctrl-list-layer{display:none!important}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:12px;font-size:11px;color:var(--info)}
+.conn-dot{width:8px;height:8px;border-radius:50%;background:var(--text-muted);transition:background .15s}
+.conn-dot.on{background:var(--success);box-shadow:0 0 6px var(--success)}
+.conn-dot.off{background:var(--danger)}
+
+/* ===== Page Container ===== */
+.page{display:none;height:calc(100vh - 48px);overflow:hidden}
+.page.active{display:block}
+
+/* ===== Overview Page ===== */
+.overview-page{display:flex;flex-direction:column;gap:12px;padding:16px;overflow-y:auto;height:100%}
+.ov-top-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;width:100%;max-width:1440px;height:max(300px,min(38vh,380px));margin:0 auto}
+.ov-mid-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;width:100%;max-width:1440px;max-height:240px;margin:0 auto}
+.ov-card{background:var(--bg-panel);border:1px solid var(--border-default);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+.ov-card-head{border-bottom:1px solid var(--border-default);padding:8px 14px;display:flex;align-items:center;gap:8px}
+.ov-card-title{font-size:12px;font-weight:600;color:var(--text-primary)}
+.ov-card-sub{margin-left:auto;font-size:10px;color:var(--info)}
+.ov-card-body{flex:1;padding:12px;overflow:hidden}
+
+/* Model card - CGC style: model-wrap + model-stats bottom bar */
+.model-wrap{background:var(--bg-base);flex:1;min-height:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.model-stats{border-top:1px solid var(--border-default);display:flex;flex-direction:column}
+.mst-row{background:var(--bg-bar);border-top:1px solid var(--border-default);flex-shrink:0;display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px}
+.mst-cell{background:var(--bg-panel);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2px;padding:6px 4px}
+.mst-val{color:var(--text-primary);font-family:var(--font-mono);font-size:12px;font-weight:600}
+.mst-label{color:var(--text-muted);font-size:9px}
+.mst-val.armed,.mst-val.vz-up{color:var(--success)}
+.mst-val.vz-down{color:var(--danger)}
+
+/* 3D Drone - CGC style realistic quadcopter */
+.drone-scene{width:100%;height:100%;perspective:600px;perspective-origin:50% 40%;display:flex;align-items:center;justify-content:center;cursor:grab;user-select:none;position:relative}
+.drone-scene:active{cursor:grabbing}
+.drone-3d-model{width:0;height:0;position:relative;transform-style:preserve-3d;transform:rotateX(-40deg) rotateY(35deg) rotateZ(0deg)}
+.d3-part{position:absolute;transform-style:preserve-3d}
+/* Body - main fuselage with 3D thickness */
+.d3-body-top{width:32px;height:32px;background:linear-gradient(145deg,#3d444d 0%,#1c2128 100%);border:1.5px solid #3b82f6;border-radius:5px;box-shadow:0 0 14px #3b82f655,inset 0 1px 0 #4c5664,inset 0 -1px 0 #0d1117;transform:translate3d(-16px,-16px,9px)}
+.d3-body-bottom{width:32px;height:32px;background:linear-gradient(145deg,#161b22 0%,#0d1117 100%);border:1.5px solid #21262d;border-radius:5px;box-shadow:inset 0 1px 0 #21262d;transform:translate3d(-16px,-16px,-1px)}
+.d3-body-side{background:#1c2128}
+.d3-body-side.bs-front{width:32px;height:10px;background:linear-gradient(180deg,#30363d 0%,#1c2128 100%);transform:translate3d(-16px,-21px,4px) rotateX(90deg)}
+.d3-body-side.bs-back{width:32px;height:10px;background:linear-gradient(0deg,#30363d 0%,#1c2128 100%);transform:translate3d(-16px,11px,4px) rotateX(-90deg)}
+.d3-body-side.bs-left{width:10px;height:32px;background:linear-gradient(90deg,#21262d 0%,#1c2128 100%);transform:translate3d(-21px,-16px,4px) rotateY(-90deg)}
+.d3-body-side.bs-right{width:10px;height:32px;background:linear-gradient(-90deg,#21262d 0%,#1c2128 100%);transform:translate3d(11px,-16px,4px) rotateY(90deg)}
+/* Nose indicator */
+.d3-nose{width:10px;height:5px;background:#3b82f6;border-radius:3px;box-shadow:0 0 10px #3b82f6aa;transform:translate3d(-5px,-22px,10px)}
+/* Arms - X configuration with 3D thickness (tapered arms) */
+.d3-arm{width:8px;height:46px;background:linear-gradient(90deg,#1c2128 0%,#30363d 30%,#3d444d 50%,#30363d 70%,#1c2128 100%);border-radius:4px;box-shadow:inset 0 1px 0 #4c5664,inset 0 -1px 0 #0d1117}
+.d3-arm.a1{transform:translate3d(-4px,-50px,5px)}
+.d3-arm.a2{transform:translate3d(46px,-4px,5px) rotateZ(90deg)}
+.d3-arm.a3{transform:translate3d(-4px,4px,5px) rotateZ(180deg)}
+.d3-arm.a4{transform:translate3d(-50px,-4px,5px) rotateZ(270deg)}
+/* Arm underside (darker) */
+.d3-arm-bottom{width:8px;height:46px;background:linear-gradient(90deg,#0d1117 0%,#161b22 50%,#0d1117 100%);border-radius:4px;box-shadow:inset 0 -1px 0 #21262d}
+.d3-arm-bottom.ab1{transform:translate3d(-4px,-50px,-1px)}
+.d3-arm-bottom.ab2{transform:translate3d(46px,-4px,-1px) rotateZ(90deg)}
+.d3-arm-bottom.ab3{transform:translate3d(-4px,4px,-1px) rotateZ(180deg)}
+.d3-arm-bottom.ab4{transform:translate3d(-50px,-4px,-1px) rotateZ(270deg)}
+/* Motor mounts with 3D depth */
+.d3-motor{width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#3d444d 0%,#21262d 40%,#161b22 100%);border:2px solid #30363d;box-shadow:inset 0 2px 4px #0d1117aa,0 2px 4px #0d111788}
+.d3-motor.m1{transform:translate3d(-11px,-62px,6px)}
+.d3-motor.m2{transform:translate3d(56px,-11px,6px)}
+.d3-motor.m3{transform:translate3d(-11px,40px,6px)}
+.d3-motor.m4{transform:translate3d(-62px,-11px,6px)}
+/* Motor underside (shadow) */
+.d3-motor-bottom{width:22px;height:22px;border-radius:50%;background:#0d1117;border:1px solid #21262d}
+.d3-motor-bottom.mb1{transform:translate3d(-11px,-62px,-1px)}
+.d3-motor-bottom.mb2{transform:translate3d(56px,-11px,-1px)}
+.d3-motor-bottom.mb3{transform:translate3d(-11px,40px,-1px)}
+.d3-motor-bottom.mb4{transform:translate3d(-62px,-11px,-1px)}
+/* Propeller discs (spinning when armed) */
+.d3-rotor{width:40px;height:40px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.12) 0%,rgba(200,200,200,.06) 30%,rgba(150,150,150,.02) 60%,transparent 80%);border:1px solid rgba(255,255,255,.06);top:50%;left:50%;transform:translate(-50%,-50%);transition:opacity .2s;opacity:0;pointer-events:none}
+.d3-rotor.spinning{opacity:1;animation:rotorSpin .025s linear infinite}
+@keyframes rotorSpin{from{transform:translate(-50%,-50%) rotate(0deg)}to{transform:translate(-50%,-50%) rotate(360deg)}}
+.d3-rotor.r1{animation-direction:normal}
+.d3-rotor.r2{animation-direction:reverse}
+.d3-rotor.r3{animation-direction:normal}
+.d3-rotor.r4{animation-direction:reverse}
+/* LED indicators */
+.d3-led{width:5px;height:5px;border-radius:50%;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10}
+.d3-led.led-front-left{background:#22c55e;box-shadow:0 0 8px #22c55e,0 0 12px #22c55e88}
+.d3-led.led-front-right{background:#22c55e;box-shadow:0 0 8px #22c55e,0 0 12px #22c55e88}
+.d3-led.led-back-left{background:#f0a500;box-shadow:0 0 8px #f0a500,0 0 12px #f0a50088}
+.d3-led.led-back-right{background:#f0a500;box-shadow:0 0 8px #f0a500,0 0 12px #f0a50088}
+/* Camera gimbal */
+.d3-gimbal{width:14px;height:10px;background:linear-gradient(180deg,#21262d 0%,#161b22 100%);border:1px solid #30363d;border-radius:3px;box-shadow:0 2px 3px #0d111766;transform:translate3d(-7px,-5px,-4px)}
+.d3-camera-lens{width:7px;height:7px;border-radius:50%;background:radial-gradient(circle at 40% 40%,#3d444d 0%,#0d1117 70%);border:1px solid #30363d;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);box-shadow:inset 0 1px 2px #0d111788}
+/* Landing gear struts */
+.d3-gear{width:3px;height:12px;background:linear-gradient(180deg,#30363d 0%,#21262d 100%);border-radius:1px 1px 2px 2px;box-shadow:1px 0 2px #0d111755}
+.d3-gear.g1{transform:translate3d(-12px,-12px,-2px)}
+.d3-gear.g2{transform:translate3d(9px,-12px,-2px)}
+.d3-gear.g3{transform:translate3d(-12px,9px,-2px)}
+.d3-gear.g4{transform:translate3d(9px,9px,-2px)}
+/* Landing skids */
+.d3-skid{width:16px;height:2px;background:#30363d;border-radius:1px;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)}
+.d3-skid.sk1{transform:translate(-50%,50px)}
+.d3-skid.sk2{transform:translate(-50%,-50px)}
+
+/* ADI card - CGC style */
+.adi-wrap{background:var(--bg-base);flex:1;min-height:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.adi-svg{width:140px;height:140px}
+.adi-strip{background:var(--bg-bar);border-top:1px solid var(--border-default);flex-shrink:0;display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px}
+.as-cell{background:var(--bg-panel);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2px;padding:6px 4px}
+.as-val{color:var(--text-primary);font-family:var(--font-mono);font-size:12px;font-weight:600}
+.as-label{color:var(--text-muted);font-size:9px}
+.as-val.vz-up{color:var(--success)}
+.as-val.vz-down{color:var(--danger)}
+
+/* Sensor card - CGC sg-cell structure */
+.sensor-grid{background:var(--bg-bar);flex:1;display:grid;grid-template-rows:repeat(3,1fr);grid-template-columns:1fr 1fr;gap:1px;overflow:hidden;height:100%}
+.sg-cell{background:var(--bg-panel);display:flex;flex-direction:column;justify-content:center;gap:5px;padding:10px 12px 10px 14px;transition:background .15s;position:relative;overflow:visible}
+.sg-accent{background:#2d333b;border-radius:1px;width:2px;position:absolute;top:8px;bottom:8px;left:0}
+.sg-cell.ok .sg-accent{background:var(--success)}
+.sg-cell.err .sg-accent{background:var(--danger)}
+.sg-cell.warn .sg-accent{background:var(--warning)}
+.sg-cell.off .sg-accent{background:#2d333b}
+.sg-cell.ok{background:#22c55e0a}
+.sg-cell.err{background:#ef44440d}
+.sg-cell.warn{background:#f59e0b0a}
+.sg-cell.off{background:var(--bg-panel)}
+.sg-head{display:flex;align-items:center;gap:6px}
+.sg-icon{color:var(--text-muted);flex-shrink:0;transition:color .15s;width:14px;height:14px}
+.sg-cell.ok .sg-icon{color:var(--success)}
+.sg-cell.err .sg-icon{color:var(--danger)}
+.sg-cell.warn .sg-icon{color:var(--warning)}
+.sg-cell.off .sg-icon{color:#2d333b}
+.sg-name{color:var(--info);letter-spacing:.02em;text-transform:uppercase;font-size:11px;font-weight:600}
+.sg-body{display:flex;align-items:baseline;gap:6px}
+.sg-status{color:var(--text-muted);min-width:36px;font-size:10px}
+.sg-cell.ok .sg-status{color:var(--success)}
+.sg-cell.err .sg-status{color:var(--danger)}
+.sg-cell.warn .sg-status{color:var(--warning)}
+.sg-cell.off .sg-status{color:var(--text-muted)}
+.sg-value{color:var(--text-primary);margin-left:auto;font-family:var(--font-mono);font-size:12px;font-weight:600}
+
+/* Channel bars (RC & Motor) */
+.ch-card-body{display:flex;gap:6px;padding:8px 8px 6px;align-items:flex-end;height:100%}
+.vbar{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1}
+.vbar-val{color:var(--info);writing-mode:vertical-rl;height:28px;font-family:var(--font-mono);font-size:8px;transform:rotate(180deg)}
+.vbar-track{background:var(--bg-bar);border-radius:2px;width:100%;height:80px;position:relative;overflow:hidden}
+.vbar-fill{position:absolute;bottom:0;left:0;right:0;border-radius:2px 2px 0 0;transition:height .1s}
+.rc-fill{background:var(--primary)}
+.motor-fill{background:var(--success)}
+.vbar-label{color:var(--text-muted);font-size:9px}
+
+/* Joystick sim */
+.joy-body{display:flex;gap:16px;padding:12px 8px;justify-content:center;align-items:center;height:100%}
+.joystick{display:flex;flex-direction:column;align-items:center;gap:6px}
+.joy-pad{background:var(--bg-base);border:1px solid #2d333b;border-radius:50%;width:80px;height:80px;position:relative}
+.joy-cross::before,.joy-cross::after{content:'';position:absolute;background:#2d333b}
+.joy-cross::before{width:100%;height:1px;top:50%;left:0}
+.joy-cross::after{width:1px;height:100%;left:50%;top:0}
+.joy-dot{background:var(--primary);border-radius:50%;width:12px;height:12px;position:absolute;transition:left 80ms,top 80ms;box-shadow:var(--shadow-joydot)}
+.joy-label{color:var(--text-muted);font-size:9px}
+.joy-vals{display:flex;gap:10px;font-family:var(--font-mono);font-size:9px;color:var(--info)}
+
+/* ===== Fly Page ===== */
+.fly-page{display:flex;flex-direction:column;height:100%}
+.fly-body{flex:1;position:relative;overflow:hidden}
+#flyMap{width:100%;height:100%}
+.fly-banner{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:10;border-radius:20px;padding:5px 16px;font-size:12px;display:flex;align-items:center;gap:8px;transition:opacity .3s}
+.info-banner{color:var(--info);background:#0d1117d1;border:1px solid var(--border-default)}
+.warn-banner{color:var(--warning);background:#f59e0b1f;border:1px solid #f59e0b59}
+.banner-link{color:var(--text-link);cursor:pointer;text-decoration:underline}
+.adi-overlay{position:absolute;bottom:12px;left:12px;z-index:10;width:164px;height:164px;border-radius:12px;overflow:hidden}
+.adi-show{position:absolute;bottom:12px;left:12px;z-index:10;background:#161b22e0;border:1px solid var(--border-default);border-radius:8px;padding:6px 10px;font-size:11px;color:var(--text-secondary);cursor:pointer}
+.hud-right{position:absolute;top:50%;right:12px;transform:translateY(-50%);z-index:10;background:#0d1117d1;backdrop-filter:blur(10px);border:1px solid var(--border-default);border-radius:8px;padding:10px 14px;min-width:88px}
+.hud-row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:2px 0}
+.hud-label{color:var(--text-muted);font-size:9px}
+.hud-val{color:var(--text-primary);font-family:var(--font-mono);font-size:15px;font-weight:700}
+.hud-unit{color:var(--info);font-size:9px;margin-left:1px}
+.hud-sep{height:1px;background:var(--border-default);margin:4px 0}
+.hud-mode{text-align:center;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;background:var(--bg-bar);color:var(--info)}
+.hud-mode.armed{color:var(--success);background:#22c55e26}
+.alerts-panel{position:absolute;bottom:0;left:50%;transform:translateX(-50%);z-index:10;backdrop-filter:blur(10px);background:#161b22eb;border:1px solid var(--border-default);border-bottom:none;border-radius:8px 8px 0 0;min-width:320px;max-width:520px}
+.alerts-header{padding:5px 12px;font-size:11px;display:flex;align-items:center;gap:8px;cursor:pointer}
+.alerts-header .alert-count{background:var(--bg-bar);border-radius:10px;padding:0 6px;font-size:10px}
+.alerts-header .alert-count.warn{color:var(--warning);background:#f59e0b33}
+.alerts-body{max-height:130px;overflow-y:auto;padding:4px 0 6px}
+.alert-item{display:flex;gap:6px;padding:3px 12px;font-size:11px}
+.alert-item.info{color:var(--info)}
+.alert-item.warn{color:var(--warning)}
+.alert-item.err{color:var(--danger)}
+.alert-time{color:var(--text-muted);font-family:var(--font-mono)}
+.bottom-hud{background:var(--bg-base);border-top:1px solid var(--border-default);height:44px;padding:0 20px;display:flex;align-items:center;gap:0}
+.bh-item{display:flex;align-items:center;gap:6px;padding:0 16px}
+.bh-label{color:var(--text-muted);font-size:9px}
+.bh-val{color:var(--text-primary);font-family:var(--font-mono);font-size:13px;font-weight:700}
+.bh-sep{width:1px;height:22px;background:var(--border-hover)}
+.cmd-bar{background:var(--bg-panel);border-top:1px solid var(--border-default);height:64px;padding:0 20px;display:flex;align-items:center;justify-content:center;gap:12px}
+.cmd-btn{min-width:90px;padding:8px 16px;border-radius:6px;font-size:13px;font-weight:600;transition:all .15s;border:1px solid var(--border-default);background:var(--bg-panel);color:var(--text-secondary)}
+.cmd-btn:hover{background:var(--bg-hover);color:var(--text-primary)}
+.cmd-btn.primary{background:var(--primary);color:#0d1117;border-color:var(--primary)}
+.cmd-btn.primary:hover{filter:brightness(1.1)}
+.cmd-btn.warn{background:var(--warning);color:#0d1117;border-color:var(--warning)}
+.cmd-btn.success{background:var(--success);color:#0d1117;border-color:var(--success)}
+.cmd-btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* ===== Plan Page ===== */
+.plan-page{display:flex;height:100%}
+.plan-body{flex:1;position:relative;overflow:hidden}
+#planMap{width:100%;height:100%}
+.map-toolbar{position:absolute;top:12px;right:12px;z-index:5;backdrop-filter:blur(10px);background:#161b22eb;border:1px solid var(--border-hover);border-radius:8px;padding:6px 10px;display:flex;gap:4px;align-items:center;box-shadow:var(--shadow-map)}
+.map-toolbar button{color:var(--text-secondary);background:none;border:none;width:28px;height:28px;border-radius:4px;font-size:13px;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s;cursor:pointer}
+.map-toolbar button:hover{color:#fff;background:#ffffff1a}
+.map-toolbar button.active{color:var(--primary)}
+.tb-divider{width:1px;height:20px;background:var(--border-hover);margin:0 4px}
+.map-hint{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);color:var(--text-muted);background:#0d111799;border-radius:20px;padding:3px 10px;font-size:10px;z-index:5}
+.map-hud{position:absolute;bottom:36px;left:50%;transform:translateX(-50%);z-index:5;backdrop-filter:blur(4px);background:#0d1117d1;border:1px solid #ffffff14;border-radius:24px;padding:5px 16px;display:flex;gap:16px}
+.map-hud-item{display:flex;align-items:center;gap:4px}
+.map-hud-label{color:var(--info);font-size:10px}
+.map-hud-val{color:var(--text-primary);font-family:var(--font-mono);font-size:13px;font-weight:600}
+.map-hud-unit{color:var(--info);font-size:10px}
+.map-hud-sep{width:1px;height:16px;background:#ffffff1f}
+
+/* Mission panel (right side) */
+.mission-panel{background:var(--bg-panel);border-left:1px solid var(--border-default);width:280px;display:flex;flex-direction:column;transition:width .2s;flex-shrink:0}
+.mission-panel.collapsed{width:32px}
+.panel-header{border-bottom:1px solid var(--border-default);height:44px;padding:0 12px;display:flex;align-items:center;justify-content:space-between}
+.panel-title{font-size:13px;font-weight:600;color:var(--text-primary);display:flex;align-items:center;gap:6px}
+.dirty-dot{width:6px;height:6px;border-radius:50%;background:var(--primary)}
+.panel-body{flex:1;overflow-y:auto;padding:0}
+.panel-name-row{padding:8px 12px}
+.wp-list{padding:0}
+.wp-item{padding:8px 12px;transition:background .15s;cursor:pointer;border-left:3px solid transparent;display:flex;align-items:center;gap:8px}
+.wp-item:hover{background:var(--bg-hover)}
+.wp-item.active{background:var(--bg-hover);border-left-color:var(--primary)}
+.wp-seq{color:#0d1117;background:var(--primary);border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.wp-coords{flex:1;font-family:var(--font-mono);font-size:11px;color:var(--info)}
+.wp-del{color:var(--danger);cursor:pointer;font-size:11px;padding:0 2px;opacity:.4;transition:opacity .15s}
+.wp-del:hover{opacity:1}
+.wp-editor{padding:8px 12px;background:var(--bg-hover)}
+.wp-editor-row{display:flex;gap:8px;margin-bottom:6px;align-items:center}
+.wp-editor-row label{font-size:10px;color:var(--info);width:60px}
+.wp-editor-row input,.wp-editor-row select{flex:1;font-size:11px;padding:3px 6px}
+.panel-stats{padding:8px 12px;border-top:1px solid var(--border-default)}
+.stat-row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px;color:var(--info)}
+.stat-row .mono{color:var(--text-primary)}
+.panel-actions{padding:12px;border-top:1px solid var(--border-default);display:flex;flex-direction:column;gap:6px}
+.transfer-progress{background:var(--bg-hover);border:1px solid var(--border-default);border-radius:6px;padding:6px 10px;margin-bottom:6px}
+.btn-row{display:flex;gap:6px}
+.action-btn{padding:5px 10px;border-radius:4px;font-size:11px;border:1px solid var(--border-default);background:var(--bg-panel);color:var(--text-secondary);transition:all .15s;cursor:pointer;flex:1;text-align:center}
+.action-btn:hover{background:var(--bg-hover);color:var(--text-primary)}
+.action-btn.primary{background:var(--primary);color:#0d1117;border-color:var(--primary)}
+.action-btn:disabled{opacity:.4;cursor:not-allowed}
+.fly-hint{color:var(--success);background:#22c55e14;border:1px solid #22c55e40;border-radius:6px;padding:6px 10px;font-size:11px}
+.fly-hint-link{color:var(--success);cursor:pointer;text-decoration:underline}
+
+/* ===== Setup Page ===== */
+.setup-page{display:flex;height:100%}
+.setup-menu{background:var(--bg-panel);border-right:1px solid var(--border-default);width:180px;flex-shrink:0;display:flex;flex-direction:column}
+.setup-menu-head{color:var(--info);border-bottom:1px solid var(--border-default);height:48px;display:flex;align-items:center;padding:0 16px;font-size:13px;font-weight:600}
+.setup-menu-group{padding:8px 0}
+.setup-group-label{color:var(--text-muted);font-size:10px;font-weight:600;padding:4px 16px;letter-spacing:.5px;text-transform:uppercase}
+.setup-menu-item{padding:6px 16px;font-size:12px;color:var(--info);cursor:pointer;transition:background .15s,color .15s;display:flex;align-items:center;gap:8px}
+.setup-menu-item:hover{background:var(--bg-hover);color:var(--text-secondary)}
+.setup-menu-item.active{color:var(--primary);background:var(--bg-hover)}
+.setup-menu-item svg{width:14px;height:14px;flex-shrink:0}
+.setup-content{flex:1;overflow-y:auto;padding:20px}
+.setup-section{display:none}
+.setup-section.active{display:block}
+.setup-section-title{font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:4px}
+.setup-section-sub{font-size:11px;color:var(--info);margin-bottom:16px}
+
+/* Frame cards */
+.frame-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.frame-card{background:var(--bg-panel);border:1px solid var(--border-default);border-radius:10px;padding:12px;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:6px}
+.frame-card:hover{background:var(--bg-hover);border-color:var(--border-hover)}
+.frame-card.selected{background:#f0a5000f;border-color:var(--primary)}
+.frame-card svg{width:60px;height:60px}
+.frame-name{font-size:13px;font-weight:600;color:var(--text-primary)}
+.frame-desc{font-size:10px;color:var(--info);text-align:center;line-height:1.4}
+.frame-params{font-size:10px;color:var(--text-muted);font-family:var(--font-mono)}
+.frame-badge{color:var(--primary);font-size:10px;font-weight:700}
+
+/* Motor/RC cards */
+.motor-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:8px}
+.motor-card{background:var(--bg-panel);border:1px solid var(--border-default);border-radius:8px;padding:8px;display:flex;flex-direction:column;align-items:center;gap:4px;transition:border-color .15s}
+.motor-card:hover{border-color:var(--border-hover)}
+.motor-card.off{opacity:.4}
+.motor-name{font-size:11px;font-weight:600;color:var(--text-primary)}
+.motor-bar{background:var(--bg-bar);border-radius:4px;width:24px;height:60px;position:relative;overflow:hidden}
+.motor-bar-fill{position:absolute;bottom:0;left:0;right:0;border-radius:4px 4px 0 0;transition:height .1s}
+.motor-val{font-family:var(--font-mono);font-size:10px;color:var(--info)}
+.motor-pct{font-family:var(--font-mono);font-size:10px;font-weight:600}
+
+/* PID table */
+.pid-tabs{display:flex;gap:0;border-bottom:1px solid var(--border-default);margin-bottom:16px}
+.pid-tab{padding:8px 16px;font-size:12px;color:var(--info);cursor:pointer;border-bottom:2px solid transparent;transition:color .15s}
+.pid-tab:hover{color:var(--text-secondary)}
+.pid-tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+.pid-table{width:100%;border-collapse:collapse}
+.pid-table th{text-align:left;padding:6px 8px;font-size:11px;font-weight:600;color:var(--info);border-bottom:1px solid var(--border-default)}
+.pid-table td{padding:6px 8px;border-bottom:1px solid var(--border-default);font-size:11px}
+.pid-table tr:hover td{background:var(--bg-panel)}
+.pid-modified{background:#f0a5000d}
+
+/* Calibration cards */
+.cal-card{background:var(--bg-panel);border:1px solid var(--border-default);border-radius:12px;max-width:480px;padding:32px 24px;text-align:center}
+.cal-icon{font-size:40px;margin-bottom:12px}
+.cal-title{font-size:18px;font-weight:600;color:var(--text-primary);margin-bottom:8px}
+.cal-desc{font-size:13px;color:var(--info);line-height:1.6;margin-bottom:20px}
+.cal-steps{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+.cal-step{padding:10px;border-radius:6px;font-size:12px;display:flex;align-items:center;gap:8px}
+.cal-step.done{background:#22c55e0a;color:var(--success)}
+.cal-step.current{background:#f0a5000f;color:var(--primary);border:1px solid var(--primary)}
+.cal-step.pending{background:var(--bg-panel);color:var(--text-muted)}
+
+/* GPS/Baro/OptFlow/Rangefinder status cards */
+.status-cards{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.status-card{background:var(--bg-panel);border:1px solid var(--border-default);border-radius:8px;padding:14px 20px;min-width:110px;text-align:center}
+.status-card-val{font-size:18px;font-weight:600;color:var(--text-primary);font-family:var(--font-mono)}
+.status-card-label{color:var(--info);margin-top:4px;font-size:11px}
+
+/* OTA */
+.ota-warn{color:var(--highlight-warning);background:#e3b34114;border:1px solid #e3b3414d;border-radius:8px;padding:10px 14px;font-size:12px;line-height:1.6;margin-bottom:16px}
+.ota-drop{border:2px dashed var(--border-hover);border-radius:12px;padding:32px 20px;text-align:center;cursor:pointer;transition:all .15s}
+.ota-drop:hover{background:#f0a50008;border-color:var(--primary)}
+
+/* Param table */
+.param-search{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.param-search input{min-width:180px;max-width:300px}
+.param-table{width:100%;border-collapse:collapse}
+.param-table th{text-align:left;padding:5px 4px;font-size:11px;font-weight:600;color:var(--info);border-bottom:1px solid var(--border-default);position:sticky;top:0;background:var(--bg-base)}
+.param-table td{padding:5px 4px;border-bottom:1px solid var(--border-default);font-size:11px}
+.param-table tr:hover td{background:var(--bg-panel)}
+.param-table tr.modified td{background:#f0a5000d}
+
+/* Port table */
+.port-table{width:100%;border-collapse:collapse}
+.port-table th{text-align:left;padding:6px 4px;font-size:11px;font-weight:600;color:var(--info);border-bottom:1px solid var(--border-default)}
+.port-table td{padding:6px 4px;border-bottom:1px solid var(--border-default);font-size:11px}
+.port-table td.mono{color:var(--text-secondary)}
+
+/* ===== Data Page ===== */
+.data-page{display:flex;flex-direction:column;height:100%}
+.data-tabs{display:flex;border-bottom:1px solid var(--border-default);padding:0 8px;flex-shrink:0}
+.data-tab{padding:8px 16px;font-size:12px;color:var(--info);cursor:pointer;border-bottom:2px solid transparent;transition:color .15s}
+.data-tab:hover{color:var(--text-secondary)}
+.data-tab.active{color:var(--text-primary);border-bottom-color:var(--primary)}
+.data-tab-content{flex:1;overflow:hidden;display:none}
+.data-tab-content.active{display:flex}
+
+/* Waveform monitor */
+.wave-toolbar{background:var(--bg-panel);border-bottom:1px solid var(--border-default);padding:8px 12px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.wave-toolbar .stat-info{color:var(--info);margin-left:auto;font-size:11px}
+.wave-tr-btn{padding:3px 8px;font-size:11px;border-radius:4px;border:1px solid var(--border-default);background:var(--bg-panel);color:var(--info);cursor:pointer}
+.wave-tr-btn.active{background:var(--primary);color:#0d1117;border-color:var(--primary)}
+.wave-body{flex:1;display:flex;overflow:hidden}
+.wave-chart{flex:1;background:var(--bg-base);position:relative}
+#waveCanvas{width:100%;height:100%;display:block}
+.wave-sidebar{background:var(--bg-panel);border-left:1px solid var(--border-default);width:160px;overflow-y:auto;padding-bottom:8px;flex-shrink:0}
+.wave-sidebar-group{color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;padding:4px 12px 2px;font-size:10px;font-weight:600}
+.wave-channel{border-radius:4px;margin:1px 4px;padding:3px 12px;transition:background .15s;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:11px}
+.wave-channel:hover{background:#ffffff0a}
+.wave-channel.enabled .ch-dot{opacity:1}
+.ch-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;opacity:.3;transition:opacity .2s}
+.ch-name{color:var(--text-secondary)}
+.ch-unit{color:var(--text-muted);font-size:10px;margin-left:auto}
+
+/* MAVLink console */
+.mav-body{flex:1;display:flex;overflow:hidden}
+.mav-log{flex:1;display:flex;flex-direction:column;min-width:0}
+.mav-toolbar{background:var(--bg-panel);border-bottom:1px solid var(--border-default);padding:6px 12px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.mav-stats{color:var(--info);margin-left:4px;font-size:11px}
+.mav-autoscroll{color:var(--info);margin-left:auto;font-size:11px;display:flex;align-items:center;gap:4px}
+.mav-header{color:var(--info);background:var(--bg-base);border-bottom:1px solid var(--border-default);padding:4px 8px;font-size:10px;font-weight:600;display:grid;grid-template-columns:110px 40px 160px 50px 40px 1fr;gap:8px;flex-shrink:0}
+.mav-list{flex:1;font-size:11px;overflow-y:auto}
+.mav-row{border-bottom:1px solid #21262d18;padding:2px 8px;display:grid;grid-template-columns:110px 40px 160px 50px 40px 1fr;gap:8px;transition:background .15s}
+.mav-row:hover{background:var(--bg-panel)}
+.mav-freq{background:var(--bg-panel);border-left:1px solid var(--border-default);width:220px;display:flex;flex-direction:column;flex-shrink:0}
+.mav-freq-head{color:var(--info);letter-spacing:.5px;padding:8px 12px 4px;font-size:11px;font-weight:600;border-bottom:1px solid var(--border-default)}
+.mav-freq-list{max-height:200px;overflow-y:auto}
+.mav-freq-row{padding:2px 12px;font-size:11px;display:flex;justify-content:space-between}
+.mav-freq-name{color:var(--text-secondary);overflow:hidden;white-space:nowrap}
+.mav-freq-hz{color:var(--text-secondary);text-align:right;min-width:30px;font-family:var(--font-mono);font-weight:700}
+.mav-freq-sep{background:var(--border-default);height:1px;margin:6px 0}
+.mav-stream-list{flex:1;overflow-y:auto}
+.mav-stream-row{padding:4px 12px;display:flex;align-items:center;gap:8px;font-size:11px}
+.mav-stream-name{color:var(--text-secondary);flex:1}
+.mav-stream-select{font-size:10px;padding:2px 4px}
+
+/* Flight logs */
+.flight-body{flex:1;display:flex;overflow:hidden}
+.flight-list{background:var(--bg-panel);border-right:1px solid var(--border-default);width:260px;display:flex;flex-direction:column;flex-shrink:0}
+.flight-list-head{border-bottom:1px solid var(--border-default);padding:10px 14px;display:flex;align-items:center;justify-content:space-between}
+.flight-list-title{font-size:13px;font-weight:600;color:var(--text-primary)}
+.flight-list-body{flex:1;padding:6px;overflow-y:auto}
+.flight-item{border:1px solid transparent;border-radius:8px;margin-bottom:4px;padding:10px;transition:all .12s;cursor:pointer}
+.flight-item:hover{background:var(--bg-hover)}
+.flight-item.active{background:#f0a50014;border-color:#f0a50050}
+.flight-item-id{color:var(--primary);font-family:var(--font-mono);font-size:11px;font-weight:700}
+.flight-item-type{color:var(--text-secondary);flex:1;font-size:11px}
+.flight-item-time{color:var(--info);margin-bottom:4px;font-size:11px}
+.flight-item-stats{color:var(--info);gap:8px;font-size:10px;display:flex}
+.flight-detail{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.flight-detail-head{background:var(--bg-panel);border-bottom:1px solid var(--border-default);padding:12px 16px}
+.flight-detail-title{color:var(--text-primary);margin-bottom:4px;font-size:14px;font-weight:600}
+.flight-detail-meta{color:var(--info);gap:8px;font-size:12px;display:flex}
+#flightMap{flex:1;width:100%}
+.flight-detail-stats{display:flex;border-top:1px solid var(--border-default);flex-shrink:0}
+.flight-stat-item{border-right:1px solid var(--border-default);padding:10px;flex:1;text-align:center}
+.flight-stat-item:last-child{border-right:none}
+.flight-stat-val{color:var(--text-primary);font-family:var(--font-mono);font-size:16px;font-weight:700}
+.flight-stat-label{color:var(--info);margin-top:2px;font-size:10px}
+
+/* ===== AMap overrides ===== */
+.amap-info-content{background:var(--bg-panel)!important;color:var(--text-primary)!important;border:1px solid var(--border-default);border-radius:6px;font-size:11px;padding:8px 12px;box-shadow:0 4px 16px #00000073}
+.amap-info-close{display:none!important}
+.amap-info-sharp{border-top-color:var(--bg-panel)!important}
+
+/* Drone marker */
+.amap-drone-marker{width:40px;height:40px;cursor:pointer;position:relative}
+.amap-drone-marker svg{filter:drop-shadow(0 0 4px #3b82f6cc)}
+.amap-drone-marker .drone-alt-tag{position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:#161b22cc;color:#f0a500;font-size:9px;font-family:var(--font-mono);padding:1px 4px;border-radius:3px;border:1px solid #f0a50044;white-space:nowrap}
+
+/* Map controls */
+.map-ctrl-bar{position:absolute;top:10px;left:112px;z-index:10;display:flex;gap:6px}
+.map-ctrl-btn{background:#0d1117f2;border:1.5px solid #30363d;color:#e6edf3;padding:4px 10px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:.02em;cursor:pointer;backdrop-filter:blur(6px);box-shadow:0 1px 5px #00000073;transition:all .15s}
+.map-ctrl-btn:hover{background:#1c2128f2;color:#fff;border-color:#6e7681}
+.map-ctrl-btn.active{background:#f0a500;border-color:#ffdf7e;color:#0d1117;box-shadow:0 0 8px #f0a50088}
+
+/* Waypoint marker on map */
+.wp-marker{width:24px;height:24px;cursor:pointer}
+
+/* Hidden */
+.hidden{display:none!important}
+
+/* Toast */
+.toast{position:fixed;top:60px;right:20px;z-index:9999;padding:10px 16px;border-radius:8px;font-size:12px;transition:opacity .3s;backdrop-filter:blur(10px)}
+.toast.success{background:#22c55e14;border:1px solid #22c55e40;color:var(--success)}
+.toast.warn{background:#f59e0b1f;border:1px solid #f59e0b59;color:var(--warning)}
+.toast.err{background:#ef44440d;border:1px solid #ef444440;color:var(--danger)}
+
+/* Map loading */
+.map-loading{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:5;color:var(--text-muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px}
+.map-loading .ml-spin{width:24px;height:24px;border:2.5px solid var(--border-default);border-top-color:var(--primary);border-radius:50%;animation:mlSpin .8s linear infinite}
+@keyframes mlSpin{to{transform:rotate(360deg)}}
+
+</style>
+</head>
+<body>
+
+<!-- ===== Top Nav ===== -->
+<nav class="topnav">
+  <div class="nav-brand">NUAA GCS</div>
+  <div class="nav-tabs">
+    <div class="nav-tab active" data-page="overview" onclick="switchPage('overview')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect></svg>仪表盘</div>
+    <div class="nav-tab" data-page="fly" onclick="switchPage('fly')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 L18 12 L22 14 L12 22 L2 14 L6 12 Z"></path></svg>飞行</div>
+    <div class="nav-tab" data-page="plan" onclick="switchPage('plan')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17 L8 12 L12 16 L21 7"></path><circle cx="21" cy="7" r="2"></circle></svg>规划</div>
+    <div class="nav-tab" data-page="setup" onclick="switchPage('setup')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M12 1v3M12 20v3M1 12h3M20 10h3M4.5 4.5l2 2M17.5 17.5l2 2M4.5 19.5l2-2M17.5 6.5l2-2"></path></svg>调参</div>
+    <div class="nav-tab" data-page="data" onclick="switchPage('data')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 20 L7 14 L10 17 L17 8 L21 12"></path></svg>数据</div>
+  </div>
+  <div class="nav-right">
+    <span class="conn-dot on" id="connDot"></span>
+    <span id="connText">已连接 · UDP 127.0.0.1:14550</span>
+  </div>
+</nav>
+
+<!-- ===== Overview Page ===== -->
+<div class="page active" id="page-overview">
+  <div class="overview-page">
+    <div class="ov-top-row">
+      <!-- Model card (CGC style: no header, model-wrap + stats bar) -->
+      <div class="ov-card">
+        <div class="model-wrap">
+          <div class="drone-scene" id="droneScene">
+            <div class="drone-3d-model" id="drone3dModel" style="transform: rotateX(35.4254deg) rotateY(0.707281deg) rotateZ(-148.2deg);">
+              <!-- Body -->
+              <div class="d3-part d3-body-top"></div>
+              <div class="d3-part d3-body-bottom"></div>
+              <div class="d3-part d3-body-side bs-front"></div>
+              <div class="d3-part d3-body-side bs-back"></div>
+              <div class="d3-part d3-body-side bs-left"></div>
+              <div class="d3-part d3-body-side bs-right"></div>
+              <!-- Nose indicator -->
+              <div class="d3-part d3-nose"></div>
+              <!-- Arms (X configuration) -->
+              <div class="d3-part d3-arm a1"></div>
+              <div class="d3-part d3-arm a2"></div>
+              <div class="d3-part d3-arm a3"></div>
+              <div class="d3-part d3-arm a4"></div>
+              <div class="d3-part d3-arm-bottom ab1"></div>
+              <div class="d3-part d3-arm-bottom ab2"></div>
+              <div class="d3-part d3-arm-bottom ab3"></div>
+              <div class="d3-part d3-arm-bottom ab4"></div>
+              <!-- Motors + propellers -->
+              <div class="d3-part d3-motor-bottom mb1"></div>
+              <div class="d3-part d3-motor-bottom mb2"></div>
+              <div class="d3-part d3-motor-bottom mb3"></div>
+              <div class="d3-part d3-motor-bottom mb4"></div>
+              <div class="d3-part d3-motor m1"><div class="d3-rotor r1 spinning" id="rotor1"></div><div class="d3-led led-front-left"></div></div>
+              <div class="d3-part d3-motor m2"><div class="d3-rotor r2 spinning" id="rotor2"></div><div class="d3-led led-front-right"></div></div>
+              <div class="d3-part d3-motor m3"><div class="d3-rotor r3 spinning" id="rotor3"></div><div class="d3-led led-back-right"></div></div>
+              <div class="d3-part d3-motor m4"><div class="d3-rotor r4 spinning" id="rotor4"></div><div class="d3-led led-back-left"></div></div>
+              <!-- Gimbal + camera -->
+              <div class="d3-part d3-gimbal"><div class="d3-camera-lens"></div></div>
+              <!-- Landing gear -->
+              <div class="d3-part d3-gear g1"></div>
+              <div class="d3-part d3-gear g2"></div>
+              <div class="d3-part d3-gear g3"></div>
+              <div class="d3-part d3-gear g4"></div>
+            </div>
+          </div>
+        </div>
+        <div class="model-stats">
+          <div class="mst-row">
+            <div class="mst-cell"><div class="mst-val mono" id="ovRoll">-0.7°</div><div class="mst-label">横滚 ROL</div></div>
+            <div class="mst-cell"><div class="mst-val mono" id="ovPitch">0.4°</div><div class="mst-label">俯仰 PIT</div></div>
+            <div class="mst-cell"><div class="mst-val mono" id="ovYaw">148°</div><div class="mst-label">航向 YAW</div></div>
+          </div>
+        </div>
+      </div>
+      <!-- ADI card (CGC style: adi-wrap + adi-strip bottom) -->
+      <div class="ov-card">
+        <div class="adi-wrap">
+          <svg class="adi-svg" viewBox="0 0 140 140">
+            <defs>
+              <clipPath id="adiClip"><circle cx="70" cy="70" r="62"></circle></clipPath>
+              <radialGradient id="skyGrad" cx="50%" cy="30%" r="70%">
+                <stop offset="0%" stop-color="#2a4a7f"></stop>
+                <stop offset="100%" stop-color="#1a2d4d"></stop>
+              </radialGradient>
+              <radialGradient id="groundGrad" cx="50%" cy="70%" r="70%">
+                <stop offset="0%" stop-color="#5c3d1e"></stop>
+                <stop offset="100%" stop-color="#3d2a1a"></stop>
+              </radialGradient>
+            </defs>
+            <!-- Outer bezel -->
+            <circle cx="70" cy="70" r="67" fill="#161b22" stroke="#30363d" stroke-width="2"></circle>
+            <circle cx="70" cy="70" r="64" fill="#0d1117" stroke="#21262d" stroke-width="1"></circle>
+            <!-- ADI ball (rotating pitch/roll) -->
+            <g clip-path="url(#adiClip)">
+              <g id="adiBall" transform="rotate(0.7072812874504777 70 70) translate(0 0.8508088636167392)">
+                <!-- Sky -->
+                <rect x="-70" y="-200" width="280" height="270" fill="url(#skyGrad)"></rect>
+                <!-- Ground -->
+                <rect x="-70" y="70" width="280" height="270" fill="url(#groundGrad)"></rect>
+                <!-- Horizon line -->
+                <line x1="-70" y1="70" x2="210" y2="70" stroke="#fff" stroke-width="1.2"></line>
+                <!-- Pitch ladder - positive (up) -->
+                <line x1="20" y1="50" x2="120" y2="50" stroke="#fff" stroke-width="0.8" opacity="0.6"></line>
+                <text x="15" y="53" fill="#fff" font-size="7" font-family="JetBrains Mono,monospace" text-anchor="end" opacity="0.7">10</text>
+                <line x1="30" y1="60" x2="110" y2="60" stroke="#fff" stroke-width="0.6" opacity="0.4"></line>
+                <line x1="40" y1="65" x2="100" y2="65" stroke="#fff" stroke-width="0.5" opacity="0.3"></line>
+                <line x1="20" y1="30" x2="120" y2="30" stroke="#fff" stroke-width="0.8" opacity="0.5"></line>
+                <text x="15" y="33" fill="#fff" font-size="7" font-family="JetBrains Mono,monospace" text-anchor="end" opacity="0.6">20</text>
+                <line x1="40" y1="40" x2="100" y2="40" stroke="#fff" stroke-width="0.5" opacity="0.3"></line>
+                <line x1="20" y1="10" x2="120" y2="10" stroke="#fff" stroke-width="0.8" opacity="0.4"></line>
+                <text x="15" y="13" fill="#fff" font-size="7" font-family="JetBrains Mono,monospace" text-anchor="end" opacity="0.5">30</text>
+                <!-- Pitch ladder - negative (down) -->
+                <line x1="20" y1="90" x2="120" y2="90" stroke="#fff" stroke-width="0.8" opacity="0.6"></line>
+                <text x="15" y="93" fill="#fff" font-size="7" font-family="JetBrains Mono,monospace" text-anchor="end" opacity="0.7">10</text>
+                <line x1="30" y1="80" x2="110" y2="80" stroke="#fff" stroke-width="0.6" opacity="0.4"></line>
+                <line x1="40" y1="75" x2="100" y2="75" stroke="#fff" stroke-width="0.5" opacity="0.3"></line>
+                <line x1="20" y1="110" x2="120" y2="110" stroke="#fff" stroke-width="0.8" opacity="0.5"></line>
+                <text x="15" y="113" fill="#fff" font-size="7" font-family="JetBrains Mono,monospace" text-anchor="end" opacity="0.6">20</text>
+                <line x1="40" y1="100" x2="100" y2="100" stroke="#fff" stroke-width="0.5" opacity="0.3"></line>
+                <line x1="20" y1="130" x2="120" y2="130" stroke="#fff" stroke-width="0.8" opacity="0.4"></line>
+                <text x="15" y="133" fill="#fff" font-size="7" font-family="JetBrains Mono,monospace" text-anchor="end" opacity="0.5">30</text>
+              </g>
+            </g>
+            <!-- Roll pointer (top) -->
+            <polygon points="70,12 66,20 74,20" fill="#f0a500"></polygon>
+            <!-- Roll scale marks -->
+            <g stroke="#484f58" stroke-width="1">
+              <line x1="70" y1="22" x2="70" y2="25" transform="rotate(-30 70 70)"></line>
+              <line x1="70" y1="22" x2="70" y2="25" transform="rotate(-15 70 70)"></line>
+              <line x1="70" y1="22" x2="70" y2="27" transform="rotate(0 70 70)" stroke="#f0a500"></line>
+              <line x1="70" y1="22" x2="70" y2="25" transform="rotate(15 70 70)"></line>
+              <line x1="70" y1="22" x2="70" y2="25" transform="rotate(30 70 70)"></line>
+            </g>
+            <!-- Fixed aircraft symbol (yellow/orange) -->
+            <g stroke="#f0a500" stroke-width="2" fill="none" stroke-linecap="round">
+              <!-- Left wing -->
+              <line x1="70" y1="70" x2="42" y2="70"></line>
+              <line x1="42" y1="70" x2="36" y2="67"></line>
+              <!-- Right wing -->
+              <line x1="70" y1="70" x2="98" y2="70"></line>
+              <line x1="98" y1="70" x2="104" y2="67"></line>
+              <!-- Fuselage dot -->
+              <circle cx="70" cy="70" r="2.5" fill="#f0a500" stroke="none"></circle>
+              <!-- Bottom tail -->
+              <line x1="70" y1="70" x2="70" y2="82"></line>
+              <line x1="66" y1="82" x2="74" y2="82"></line>
+            </g>
+            <!-- Inner ring -->
+            <circle cx="70" cy="70" r="62" fill="none" stroke="#30363d" stroke-width="1.5"></circle>
+          </svg>
+        </div>
+        <div class="adi-strip">
+          <div class="as-cell"><div class="as-val mono" id="ovAlt">86.2m</div><div class="as-label">高度</div></div>
+          <div class="as-cell"><div class="as-val mono" id="ovGs">9.2</div><div class="as-label">地速 m/s</div></div>
+          <div class="as-cell"><div class="as-val mono" id="ovVs" style="color: var(--success);">+0.8</div><div class="as-label">爬升 m/s</div></div>
+        </div>
+      </div>
+      <!-- Sensor card (CGC style: no header, sg-cell grid) -->
+      <div class="ov-card">
+        <div class="sensor-grid">
+          <div class="sg-cell ok"><div class="sg-accent"></div><div class="sg-head"><svg class="sg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 L20 7 L20 17 L12 22 L4 17 L4 7 Z"></path><circle cx="12" cy="12" r="3"></circle></svg><span class="sg-name">IMU</span></div><div class="sg-body"><span class="sg-status">正常</span><span class="sg-value mono" id="sImu">-0.7°/0.4°</span></div></div>
+          <div class="sg-cell ok"><div class="sg-accent"></div><div class="sg-head"><svg class="sg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2 L12 14"></path><path d="M12 14 L16 10"></path></svg><span class="sg-name">罗盘</span></div><div class="sg-body"><span class="sg-status">正常</span><span class="sg-value mono" id="sMag">148°</span></div></div>
+          <div class="sg-cell ok"><div class="sg-accent"></div><div class="sg-head"><svg class="sg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 Q8 8 12 12 Q16 16 12 22"></path><path d="M8 6 L12 10 L16 6"></path></svg><span class="sg-name">气压计</span></div><div class="sg-body"><span class="sg-status">正常</span><span class="sg-value mono" id="sBaro">86.2m</span></div></div>
+          <div class="sg-cell warn"><div class="sg-accent"></div><div class="sg-head"><svg class="sg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 L2 22 L22 22 Z"></path><path d="M12 10 L12 16"></path><circle cx="12" cy="19" r=".5" fill="currentColor"></circle></svg><span class="sg-name">测距仪</span></div><div class="sg-body"><span class="sg-status">异常</span><span class="sg-value mono" id="sRange">0.8m</span></div></div>
+          <div class="sg-cell ok"><div class="sg-accent"></div><div class="sg-head"><svg class="sg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"></path></svg><span class="sg-name">光流</span></div><div class="sg-body"><span class="sg-status">正常</span><span class="sg-value mono" id="sFlow">98%</span></div></div>
+          <div class="sg-cell ok"><div class="sg-accent"></div><div class="sg-head"><svg class="sg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 L18 6 L18 12 L12 16 L6 12 L6 6 Z"></path><circle cx="12" cy="10" r="2"></circle></svg><span class="sg-name">GPS</span></div><div class="sg-body"><span class="sg-status">正常</span><span class="sg-value mono" id="sGps">3D·11颗</span></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="ov-mid-row">
+      <!-- RC channels -->
+      <div class="ov-card">
+        <div class="ov-card-head"><span class="ov-card-title">遥控输入</span><span class="ov-card-sub">CH1–12</span></div>
+        <div class="ch-card-body" id="rcBars"><div class="vbar"><span class="vbar-val mono">1535</span><div class="vbar-track"><div class="vbar-fill rc-fill" style="height: 53.5097%;"></div></div><span class="vbar-label">CH1</span></div><div class="vbar"><span class="vbar-val mono">1544</span><div class="vbar-track"><div class="vbar-fill rc-fill" style="height: 54.3715%;"></div></div><span class="vbar-label">CH2</span></div><div class="vbar"><span class="vbar-val mono">1218</span><div class="vbar-track"><div class="vbar-fill rc-fill" style="height: 21.7579%;"></div></div><span class="vbar-label">CH3</span></div><div class="vbar"><span class="vbar-val mono">1365</span><div class="vbar-track"><div class="vbar-fill rc-fill" style="height: 36.4636%;"></div></div><span class="vbar-label">CH4</span></div><div class="vbar"><span class="vbar-val mono">1321</span><div class="vbar-track"><div class="vbar-fill rc-fill" style="height: 32.0921%;"></div></div><span class="vbar-label">CH5</span></div><div class="vbar"><span class="vbar-val mono">1597</span><div class="vbar-track"><div class="vbar-fill rc-fill" style="height: 59.7217%;"></div></div><span class="vbar-label">CH6</span></div><div class="vbar"><span class="vbar-val mono">1958</span><div class="vbar-track"><div class="vbar-fill rc-fill" style="height: 95.778%;"></div></div><span class="vbar-label">CH7</span></div><div class="vbar"><span class="vbar-val mono">1571</span><div class="vbar-track"><div class="vbar-fill rc-fill" style="height: 57.1422%;"></div></div><span class="vbar-label">CH8</span></div><div class="vbar"><span class="vbar-val mono">1616</span><div class="vbar-track"><div class="vbar-fill rc-fill" style="height: 61.6186%;"></div></div><span class="vbar-label">CH9</span></div><div class="vbar"><span class="vbar-val mono">1610</span><div class="vbar-track"><div class="vbar-fill rc-fill" style="height: 61.0374%;"></div></div><span class="vbar-label">CH10</span></div><div class="vbar"><span class="vbar-val mono">1375</span><div class="vbar-track"><div class="vbar-fill rc-fill" style="height: 37.4598%;"></div></div><span class="vbar-label">CH11</span></div><div class="vbar"><span class="vbar-val mono">1859</span><div class="vbar-track"><div class="vbar-fill rc-fill" style="height: 85.9273%;"></div></div><span class="vbar-label">CH12</span></div></div>
+      </div>
+      <!-- Joystick sim -->
+      <div class="ov-card">
+        <div class="ov-card-head"><span class="ov-card-title">遥控器模拟</span><span class="ov-card-sub">Mode 2</span></div>
+        <div class="ov-card-body joy-body">
+          <div class="joystick">
+            <div class="joy-pad joy-cross"><div class="joy-dot" id="joyLeft" style="left: 18.2318%; top: 89.1211%; transform: translate(-50%, -50%);"></div></div>
+            <div class="joy-label">左 · THR/YAW</div>
+            <div class="joy-vals"><span id="ch3Val">1218</span><span id="ch4Val">1365</span></div>
+          </div>
+          <div class="joystick">
+            <div class="joy-pad joy-cross"><div class="joy-dot" id="joyRight" style="left: 26.7549%; top: 72.8143%; transform: translate(-50%, -50%);"></div></div>
+            <div class="joy-label">右 · ROLL/PITCH</div>
+            <div class="joy-vals"><span id="ch1Val">1535</span><span id="ch2Val">1544</span></div>
+          </div>
+        </div>
+      </div>
+      <!-- Motor outputs -->
+      <div class="ov-card">
+        <div class="ov-card-head"><span class="ov-card-title">电机输出</span><span class="ov-card-sub">M1–12</span></div>
+        <div class="ch-card-body" id="motorBars"><div class="vbar"><span class="vbar-val mono">1342</span><div class="vbar-track"><div class="vbar-fill motor-fill" style="height: 34.215%; background: rgb(63, 185, 80);"></div></div><span class="vbar-label">M1</span></div><div class="vbar"><span class="vbar-val mono">1232</span><div class="vbar-track"><div class="vbar-fill motor-fill" style="height: 23.1573%; background: rgb(63, 185, 80);"></div></div><span class="vbar-label">M2</span></div><div class="vbar"><span class="vbar-val mono">1087</span><div class="vbar-track"><div class="vbar-fill motor-fill" style="height: 8.6993%; background: rgb(63, 185, 80);"></div></div><span class="vbar-label">M3</span></div><div class="vbar"><span class="vbar-val mono">975</span><div class="vbar-track"><div class="vbar-fill motor-fill" style="height: 0%; background: rgb(63, 185, 80);"></div></div><span class="vbar-label">M4</span></div><div class="vbar"><span class="vbar-val mono">—</span><div class="vbar-track"><div class="vbar-fill motor-fill" style="height: 0%; background: rgb(63, 185, 80);"></div></div><span class="vbar-label">M5</span></div><div class="vbar"><span class="vbar-val mono">—</span><div class="vbar-track"><div class="vbar-fill motor-fill" style="height: 0%; background: rgb(63, 185, 80);"></div></div><span class="vbar-label">M6</span></div><div class="vbar"><span class="vbar-val mono">—</span><div class="vbar-track"><div class="vbar-fill motor-fill" style="height: 0%; background: rgb(63, 185, 80);"></div></div><span class="vbar-label">M7</span></div><div class="vbar"><span class="vbar-val mono">—</span><div class="vbar-track"><div class="vbar-fill motor-fill" style="height: 0%; background: rgb(63, 185, 80);"></div></div><span class="vbar-label">M8</span></div><div class="vbar"><span class="vbar-val mono">—</span><div class="vbar-track"><div class="vbar-fill motor-fill" style="height: 0%; background: rgb(63, 185, 80);"></div></div><span class="vbar-label">M9</span></div><div class="vbar"><span class="vbar-val mono">—</span><div class="vbar-track"><div class="vbar-fill motor-fill" style="height: 0%; background: rgb(63, 185, 80);"></div></div><span class="vbar-label">M10</span></div><div class="vbar"><span class="vbar-val mono">—</span><div class="vbar-track"><div class="vbar-fill motor-fill" style="height: 0%; background: rgb(63, 185, 80);"></div></div><span class="vbar-label">M11</span></div><div class="vbar"><span class="vbar-val mono">—</span><div class="vbar-track"><div class="vbar-fill motor-fill" style="height: 0%; background: rgb(63, 185, 80);"></div></div><span class="vbar-label">M12</span></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Fly Page ===== -->
+<div class="page" id="page-fly">
+  <div class="fly-page">
+    <div class="fly-body">
+      <div id="flyMap" style="position:relative;flex:1;min-height:0;overflow:hidden;background:#0d1117"></div>
+      <div class="fly-banner info-banner hidden" id="flyBanner"></div>
+      <div class="adi-overlay" id="adiOverlay">
+        <svg width="164" height="164" viewBox="0 0 164 164">
+          <defs>
+            <clipPath id="adiClipFly"><circle cx="82" cy="82" r="74"></circle></clipPath>
+            <radialGradient id="skyGradFly" cx="50%" cy="30%" r="70%">
+              <stop offset="0%" stop-color="#2a4a7f"></stop>
+              <stop offset="100%" stop-color="#1a2d4d"></stop>
+            </radialGradient>
+            <radialGradient id="groundGradFly" cx="50%" cy="70%" r="70%">
+              <stop offset="0%" stop-color="#5c3d1e"></stop>
+              <stop offset="100%" stop-color="#3d2a1a"></stop>
+            </radialGradient>
+          </defs>
+          <circle cx="82" cy="82" r="80" fill="#161b22" stroke="#30363d" stroke-width="2"></circle>
+          <circle cx="82" cy="82" r="76" fill="#0d1117" stroke="#21262d" stroke-width="1"></circle>
+          <g clip-path="url(#adiClipFly)">
+            <g id="adiBallFly" transform="rotate(0.7072812874504777 82 82) translate(0 0.8508088636167392)">
+              <rect x="-82" y="-200" width="328" height="282" fill="url(#skyGradFly)"></rect>
+              <rect x="-82" y="82" width="328" height="282" fill="url(#groundGradFly)"></rect>
+              <line x1="-82" y1="82" x2="246" y2="82" stroke="#fff" stroke-width="1.2"></line>
+              <!-- Pitch ladder up -->
+              <line x1="28" y1="62" x2="136" y2="62" stroke="#fff" stroke-width="0.8" opacity="0.6"></line>
+              <text x="22" y="65" fill="#fff" font-size="8" font-family="JetBrains Mono,monospace" text-anchor="end" opacity="0.7">10</text>
+              <line x1="40" y1="72" x2="124" y2="72" stroke="#fff" stroke-width="0.6" opacity="0.4"></line>
+              <line x1="52" y1="77" x2="112" y2="77" stroke="#fff" stroke-width="0.5" opacity="0.3"></line>
+              <line x1="28" y1="42" x2="136" y2="42" stroke="#fff" stroke-width="0.8" opacity="0.5"></line>
+              <text x="22" y="45" fill="#fff" font-size="8" font-family="JetBrains Mono,monospace" text-anchor="end" opacity="0.6">20</text>
+              <line x1="52" y1="52" x2="112" y2="52" stroke="#fff" stroke-width="0.5" opacity="0.3"></line>
+              <line x1="28" y1="22" x2="136" y2="22" stroke="#fff" stroke-width="0.8" opacity="0.4"></line>
+              <text x="22" y="25" fill="#fff" font-size="8" font-family="JetBrains Mono,monospace" text-anchor="end" opacity="0.5">30</text>
+              <!-- Pitch ladder down -->
+              <line x1="28" y1="102" x2="136" y2="102" stroke="#fff" stroke-width="0.8" opacity="0.6"></line>
+              <text x="22" y="105" fill="#fff" font-size="8" font-family="JetBrains Mono,monospace" text-anchor="end" opacity="0.7">10</text>
+              <line x1="40" y1="92" x2="124" y2="92" stroke="#fff" stroke-width="0.6" opacity="0.4"></line>
+              <line x1="52" y1="87" x2="112" y2="87" stroke="#fff" stroke-width="0.5" opacity="0.3"></line>
+              <line x1="28" y1="122" x2="136" y2="122" stroke="#fff" stroke-width="0.8" opacity="0.5"></line>
+              <text x="22" y="125" fill="#fff" font-size="8" font-family="JetBrains Mono,monospace" text-anchor="end" opacity="0.6">20</text>
+              <line x1="52" y1="112" x2="112" y2="112" stroke="#fff" stroke-width="0.5" opacity="0.3"></line>
+              <line x1="28" y1="142" x2="136" y2="142" stroke="#fff" stroke-width="0.8" opacity="0.4"></line>
+              <text x="22" y="145" fill="#fff" font-size="8" font-family="JetBrains Mono,monospace" text-anchor="end" opacity="0.5">30</text>
+            </g>
+          </g>
+          <!-- Roll pointer -->
+          <polygon points="82,14 77,24 87,24" fill="#f0a500"></polygon>
+          <g stroke="#484f58" stroke-width="1">
+            <line x1="82" y1="26" x2="82" y2="29" transform="rotate(-30 82 82)"></line>
+            <line x1="82" y1="26" x2="82" y2="29" transform="rotate(-15 82 82)"></line>
+            <line x1="82" y1="26" x2="82" y2="31" transform="rotate(0 82 82)" stroke="#f0a500"></line>
+            <line x1="82" y1="26" x2="82" y2="29" transform="rotate(15 82 82)"></line>
+            <line x1="82" y1="26" x2="82" y2="29" transform="rotate(30 82 82)"></line>
+          </g>
+          <!-- Aircraft symbol -->
+          <g stroke="#f0a500" stroke-width="2" fill="none" stroke-linecap="round">
+            <line x1="82" y1="82" x2="50" y2="82"></line>
+            <line x1="50" y1="82" x2="43" y2="78"></line>
+            <line x1="82" y1="82" x2="114" y2="82"></line>
+            <line x1="114" y1="82" x2="121" y2="78"></line>
+            <circle cx="82" cy="82" r="3" fill="#f0a500" stroke="none"></circle>
+            <line x1="82" y1="82" x2="82" y2="96"></line>
+            <line x1="77" y1="96" x2="87" y2="96"></line>
+          </g>
+          <circle cx="82" cy="82" r="74" fill="none" stroke="#30363d" stroke-width="1.5"></circle>
+        </svg>
+      </div>
+      <button class="adi-show hidden" id="adiShowBtn" onclick="toggleAdi()">◎ ADI</button>
+      <div class="hud-right">
+        <div class="hud-row"><span class="hud-label">HDG</span><span><span class="hud-val mono" id="flyHdg">148</span><span class="hud-unit">°</span></span></div>
+        <div class="hud-row"><span class="hud-label">ALT</span><span><span class="hud-val mono" id="flyAlt">86.2</span><span class="hud-unit">m</span></span></div>
+        <div class="hud-row"><span class="hud-label">GS</span><span><span class="hud-val mono" id="flyGs">9.2</span><span class="hud-unit">m/s</span></span></div>
+        <div class="hud-row"><span class="hud-label">VS</span><span><span class="hud-val mono" id="flyVs" style="color: var(--success);">+0.8</span><span class="hud-unit">m/s</span></span></div>
+        <div class="hud-row"><span class="hud-label">ROL</span><span class="hud-val mono" id="flyRol">-0.7</span><span class="hud-unit">°</span></div>
+        <div class="hud-row"><span class="hud-label">PIT</span><span class="hud-val mono" id="flyPit">0.4</span><span class="hud-unit">°</span></div>
+        <div class="hud-sep"></div>
+        <div class="hud-mode armed" id="flyMode">AUTO</div>
+      </div>
+      <div class="alerts-panel">
+        <div class="alerts-header" onclick="toggleAlerts()">
+          <span>系统消息</span>
+          <span><span class="alert-count warn" id="alertCount">2</span> <span id="alertChev">▾</span></span>
+        </div>
+        <div class="alerts-body" id="alertBody">
+          <div class="alert-item warn"><span class="alert-time">14:22:01</span><span>测距仪信号弱</span></div>
+          <div class="alert-item info"><span class="alert-time">14:21:30</span><span>已进入自动模式</span></div>
+          <div class="alert-item info"><span class="alert-time">14:20:15</span><span>任务已上传 6 航点</span></div>
+          <div class="alert-item info"><span class="alert-time">14:19:00</span><span>飞控已解锁</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="bottom-hud">
+      <div class="bh-item"><span class="bh-label">电池</span><span class="bh-val mono" id="bhBat" style="color:var(--success)">70%</span></div>
+      <div class="bh-sep"></div>
+      <div class="bh-item"><span class="bh-label">电压</span><span class="bh-val mono" id="bhV">12.7V</span></div>
+      <div class="bh-sep"></div>
+      <div class="bh-item"><span class="bh-label">GPS</span><span class="bh-val mono" id="bhGps" style="color:var(--success)">11颗</span></div>
+      <div class="bh-sep"></div>
+      <div class="bh-item"><span class="bh-label">HDOP</span><span class="bh-val mono" id="bhHdop">1.2</span></div>
+      <div class="bh-sep"></div>
+      <div class="bh-item"><span class="bh-label">RC</span><span class="bh-val mono" id="bhRc">89%</span></div>
+      <div class="bh-sep"></div>
+      <div class="bh-item"><span class="bh-label">飞行时间</span><span class="bh-val mono" id="bhFlightTime" style="color:var(--primary)">00:00:00</span></div>
+      <div class="bh-sep"></div>
+      <div class="bh-item"><span class="bh-label">LAT</span><span class="bh-val mono" id="bhLat">32.0603°</span></div>
+      <div class="bh-sep"></div>
+      <div class="bh-item"><span class="bh-label">LON</span><span class="bh-val mono" id="bhLon">118.7921°</span></div>
+    </div>
+    <div class="cmd-bar">
+      <button class="cmd-btn warn" onclick="flyCmd('解锁','解锁后电机将启动，请确保周围安全！确认解锁？')">解锁</button>
+      <button class="cmd-btn primary" onclick="flyCmd('起飞','起飞至默认高度 2 米，确认？')">起飞</button>
+      <button class="cmd-btn success" onclick="flyCmd('任务','将按任务列表依次飞行，确认开始任务？')">任务</button>
+      <button class="cmd-btn" onclick="flyCmd('降落','将在当前位置原地降落，确认？')">降落</button>
+      <button class="cmd-btn" onclick="flyCmd('返航','将返回起飞点（RTL），确认？')">返航</button>
+      <button class="cmd-btn" onclick="flyCmd('悬停','将在当前位置悬停，确认？')">悬停</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Plan Page ===== -->
+<div class="page" id="page-plan">
+  <div class="plan-page">
+    <div class="plan-body">
+      <div id="planMap" style="flex:1;min-height:0;overflow:hidden;background:#0d1117"></div>
+      <div class="map-toolbar">
+        <button onclick="fitWaypoints()" title="适配视图"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M4 9 V4 H9"></path><path d="M15 4 H20 V9"></path><path d="M20 15 V20 H15"></path><path d="M9 20 H4 V15"></path></svg></button>
+        <div class="tb-divider"></div>
+        <button id="mapStyleBtn" onclick="toggleMapStyle()" title="切换底图"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M9 2 L3 14 L9 14 L6 22 L21 7 L15 7 L18 2 Z"></path></svg></button>
+        <div class="tb-divider"></div>
+        <button onclick="clearWaypoints()" title="清空航点" style="color:var(--danger)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M3 6h18"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path></svg></button>
+      </div>
+      <div class="map-hud hidden" id="planMapHud">
+        <div class="map-hud-item"><span class="map-hud-label">D</span><span class="map-hud-val mono" id="pmHudD">412</span><span class="map-hud-unit">m</span></div>
+        <div class="map-hud-sep"></div>
+        <div class="map-hud-item"><span class="map-hud-label">H</span><span class="map-hud-val mono" id="pmHudH">86.2</span><span class="map-hud-unit">m</span></div>
+        <div class="map-hud-sep"></div>
+        <div class="map-hud-item"><span class="map-hud-label">GS</span><span class="map-hud-val mono" id="pmHudGs">9.2</span><span class="map-hud-unit">m/s</span></div>
+        <div class="map-hud-sep"></div>
+        <div class="map-hud-item"><span class="map-hud-label">VS</span><span class="map-hud-val mono" id="pmHudVs">+0.8</span><span class="map-hud-unit">m/s</span></div>
+        <div class="map-hud-sep"></div>
+        <div class="map-hud-item"><span class="map-hud-label">LAT</span><span class="map-hud-val mono" id="pmHudLat">32.060256</span><span class="map-hud-unit">°</span></div>
+        <div class="map-hud-sep"></div>
+        <div class="map-hud-item"><span class="map-hud-label">LON</span><span class="map-hud-val mono" id="pmHudLon">118.792066</span><span class="map-hud-unit">°</span></div>
+        <div class="map-hud-sep"></div>
+        <div class="map-hud-item"><span class="map-hud-label">HDG</span><span class="map-hud-val mono" id="pmHudHdg">148</span><span class="map-hud-unit">°</span></div>
+      </div>
+      <div class="map-hint" id="planMapHint">点击地图添加航点 · 拖动调整位置 · 右侧面板编辑参数</div>
+    </div>
+    <div class="mission-panel" id="missionPanel">
+      <div class="panel-header">
+        <span class="panel-title">任务规划 <span class="dirty-dot hidden" id="dirtyDot"></span></span>
+        <button onclick="togglePanel()" style="font-size:11px;color:var(--info);cursor:pointer" id="panelToggle">◀</button>
+      </div>
+      <div class="panel-body" id="missionPanelBody">
+        <div class="panel-name-row">
+          <input type="text" value="南京仙林巡检任务" id="missionName" style="width:100%" oninput="markDirty()">
+        </div>
+        <div class="wp-list" id="wpList"></div>
+        <div id="wpEditor" class="wp-editor hidden">
+          <div class="wp-editor-row"><label>高度 (m)</label><input type="number" value="100" min="1" max="500" id="edAlt"></div>
+          <div class="wp-editor-row"><label>速度 (m/s)</label><input type="number" value="5" min="1" max="20" id="edSpd"></div>
+          <div class="wp-editor-row"><label>悬停 (s)</label><input type="number" value="0" min="0" max="600" id="edHold"></div>
+          <div class="wp-editor-row"><label>优先级</label><select id="edPri"><option>1 最高</option><option>2</option><option selected="">3</option><option>4</option><option>5</option></select></div>
+          <div class="wp-editor-row"><label>动作</label><select id="edAct"><option>巡航 CRUISE</option><option>悬停 LOITER</option><option>拍照 TAKEPHOTO</option></select></div>
+          <button class="action-btn primary" onclick="applyWpEdit()" style="margin-top:4px">应用修改</button>
+        </div>
+        <div class="panel-stats" id="panelStats">
+          <div class="stat-row"><span>航点数</span><span class="mono" id="wpCount">0</span></div>
+          <div class="stat-row"><span>预计距离</span><span class="mono" id="wpDist">0.00 km</span></div>
+          <div class="stat-row"><span>冲突检测</span><span id="wpConflict" style="color:var(--info)">无航点</span></div>
+        </div>
+        <div class="panel-actions">
+          <div id="transferProgress" class="transfer-progress hidden">
+            <div style="font-size:11px;display:flex;justify-content:space-between"><span id="tpLabel">上传 0/0</span><span id="tpStatus"></span></div>
+            <div style="height:4px;background:var(--bg-bar);border-radius:2px;margin-top:4px;overflow:hidden"><div id="tpBar" style="height:100%;width:0;background:var(--primary);border-radius:2px;transition:width .3s"></div></div>
+          </div>
+          <button class="action-btn primary" onclick="uploadMission()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M12 19V5"></path><path d="M5 12l7-7 7 7"></path></svg> 上传到飞控</button>
+          <button class="action-btn" onclick="downloadMission()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M12 5v14"></path><path d="M19 12l-7 7-7-7"></path></svg> 从飞控读取</button>
+          <div class="btn-row">
+            <button class="action-btn" onclick="saveMissionXml()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><path d="M17 21v-8H7v8"></path><path d="M7 3v5h8"></path></svg> 保存XML</button>
+            <button class="action-btn" onclick="loadMissionXml()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="M7 10l5 5 5-5"></path><path d="M12 15V3"></path></svg> 加载XML</button>
+          </div>
+          <div style="border-top:1px solid var(--border-default);margin-top:6px;padding-top:8px">
+            <div style="font-size:11px;color:var(--info);margin-bottom:4px">路径优化（贪婪算法）</div>
+            <button class="action-btn primary" onclick="optimizePath()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M13 2 L3 14 h7 l-1 8 10-12 h-7 z"></path></svg> 一键优化路径</button>
+            <div id="optResult" class="hidden" style="margin-top:4px">
+              <div class="stat-row"><span>优化前</span><span class="mono" id="optBefore">—</span></div>
+              <div class="stat-row"><span>优化后</span><span class="mono" id="optAfter" style="color:var(--success)">—</span></div>
+            </div>
+          </div>
+          <div style="border-top:1px solid var(--border-default);margin-top:6px;padding-top:8px">
+            <div style="font-size:11px;color:var(--info);margin-bottom:4px">电池续航预测（线性回归）</div>
+            <div class="wp-editor-row"><label>距离(km)</label><input type="number" value="0.00" id="bpDist" step="0.01" readonly title="由任务航点自动计算" style="color:var(--primary)"></div>
+            <div class="wp-editor-row"><label>负载(kg)</label><input type="number" value="0.5" step="0.1" id="bpLoad"></div>
+            <div class="wp-editor-row"><label>风速(m/s)</label><input type="number" value="3" id="bpWind" style="width:60px"><button class="action-btn" id="btnFetchWind" onclick="fetchWind()" style="padding:3px 8px;font-size:10px;flex-shrink:0">获取</button></div>
+            <div id="windInfo" style="font-size:10px;color:var(--text-muted);margin-bottom:4px">点击「获取」拉取实时气象风速（Open-Meteo）</div>
+            <button class="action-btn" onclick="predictBattery()" style="margin-top:4px">预测续航</button>
+            <div id="bpResult" class="hidden" style="margin-top:4px">
+              <div class="stat-row"><span>预测续航</span><span class="mono" id="bpTime" style="color:var(--success)">—</span></div>
+              <div class="stat-row"><span>预计耗电</span><span class="mono" id="bpCost">—</span></div>
+            </div>
+          </div>
+          <div id="flyHint" class="fly-hint hidden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" style="color:var(--success)"><path d="M20 6 L9 17 L4 12"></path></svg> 任务已上传 · <span class="fly-hint-link" onclick="switchPage('fly')">切换到飞行页执行 →</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Setup Page ===== -->
+<div class="page" id="page-setup">
+  <div class="setup-page">
+    <div class="setup-menu">
+      <div class="setup-menu-head">调参</div>
+      <div class="setup-menu-group">
+        <div class="setup-group-label">设置</div>
+        <div class="setup-menu-item" onclick="setupSection(this,'frame')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 L20 7 L20 17 L12 22 L4 17 L4 7 Z"></path></svg>机架类型</div>
+        <div class="setup-menu-item" onclick="setupSection(this,'motor')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3"></path></svg>电机设置</div>
+        <div class="setup-menu-item" onclick="setupSection(this,'rc')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"></rect><circle cx="8" cy="12" r="3"></circle><circle cx="16" cy="12" r="3"></circle></svg>遥控器</div>
+        <div class="setup-menu-item" onclick="setupSection(this,'ports')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M6 10v4M10 10v4M14 10v4M18 10v4"></path></svg>端口设置</div>
+        <div class="setup-menu-item" onclick="setupSection(this,'pid')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3-9 4 18 3-9h4"></path></svg>PID 调参</div>
+        <div class="setup-menu-item" onclick="setupSection(this,'safety')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 L22 6 L22 12 C22 18 18 22 12 22 C6 22 2 18 2 12 L2 6 Z"></path><path d="M12 8v5"></path><circle cx="12" cy="16" r=".5" fill="currentColor"></circle></svg>安全设置</div>
+      </div>
+      <div class="setup-menu-group">
+        <div class="setup-group-label">传感器</div>
+        <div class="setup-menu-item" onclick="setupSection(this,'imu')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 L20 7 L20 17 L12 22 L4 17 L4 7 Z"></path><circle cx="12" cy="12" r="3"></circle></svg>IMU 校准</div>
+        <div class="setup-menu-item" onclick="setupSection(this,'compass')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2 L12 14"></path><path d="M12 14 L16 10"></path></svg>罗盘校准</div>
+        <div class="setup-menu-item" onclick="setupSection(this,'gps')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 L18 6 L18 12 L12 16 L6 12 L6 6 Z"></path><circle cx="12" cy="10" r="2"></circle></svg>GPS</div>
+        <div class="setup-menu-item" onclick="setupSection(this,'baro')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 Q8 8 12 12 Q16 16 12 22"></path><path d="M8 6 L12 10 L16 6"></path></svg>气压计</div>
+        <div class="setup-menu-item active" onclick="setupSection(this,'optflow')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"></path></svg>光流传感器</div>
+        <div class="setup-menu-item" onclick="setupSection(this,'rangefinder')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 L2 22 L22 22 Z"></path><path d="M12 10 L12 16"></path></svg>激光/测距仪</div>
+      </div>
+      <div class="setup-menu-group">
+        <div class="setup-group-label">参数 / 固件</div>
+        <div class="setup-menu-item" onclick="setupSection(this,'params')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5h11"></path><path d="M9 12h11"></path><path d="M9 19h11"></path><circle cx="4" cy="5" r="1" fill="currentColor"></circle><circle cx="4" cy="12" r="1" fill="currentColor"></circle><circle cx="4" cy="19" r="1" fill="currentColor"></circle></svg>参数列表</div>
+        <div class="setup-menu-item" onclick="setupSection(this,'firmware')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 L22 12 L12 22 L2 12 Z"></path><path d="M12 8v5"></path><path d="M10 15h4"></path></svg>固件升级</div>
+      </div>
+    </div>
+    <div class="setup-content" id="setupContent"><div class="setup-section active"><div class="setup-section-title">机架类型</div><div class="setup-section-sub">选择机架后点击应用，重启飞控生效 · FRAME_CLASS / FRAME_TYPE</div>
+      <div style="margin-bottom:12px"><button class="action-btn">读取当前</button></div>
+      <div class="frame-grid" id="frameGrid"><div class="frame-card selected" onclick="selectFrame(this)"><svg viewBox="0 0 60 60"><line x1="15" y1="15" x2="45" y2="45" stroke="#30363d" stroke-width="2"></line><line x1="45" y1="15" x2="15" y2="45" stroke="#30363d" stroke-width="2"></line><circle cx="15" cy="15" r="6" fill="#1c2128" stroke="#4b8bf5"></circle><circle cx="45" cy="15" r="6" fill="#1c2128" stroke="#ef4444"></circle><circle cx="15" cy="45" r="6" fill="#1c2128" stroke="#ef4444"></circle><circle cx="45" cy="45" r="6" fill="#1c2128" stroke="#4b8bf5"></circle><rect x="25" y="25" width="10" height="10" rx="2" fill="#21262d" stroke="#4b8bf5"></rect></svg><div class="frame-name">四旋翼 X</div><div class="frame-desc">标准 X 型四旋翼</div><div class="frame-params">CLASS=1 TYPE=1</div><div class="frame-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="10" height="10"><path d="M20 6 L9 17 L4 12"></path></svg> 当前</div></div><div class="frame-card" onclick="selectFrame(this)"><svg viewBox="0 0 60 60"><line x1="15" y1="15" x2="45" y2="45" stroke="#30363d" stroke-width="2"></line><line x1="45" y1="15" x2="15" y2="45" stroke="#30363d" stroke-width="2"></line><circle cx="15" cy="15" r="6" fill="#1c2128" stroke="#4b8bf5"></circle><circle cx="45" cy="15" r="6" fill="#1c2128" stroke="#ef4444"></circle><circle cx="15" cy="45" r="6" fill="#1c2128" stroke="#4b8bf5"></circle><circle cx="45" cy="45" r="6" fill="#1c2128" stroke="#ef4444"></circle><rect x="25" y="25" width="10" height="10" rx="2" fill="#21262d" stroke="#4b8bf5"></rect></svg><div class="frame-name">四旋翼 +</div><div class="frame-desc">十字型四旋翼</div><div class="frame-params">CLASS=1 TYPE=0</div></div><div class="frame-card" onclick="selectFrame(this)"><svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="20" fill="none" stroke="#30363d" stroke-width="2"></circle><circle cx="30" cy="10" r="5" fill="#1c2128" stroke="#4b8bf5"></circle><circle cx="48" cy="40" r="5" fill="#1c2128" stroke="#ef4444"></circle><circle cx="12" cy="40" r="5" fill="#1c2128" stroke="#ef4444"></circle><rect x="25" y="25" width="10" height="10" rx="2" fill="#21262d" stroke="#4b8bf5"></rect></svg><div class="frame-name">六旋翼 X</div><div class="frame-desc">标准 X 型六旋翼</div><div class="frame-params">CLASS=3 TYPE=1</div></div><div class="frame-card" onclick="selectFrame(this)"><svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="20" fill="none" stroke="#30363d" stroke-width="2"></circle><circle cx="30" cy="10" r="5" fill="#1c2128" stroke="#4b8bf5"></circle><circle cx="48" cy="40" r="5" fill="#1c2128" stroke="#ef4444"></circle><circle cx="12" cy="40" r="5" fill="#1c2128" stroke="#ef4444"></circle><rect x="25" y="25" width="10" height="10" rx="2" fill="#21262d" stroke="#4b8bf5"></rect></svg><div class="frame-name">八旋翼 X</div><div class="frame-desc">标准 X 型八旋翼</div><div class="frame-params">CLASS=7 TYPE=1</div></div><div class="frame-card" onclick="selectFrame(this)"><svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="20" fill="none" stroke="#30363d" stroke-width="2"></circle><circle cx="30" cy="10" r="5" fill="#1c2128" stroke="#4b8bf5"></circle><circle cx="48" cy="40" r="5" fill="#1c2128" stroke="#ef4444"></circle><circle cx="12" cy="40" r="5" fill="#1c2128" stroke="#ef4444"></circle><rect x="25" y="25" width="10" height="10" rx="2" fill="#21262d" stroke="#4b8bf5"></rect></svg><div class="frame-name">三旋翼 Y</div><div class="frame-desc">Y 型三旋翼</div><div class="frame-params">CLASS=2 TYPE=0</div></div></div></div></div>
+  </div>
+</div>
+
+<!-- ===== Data Page ===== -->
+<div class="page" id="page-data">
+  <div class="data-page">
+    <div class="data-tabs">
+      <div class="data-tab" onclick="dataTab(this,'waveform')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M3 20 L7 10 L10 15 L14 5 L18 12 L21 8"></path></svg> 波形监视器</div>
+      <div class="data-tab" onclick="dataTab(this,'mavlink')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M12 2 L22 12 L12 22 L2 12 Z"></path><path d="M12 6 L18 12 L12 18 L6 12 Z"></path></svg> MAVLink 控制台</div>
+      <div class="data-tab active" onclick="dataTab(this,'logs')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M14 2 H6 a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M8 13h8M8 17h5"></path></svg> 飞行日志</div>
+    </div>
+    <!-- Waveform -->
+    <div class="data-tab-content" id="dt-waveform">
+      <div style="flex-direction:column;width:100%">
+        <div class="wave-toolbar">
+          <button class="wave-tr-btn active" onclick="setTimeRange(this,5)">5s</button>
+          <button class="wave-tr-btn" onclick="setTimeRange(this,10)">10s</button>
+          <button class="wave-tr-btn" onclick="setTimeRange(this,30)">30s</button>
+          <button class="wave-tr-btn" onclick="setTimeRange(this,60)">60s</button>
+          <div class="tb-divider"></div>
+          <button class="wave-tr-btn" onclick="togglePause(this)">⏸ 暂停</button>
+          <button class="wave-tr-btn" onclick="clearWave()">清空</button>
+          <span class="stat-info" id="waveStat">4 通道 · 179 样本</span>
+        </div>
+        <div class="wave-body">
+          <div class="wave-chart"><canvas id="waveCanvas" width="0" height="0"></canvas></div>
+          <div class="wave-sidebar" id="waveSidebar"><div class="wave-sidebar-group">姿态</div><div class="wave-channel enabled" onclick="toggleChannel('roll')"><span class="ch-dot" style="background:#f0a500"></span><span class="ch-name">横滚 Roll</span><span class="ch-unit">°</span></div><div class="wave-channel enabled" onclick="toggleChannel('pitch')"><span class="ch-dot" style="background:#22c55e"></span><span class="ch-name">俯仰 Pitch</span><span class="ch-unit">°</span></div><div class="wave-channel" onclick="toggleChannel('yaw')"><span class="ch-dot" style="background:#60a5fa"></span><span class="ch-name">偏航 Yaw</span><span class="ch-unit">°</span></div><div class="wave-sidebar-group">飞行</div><div class="wave-channel enabled" onclick="toggleChannel('alt')"><span class="ch-dot" style="background:#a78bfa"></span><span class="ch-name">相对高度</span><span class="ch-unit">m</span></div><div class="wave-channel" onclick="toggleChannel('climb')"><span class="ch-dot" style="background:#34d399"></span><span class="ch-name">爬升率</span><span class="ch-unit">m/s</span></div><div class="wave-channel" onclick="toggleChannel('gspd')"><span class="ch-dot" style="background:#fb923c"></span><span class="ch-name">地速</span><span class="ch-unit">m/s</span></div><div class="wave-channel" onclick="toggleChannel('hdg')"><span class="ch-dot" style="background:#e879f9"></span><span class="ch-name">航向</span><span class="ch-unit">°</span></div><div class="wave-sidebar-group">电池</div><div class="wave-channel enabled" onclick="toggleChannel('volt')"><span class="ch-dot" style="background:#fbbf24"></span><span class="ch-name">电压</span><span class="ch-unit">V</span></div><div class="wave-channel" onclick="toggleChannel('curr')"><span class="ch-dot" style="background:#f87171"></span><span class="ch-name">电流</span><span class="ch-unit">A</span></div><div class="wave-channel" onclick="toggleChannel('batt')"><span class="ch-dot" style="background:#4ade80"></span><span class="ch-name">电量</span><span class="ch-unit">%</span></div><div class="wave-sidebar-group">GPS</div><div class="wave-channel" onclick="toggleChannel('sats')"><span class="ch-dot" style="background:#38bdf8"></span><span class="ch-name">卫星数</span><span class="ch-unit">颗</span></div><div class="wave-channel" onclick="toggleChannel('hdop')"><span class="ch-dot" style="background:#94a3b8"></span><span class="ch-name">HDOP</span><span class="ch-unit"></span></div></div>
+        </div>
+      </div>
+    </div>
+    <!-- MAVLink console -->
+    <div class="data-tab-content" id="dt-mavlink">
+      <div class="mav-body" style="width:100%">
+        <div class="mav-log">
+          <div class="mav-toolbar">
+            <input type="text" placeholder="过滤消息名/ID/SysID" style="width:180px" oninput="filterMav(this.value)">
+            <button class="wave-tr-btn" onclick="toggleMavPause(this)">⏸ 暂停</button>
+            <button class="wave-tr-btn" onclick="clearMav()">清空</button>
+            <button class="wave-tr-btn" onclick="toggleFreqPanel()">频率统计 →</button>
+            <span class="mav-stats" id="mavStats">19 条</span>
+            <label class="mav-autoscroll"><input type="checkbox" checked="" onchange="mavAutoScroll=this.checked"> 自动滚动</label>
+          </div>
+          <div class="mav-header">
+            <span>时间</span><span>ID</span><span>消息名</span><span>SYS</span><span>长度</span><span>Payload</span>
+          </div>
+          <div class="mav-list" id="mavList"><div class="mav-row"><span class="mono" style="color:var(--text-muted)">22:58:46.512</span><span class="mono" style="color:#58a6ff">22</span><span style="color:#58a6ff">ATTITUDE</span><span class="mono" style="color:var(--info)">1</span><span class="mono" style="color:var(--info)">8</span><span class="mono" style="color:var(--text-muted);overflow:hidden;text-overflow:ellipsis">0f0 034 0f 021 034 0b6 0e6 0a</span></div><div class="mav-row"><span class="mono" style="color:var(--text-muted)">22:58:51.509</span><span class="mono" style="color:#c9d1d9">27</span><span style="color:#c9d1d9">RAW_IMU</span><span class="mono" style="color:var(--info)">1</span><span class="mono" style="color:var(--info)">8</span><span class="mono" style="color:var(--text-muted);overflow:hidden;text-overflow:ellipsis">011 0d5 01c 0b2 08d 0b5 011 036</span></div><div class="mav-row"><span class="mono" style="color:var(--text-muted)">22:58:56.517</span><span class="mono" style="color:#c9d1d9">30</span><span style="color:#c9d1d9">ATTITUDE_QUATERNION</span><span class="mono" style="color:var(--info)">1</span><span class="mono" style="color:var(--info)">8</span><span class="mono" style="color:var(--text-muted);overflow:hidden;text-overflow:ellipsis">05d 0b 0cb 06a 0fd 03a 03b 079</span></div><div class="mav-row"><span class="mono" style="color:var(--text-muted)">22:59:01.516</span><span class="mono" style="color:#8b949e">0</span><span style="color:#8b949e">HEARTBEAT</span><span class="mono" style="color:var(--info)">1</span><span class="mono" style="color:var(--info)">8</span><span class="mono" style="color:var(--text-muted);overflow:hidden;text-overflow:ellipsis">0c9 09a 0a9 047 0af 09 018 090</span></div><div class="mav-row"><span class="mono" style="color:var(--text-muted)">22:59:06.510</span><span class="mono" style="color:#c9d1d9">35</span><span style="color:#c9d1d9">RC_CHANNELS_RAW</span><span class="mono" style="color:var(--info)">1</span><span class="mono" style="color:var(--info)">8</span><span class="mono" style="color:var(--text-muted);overflow:hidden;text-overflow:ellipsis">054 030 097 09a 083 08d 044 075</span></div><div class="mav-row"><span class="mono" style="color:var(--text-muted)">22:59:11.513</span><span class="mono" style="color:#c9d1d9">29</span><span style="color:#c9d1d9">SCALED_PRESSURE</span><span class="mono" style="color:var(--info)">1</span><span class="mono" style="color:var(--info)">8</span><span class="mono" style="color:var(--text-muted);overflow:hidden;text-overflow:ellipsis">018 04d 03d 0d3 0b3 09b 086 049</span></div><div class="mav-row"><span class="mono" style="color:var(--text-muted)">22:59:16.516</span><span class="mono" style="color:#c9d1d9">27</span><span style="color:#c9d1d9">RAW_IMU</span><span class="mono" style="color:var(--info)">1</span><span class="mono" style="color:var(--info)">8</span><span class="mono" style="color:var(--text-muted);overflow:hidden;text-overflow:ellipsis">07f 01 027 0c6 088 081 074 0fc</span></div><div class="mav-row"><span class="mono" style="color:var(--text-muted)">22:59:21.522</span><span class="mono" style="color:#c9d1d9">35</span><span style="color:#c9d1d9">RC_CHANNELS_RAW</span><span class="mono" style="color:var(--info)">1</span><span class="mono" style="color:var(--info)">8</span><span class="mono" style="color:var(--text-muted);overflow:hidden;text-overflow:ellipsis">0f3 0cd 058 061 057 051 04 0a4</span></div><div class="mav-row"><span class="mono" style="color:var(--text-muted)">22:59:26.515</span><span class="mono" style="color:#c9d1d9">2</span><span style="color:#c9d1d9">SYSTEM_TIME</span><span class="mono" style="color:var(--info)">1</span><span class="mono" style="color:var(--info)">8</span><span class="mono" style="color:var(--text-muted);overflow:hidden;text-overflow:ellipsis">07f 0c3 017 0e2 050 057 0c4 04c</span></div><div class="mav-row"><span class="mono" style="color:var(--text-muted)">22:59:31.510</span><span class="mono" style="color:#c9d1d9">74</span><span style="color:#c9d1d9">VFR_HUD</span><span class="mono" style="color:var(--info)">1</span><span class="mono" style="color:var(--info)">8</span><span class="mono" style="color:var(--text-muted);overflow:hidden;text-overflow:ellipsis">0d9 040 03b 052 038 084 06f 00</span></div><div class="mav-row"><span class="mono" style="color:var(--text-muted)">22:59:36.521</span><span class="mono" style="color:#c9d1d9">24</span><span style="color:#c9d1d9">GPS_RAW_INT</span><span class="mono" style="color:var(--info)">1</span><span class="mono" style="color:var(--info)">8</span><span class="mono" style="color:var(--text-muted);overflow:hidden;text-overflow:ellipsis">05a 02e 055 07f 0e5 090 0b3 047</span></div><div class="mav-row"><span class="mono" style="color:var(--text-muted)">22:59:41.524</span><span class="mono" style="color:#c9d1d9">29</span><span style="color:#c9d1d9">SCALED_PRESSURE</span><span class="mono" style="color:var(--info)">1</span><span class="mono" style="color:var(--info)">8</span><span class="mono" style="color:var(--text-muted);overflow:hidden;text-overflow:ellipsis">09d 0b 0c1 06a 0bd 068 018 085</span></div><div class="mav-row"><span class="mono" style="color:var(--text-muted)">22:59:46.516</span><span class="mono" style="color:#8b949e">0</span><span style="color:#8b949e">HEARTBEAT</span><span class="mono" style="color:var(--info)">1</span><span class="mono" style="color:var(--info)">8</span><span class="mono" style="color:var(--text-muted);overflow:hidden;text-overflow:ellipsis">04 0f6 08f 0fa 0a6 01a 03d 046</span></div><div class="mav-row"><span class="mono" style="color:var(--text-muted)">22:59:51.515</span><span class="mono" style="color:#c9d1d9">131</span><span style="color:#c9d1d9">SAFETY_SET_ALLOWED</span><span class="mono" style="color:var(--info)">1</span><span class="mono" style="color:var(--info)">8</span><span class="mono" style="color:var(--text-muted);overflow:hidden;text-overflow:ellipsis">041 034 0d2 0c7 046 049 03a 05</span></div><div class="mav-row"><span class="mono" style="color:var(--text-muted)">22:59:56.528</span><span class="mono" style="color:#c9d1d9">33</span><span style="color:#c9d1d9">GLOBAL_POSITION_INT</span><span class="mono" style="color:var(--info)">1</span><span class="mono" style="color:var(--info)">8</span><span class="mono" style="color:var(--text-muted);overflow:hidden;text-overflow:ellipsis">0b5 057 086 01 01a 0fe 071 075</span></div><div class="mav-row"><span class="mono" style="color:var(--text-muted)">23:00:01.516</span><span class="mono" style="color:#c9d1d9">147</span><span style="color:#c9d1d9">BATTERY_STATUS</span><span class="mono" style="color:var(--info)">1</span><span class="mono" style="color:var(--info)">8</span><span class="mono" style="color:var(--text-muted);overflow:hidden;text-overflow:ellipsis">050 04e 028 082 03e 0a8 055 06</span></div><div class="mav-row"><span class="mono" style="color:var(--text-muted)">23:00:06.517</span><span class="mono" style="color:#58a6ff">22</span><span style="color:#58a6ff">ATTITUDE</span><span class="mono" style="color:var(--info)">1</span><span class="mono" style="color:var(--info)">8</span><span class="mono" style="color:var(--text-muted);overflow:hidden;text-overflow:ellipsis">066 0b1 01a 048 0c4 0ca 06a 0c0</span></div><div class="mav-row"><span class="mono" style="color:var(--text-muted)">23:00:11.524</span><span class="mono" style="color:#c9d1d9">35</span><span style="color:#c9d1d9">RC_CHANNELS_RAW</span><span class="mono" style="color:var(--info)">1</span><span class="mono" style="color:var(--info)">8</span><span class="mono" style="color:var(--text-muted);overflow:hidden;text-overflow:ellipsis">01f 08a 0ae 013 08a 0fd 0a2 03a</span></div><div class="mav-row"><span class="mono" style="color:var(--text-muted)">23:00:16.519</span><span class="mono" style="color:#c9d1d9">33</span><span style="color:#c9d1d9">GLOBAL_POSITION_INT</span><span class="mono" style="color:var(--info)">1</span><span class="mono" style="color:var(--info)">8</span><span class="mono" style="color:var(--text-muted);overflow:hidden;text-overflow:ellipsis">0cb 055 0b7 03c 0f3 08e 0dd 07</span></div></div>
+        </div>
+        <div class="mav-freq" id="mavFreqPanel">
+          <div class="mav-freq-head">消息频率 (Hz)</div>
+          <div class="mav-freq-list" id="mavFreqList"><div class="mav-freq-row"><span class="mav-freq-name">RC_CHANNELS_RAW</span><span class="mav-freq-hz" style="color:var(--success)">0.1</span></div><div class="mav-freq-row"><span class="mav-freq-name">HEARTBEAT</span><span class="mav-freq-hz" style="color:var(--success)">0.1</span></div><div class="mav-freq-row"><span class="mav-freq-name">ATTITUDE</span><span class="mav-freq-hz" style="color:var(--success)">0.1</span></div><div class="mav-freq-row"><span class="mav-freq-name">RAW_IMU</span><span class="mav-freq-hz" style="color:var(--success)">0.1</span></div><div class="mav-freq-row"><span class="mav-freq-name">SCALED_PRESSURE</span><span class="mav-freq-hz" style="color:var(--success)">0.1</span></div><div class="mav-freq-row"><span class="mav-freq-name">GLOBAL_POSITION_INT</span><span class="mav-freq-hz" style="color:var(--success)">0.1</span></div><div class="mav-freq-row"><span class="mav-freq-name">SYSTEM_TIME</span><span class="mav-freq-hz" style="color:var(--success)">0.0</span></div><div class="mav-freq-row"><span class="mav-freq-name">GPS_RAW_INT</span><span class="mav-freq-hz" style="color:var(--success)">0.0</span></div><div class="mav-freq-row"><span class="mav-freq-name">ATTITUDE_QUATERNION</span><span class="mav-freq-hz" style="color:var(--success)">0.0</span></div><div class="mav-freq-row"><span class="mav-freq-name">VFR_HUD</span><span class="mav-freq-hz" style="color:var(--success)">0.0</span></div><div class="mav-freq-row"><span class="mav-freq-name">SAFETY_SET_ALLOWED</span><span class="mav-freq-hz" style="color:var(--success)">0.0</span></div><div class="mav-freq-row"><span class="mav-freq-name">BATTERY_STATUS</span><span class="mav-freq-hz" style="color:var(--success)">0.0</span></div></div>
+          <div class="mav-freq-sep"></div>
+          <div class="mav-freq-head">数据流频率控制</div>
+          <div class="mav-stream-list" id="mavStreamList"><div class="mav-stream-row"><span class="mav-stream-name">EXTRA1</span><select class="mav-stream-select" onchange="toast('已设置 EXTRA1 频率')"><option>0Hz</option><option>1Hz</option><option>2Hz</option><option>5Hz</option><option>10Hz</option><option>20Hz</option><option selected="">50Hz</option></select></div><div class="mav-stream-row"><span class="mav-stream-name">EXTRA2</span><select class="mav-stream-select" onchange="toast('已设置 EXTRA2 频率')"><option>0Hz</option><option>1Hz</option><option>2Hz</option><option>5Hz</option><option selected="">10Hz</option><option>20Hz</option><option>50Hz</option></select></div><div class="mav-stream-row"><span class="mav-stream-name">POSITION</span><select class="mav-stream-select" onchange="toast('已设置 POSITION 频率')"><option>0Hz</option><option>1Hz</option><option>2Hz</option><option selected="">5Hz</option><option>10Hz</option><option>20Hz</option><option>50Hz</option></select></div><div class="mav-stream-row"><span class="mav-stream-name">RAW_SENSORS</span><select class="mav-stream-select" onchange="toast('已设置 RAW_SENSORS 频率')"><option>0Hz</option><option>1Hz</option><option>2Hz</option><option>5Hz</option><option selected="">10Hz</option><option>20Hz</option><option>50Hz</option></select></div><div class="mav-stream-row"><span class="mav-stream-name">RC_CHANNELS</span><select class="mav-stream-select" onchange="toast('已设置 RC_CHANNELS 频率')"><option>0Hz</option><option>1Hz</option><option>2Hz</option><option>5Hz</option><option selected="">10Hz</option><option>20Hz</option><option>50Hz</option></select></div><div class="mav-stream-row"><span class="mav-stream-name">EXTENDED_STATUS</span><select class="mav-stream-select" onchange="toast('已设置 EXTENDED_STATUS 频率')"><option>0Hz</option><option>1Hz</option><option selected="">2Hz</option><option>5Hz</option><option>10Hz</option><option>20Hz</option><option>50Hz</option></select></div><div class="mav-stream-row"><span class="mav-stream-name">EXTRA3</span><select class="mav-stream-select" onchange="toast('已设置 EXTRA3 频率')"><option>0Hz</option><option>1Hz</option><option>2Hz</option><option selected="">5Hz</option><option>10Hz</option><option>20Hz</option><option>50Hz</option></select></div></div>
+        </div>
+      </div>
+    </div>
+    <!-- Flight logs -->
+    <div class="data-tab-content active" id="dt-logs">
+      <div class="flight-body" style="width:100%">
+        <div class="flight-list">
+          <div class="flight-list-head">
+            <span class="flight-list-title">飞行记录</span>
+            <button class="wave-tr-btn" onclick="refreshFlights()">刷新</button>
+          </div>
+          <div class="flight-list-body" id="flightList"><div class="flight-item" onclick="selectFlight(1)"><div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span class="flight-item-id">#1</span><span class="flight-item-type">SITL-Quad</span></div><div class="flight-item-time">2026-08-31 14:19:00</div><div class="flight-item-stats"><span>16分20秒</span><span>102.5m</span><span>4.25km</span></div></div><div class="flight-item" onclick="selectFlight(2)"><div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span class="flight-item-id">#2</span><span class="flight-item-type">SITL-Quad</span></div><div class="flight-item-time">2026-08-30 10:15:00</div><div class="flight-item-stats"><span>13分30秒</span><span>85m</span><span>3.12km</span></div></div><div class="flight-item" onclick="selectFlight(3)"><div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span class="flight-item-id">#3</span><span class="flight-item-type">SITL-Quad</span></div><div class="flight-item-time">2026-08-29 15:42:00</div><div class="flight-item-stats"><span>13分10秒</span><span>76.8m</span><span>2.68km</span></div></div><div class="flight-item" onclick="selectFlight(4)"><div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span class="flight-item-id">#4</span><span class="flight-item-type">SITL-Quad</span></div><div class="flight-item-time">2026-08-28 09:20:00</div><div class="flight-item-stats"><span>12分45秒</span><span>90.2m</span><span>3.54km</span></div></div></div>
+        </div>
+        <div class="flight-detail">
+          <div class="flight-detail-head">
+            <div class="flight-detail-title" id="flightDetailTitle">选择一条飞行记录</div>
+            <div class="flight-detail-meta" id="flightDetailMeta"></div>
+          </div>
+          <div id="flightMap" style="flex:1;width:100%;overflow:hidden;background:#0d1117"></div>
+          <div class="flight-detail-stats" id="flightStats" style="display:none">
+            <div class="flight-stat-item"><div class="flight-stat-val mono" id="fsPoints">—</div><div class="flight-stat-label">数据点</div></div>
+            <div class="flight-stat-item"><div class="flight-stat-val mono" id="fsAlt">—</div><div class="flight-stat-label">最高高度</div></div>
+            <div class="flight-stat-item"><div class="flight-stat-val mono" id="fsSpeed">—</div><div class="flight-stat-label">最大速度</div></div>
+            <div class="flight-stat-item"><div class="flight-stat-val mono" id="fsVolt">—</div><div class="flight-stat-label">最低电压</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://webapi.amap.com/maps?v=2.0&amp;key=e8327a3b1618e6d0c100ee550c824af3&amp;plugin=AMap.Scale,AMap.ControlBar,AMap.TileLayer.Satellite,AMap.InfoWindow,AMap.Marker,AMap.Polyline"></script>
+<script>
+/* ===== Global State ===== */
+var state = {
+  connected:true, armed:true, mode:'AUTO', remaining:72, voltageV:12.4,
+  signalPct:88, satellites:14, fixType:3, hdop:1.2,
+  heading:128, rollDeg:2.3, pitchDeg:1.5, relAltM:86.4, speedMs:8.2, climbRate:0.6,
+  lat:32.0612, lon:118.793,
+  homeLat:32.0612, homeLon:118.793, armedTime:null, flightTime:0,
+  rcChannels:[1500,1500,1500,1500,1500,1500,1500,1500,1500,1500,1500,1500],
+  servoOutputs:[1200,1100,1150,1180,0,0,0,0,0,0,0,0],
+  sensorsPresent:{IMU:true,COMPASS:true,BARO:true,RANGEFINDER:true,OPTFLOW:true,GPS:true},
+  sensorsHealthy:{IMU:true,COMPASS:true,BARO:true,RANGEFINDER:false,OPTFLOW:true,GPS:true},
+  rangeDistance:82, optFlowQuality:250, baroPresAbs:1013.2, baroTemp:2650,
+  vz:-60, current:8.5
+};
+var alerts = [
+  {level:'warn',message:'测距仪信号弱',timestamp:Date.now()-35000},
+  {level:'info',message:'已进入自动模式',timestamp:Date.now()-66000},
+  {level:'info',message:'任务已上传 6 航点',timestamp:Date.now()-141000},
+  {level:'info',message:'飞控已解锁',timestamp:Date.now()-216000}
+];
+
+/* 3D Drone view control */
+var droneView={pitch:35,roll:0,yaw:0};
+var droneDragging=false,dragStart3d={x:0,y:0};
+(function initDroneDrag(){
+  var scene=document.getElementById('droneScene');
+  if(!scene)return;
+  scene.addEventListener('mousedown',function(e){
+    droneDragging=true;dragStart3d={x:e.clientX,y:e.clientY};
+    scene.style.cursor='grabbing';
+  });
+  document.addEventListener('mousemove',function(e){
+    if(!droneDragging)return;
+    droneView.roll+=(e.clientX-dragStart3d.x)*0.3;
+    droneView.pitch+=(e.clientY-dragStart3d.y)*0.3;
+    droneView.pitch=Math.max(-60,Math.min(90,droneView.pitch));
+    dragStart3d={x:e.clientX,y:e.clientY};
+  });
+  document.addEventListener('mouseup',function(){
+    if(droneDragging){droneDragging=false;scene.style.cursor='grab';}
+  });
+})();
+
+/* ===== Page Switching ===== */
+function switchPage(name){
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.toggle('active',t.dataset.page===name));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  if(typeof AMap==='undefined'){
+    toast('高德地图API加载失败，请检查网络或Key配置','error');
+    return;
+  }
+  if(name==='fly' && !flyMap) setTimeout(function(){initFlyMap();},50);
+  if(name==='plan' && !planMap) setTimeout(function(){initPlanMap();},50);
+  if(name==='data' && !dataMapsInited){ initWaveCanvas(); setTimeout(function(){initDataMaps();},50); dataMapsInited=true; }
+  if(name==='fly' && flyMap && flyMap.resize) setTimeout(function(){flyMap.resize();},150);
+  if(name==='plan' && planMap && planMap.resize) setTimeout(function(){planMap.resize();},150);
+  if(name==='data' && flightMap && flightMap.resize) setTimeout(function(){flightMap.resize();},150);
+}
+
+/* ===== Toast ===== */
+function toast(msg,type){
+  type=type||'success';
+  var d=document.createElement('div');
+  d.className='toast '+type;
+  d.textContent=msg;
+  document.body.appendChild(d);
+  setTimeout(()=>{d.style.opacity='0';setTimeout(()=>d.remove(),300)},2500);
+}
+function updateConnStatus(){
+  var dot=document.getElementById('connDot');
+  var txt=document.getElementById('connText');
+  if(!dot||!txt)return;
+  if(state.connected){
+    dot.className='conn-dot on';
+    txt.textContent='已连接 · UDP 127.0.0.1:14550';
+  }else{
+    dot.className='conn-dot off';
+    txt.textContent='连接断开 · 正在重连...';
+    toast('飞控连接断开！','err');
+  }
+}
+
+/* ===== RC & Motor Bars ===== */
+function buildChannelBars(){
+  var rc='',mot='';
+  for(var i=1;i<=12;i++){
+    rc+='<div class="vbar"><span class="vbar-val mono">—</span><div class="vbar-track"><div class="vbar-fill rc-fill" style="height:0%"></div></div><span class="vbar-label">CH'+i+'</span></div>';
+    mot+='<div class="vbar"><span class="vbar-val mono">—</span><div class="vbar-track"><div class="vbar-fill motor-fill" style="height:0%"></div></div><span class="vbar-label">M'+i+'</span></div>';
+  }
+  document.getElementById('rcBars').innerHTML=rc;
+  document.getElementById('motorBars').innerHTML=mot;
+}
+function updateChannelBars(){
+  var rcFills=document.querySelectorAll('#rcBars .vbar-fill');
+  var rcVals=document.querySelectorAll('#rcBars .vbar-val');
+  var motFills=document.querySelectorAll('#motorBars .vbar-fill');
+  var motVals=document.querySelectorAll('#motorBars .vbar-val');
+  for(var i=0;i<12;i++){
+    var rc=state.rcChannels[i];
+    var rcpct=rc<800?0:((rc-1000)/10);
+    rcpct=Math.max(0,Math.min(100,rcpct));
+    rcFills[i].style.height=rcpct+'%';
+    rcVals[i].textContent=rc<900?'—':Math.round(rc);
+    var mo=state.servoOutputs[i];
+    var mopct=mo<800?0:((mo-1000)/10);
+    mopct=Math.max(0,Math.min(100,mopct));
+    motFills[i].style.height=mopct+'%';
+    motFills[i].style.background=mopct>85?'#ef4444':mopct>65?'#e3b341':'#3fb950';
+    motVals[i].textContent=mo<900?'—':Math.round(mo);
+  }
+  // Joystick
+  var ch1=state.rcChannels[0],ch2=state.rcChannels[1],ch3=state.rcChannels[2],ch4=state.rcChannels[3];
+  var jl=document.getElementById('joyLeft'),jr=document.getElementById('joyRight');
+  if(jl){
+    var lpct=ch3<800?50:((ch3-1000)/20);
+    var rpct=ch4<800?50:((ch4-1000)/20);
+    jl.style.left=rpct+'%';jl.style.top=(100-lpct)+'%';
+  }
+  if(jr){
+    var rpct2=ch1<800?50:((ch1-1000)/20);
+    var ppct=ch2<800?50:((ch2-1000)/20);
+    jr.style.left=rpct2+'%';jr.style.top=(100-ppct)+'%';
+  }
+  var c1=document.getElementById('ch1Val'),c2=document.getElementById('ch2Val'),c3=document.getElementById('ch3Val'),c4=document.getElementById('ch4Val');
+  if(c1)c1.textContent=ch1<900?'—':Math.round(ch1);
+  if(c2)c2.textContent=ch2<900?'—':Math.round(ch2);
+  if(c3)c3.textContent=ch3<900?'—':Math.round(ch3);
+  if(c4)c4.textContent=ch4<900?'—':Math.round(ch4);
+}
+
+/* ===== Overview Update ===== */
+function updateOverview(){
+  document.getElementById('ovRoll').textContent=state.rollDeg.toFixed(1)+'°';
+  document.getElementById('ovPitch').textContent=state.pitchDeg.toFixed(1)+'°';
+  document.getElementById('ovYaw').textContent=state.heading.toFixed(0)+'°';
+  document.getElementById('ovAlt').textContent=state.relAltM.toFixed(1)+'m';
+  document.getElementById('ovGs').textContent=state.speedMs.toFixed(1);
+  var vs=state.climbRate;
+  var vsEl=document.getElementById('ovVs');
+  vsEl.textContent=(vs>=0?'+':'')+vs.toFixed(1);
+  vsEl.style.color=vs>0.2?'var(--success)':vs<-0.2?'var(--danger)':'var(--info)';
+  document.getElementById('sImu').textContent=state.rollDeg.toFixed(1)+'°/'+state.pitchDeg.toFixed(1)+'°';
+  document.getElementById('sMag').textContent=state.heading.toFixed(0)+'°';
+  document.getElementById('sBaro').textContent=state.relAltM.toFixed(1)+'m';
+  document.getElementById('sRange').textContent=(state.rangeDistance/100).toFixed(1)+'m';
+  document.getElementById('sFlow').textContent=Math.round(state.optFlowQuality/2.55)+'%';
+  document.getElementById('sGps').textContent=(state.fixType>=3?state.fixType+'D':'No Fix')+'·'+state.satellites+'颗';
+  // ADI ball
+  var adiBall=document.getElementById('adiBall');
+  if(adiBall) adiBall.setAttribute('transform','rotate('+(-state.rollDeg)+' 70 70) translate(0 '+(state.pitchDeg*2)+')');
+  // 3D Drone model rotation
+  var d3m=document.getElementById('drone3dModel');
+  if(d3m){
+    var rx=state.pitchDeg+droneView.pitch;
+    var ry=-state.rollDeg+droneView.roll;
+    var rz=-state.heading+droneView.yaw;
+    d3m.style.transform='rotateX('+rx+'deg) rotateY('+ry+'deg) rotateZ('+rz+'deg)';
+  }
+  // Motor rotors spin
+  for(var ri=1;ri<=4;ri++){
+    var rotor=document.getElementById('rotor'+ri);
+    if(rotor){
+      if(state.armed) rotor.classList.add('spinning');
+      else rotor.classList.remove('spinning');
+    }
+  }
+}
+
+/* ===== Fly Page ===== */
+var flyMap=null, droneMarkerFly=null, flyInfoWindow=null, flyPath=[], flyPolyline=null, mapFollowMode=true, showTrajectory=true, homeMarkerFly=null;
+/* 旋转无人机图标：实测校准——通过投影测量"北"在屏幕上的真实方向来补偿地图旋转/倾斜 */
+function updateDroneIconRotation(){
+  if(!droneMarkerFly||!flyMap)return;
+  var el=droneMarkerFly.getContent();if(!el)return;
+  var svg=el.querySelector('svg g');if(!svg)return;
+  var ang=state.heading;
+  try{
+    if(flyMap.lngLatToContainer){
+      var p0=flyMap.lngLatToContainer(new AMap.LngLat(state.lon,state.lat));
+      var p1=flyMap.lngLatToContainer(new AMap.LngLat(state.lon,state.lat+0.01));
+      if(p0&&p1){
+        var x0=(typeof p0.getX==='function')?p0.getX():p0.x;
+        var y0=(typeof p0.getY==='function')?p0.getY():p0.y;
+        var x1=(typeof p1.getX==='function')?p1.getX():p1.x;
+        var y1=(typeof p1.getY==='function')?p1.getY():p1.y;
+        if(isFinite(x1-x0)&&isFinite(y1-y0)&&(x1!==x0||y1!==y0)){
+          ang=state.heading+Math.atan2(x1-x0,-(y1-y0))*180/Math.PI;
+        }
+      }
+    }else if(flyMap.getRotation){
+      ang=state.heading+flyMap.getRotation();
+    }
+  }catch(e){}
+  svg.setAttribute('transform','translate(20,20) rotate('+ang+')');
+}
+function initFlyMap(){
+  try{
+    var container=document.getElementById('flyMap');
+    container.innerHTML='<div class="map-loading" id="flyMapLoading"><div class="ml-spin"></div>地图加载中...</div><div class="map-ctrl-bar"><button class="map-ctrl-btn active" id="btnFollow" onclick="toggleFollow()">跟随</button><button class="map-ctrl-btn active" id="btnTrajectory" onclick="toggleTrajectory()">轨迹</button></div>';
+    flyMap=new AMap.Map('flyMap',{
+      zoom:16,center:[state.lon,state.lat],
+      viewMode:'3D',pitch:55,rotation:0,
+      resizeEnable:true
+    });
+    flyMap.on('complete',function(){var l=document.getElementById('flyMapLoading');if(l)l.remove();});
+    setTimeout(function(){var l=document.getElementById('flyMapLoading');if(l)l.remove();},5000);
+    flyMap.addControl(new AMap.Scale({position:'LB'}));
+    var cb=new AMap.ControlBar({position:{left:'10px',top:'10px'},showZoomBar:true,showControlButton:true});
+    flyMap.addControl(cb);
+    var cbEl=document.querySelector('.amap-control-bar');
+    if(cbEl)cbEl.style.zIndex='1000';
+    var el=document.createElement('div');el.className='amap-drone-marker';
+    el.innerHTML='<div class="drone-alt-tag" id="flyMarkerAlt">'+state.relAltM.toFixed(1)+'m</div><svg width="40" height="40" viewBox="0 0 40 40"><g transform="translate(20,20)"><path d="M0,-16 L11,10 L3,4 L0,14 L-3,4 L-11,10 Z" fill="#ef4444" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></g></svg>';
+    droneMarkerFly=new AMap.Marker({position:[state.lon,state.lat],content:el,anchor:'center'});
+    droneMarkerFly.setMap(flyMap);
+    flyInfoWindow=new AMap.InfoWindow({content:'',offset:new AMap.Pixel(0,-35),closeWhenClickMap:true});
+    droneMarkerFly.on('click',function(){
+      var c='<div style="min-width:120px"><div style="font-weight:600;margin-bottom:4px;color:#f0a500">无人机状态</div><div>高度: '+state.relAltM.toFixed(1)+'m</div><div>速度: '+state.speedMs.toFixed(1)+'m/s</div><div>航向: '+state.heading.toFixed(0)+'°</div><div>经纬: '+state.lat.toFixed(5)+', '+state.lon.toFixed(5)+'</div></div>';
+      flyInfoWindow.setContent(c);
+      flyInfoWindow.open(flyMap,droneMarkerFly.getPosition());
+    });
+    flyPath=[[state.lon,state.lat]];
+    flyPolyline=new AMap.Polyline({path:flyPath,strokeColor:'#f0a500',strokeWeight:2.5,strokeOpacity:0.85});
+    flyPolyline.setMap(flyMap);
+    // Home marker
+    var homeEl=document.createElement('div');
+    homeEl.innerHTML='<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><circle cx="12" cy="14" r="2" fill="#22c55e"/></svg>';
+    homeEl.style.filter='drop-shadow(0 0 3px #22c55e88)';
+    homeMarkerFly=new AMap.Marker({position:[state.homeLon,state.homeLat],content:homeEl,anchor:'center',zIndex:50});
+    homeMarkerFly.setMap(flyMap);
+    // Update drone icon rotation whenever the view changes
+    ['rotate','rotateend','pitch','zoomchange','mapmove'].forEach(function(ev){
+      flyMap.on(ev,function(){updateDroneIconRotation();});
+    });
+  }catch(e){
+    console.error('initFlyMap error:',e);
+    document.getElementById('flyMap').innerHTML='<div style="color:#ef4444;padding:20px;text-align:center">地图加载失败: '+e.message+'</div>';
+  }
+}
+function toggleFollow(){
+  mapFollowMode=!mapFollowMode;
+  var btn=document.getElementById('btnFollow');
+  if(btn){btn.classList.toggle('active',mapFollowMode);btn.textContent=mapFollowMode?'跟随':'自由'}
+}
+function toggleTrajectory(){
+  showTrajectory=!showTrajectory;
+  var btn=document.getElementById('btnTrajectory');
+  if(btn){btn.classList.toggle('active',showTrajectory);btn.textContent=showTrajectory?'轨迹':'轨迹关'}
+}
+function toggleAdi(){
+  var ov=document.getElementById('adiOverlay'),sb=document.getElementById('adiShowBtn');
+  if(ov.classList.contains('hidden')){ov.classList.remove('hidden');sb.classList.add('hidden')}
+  else{ov.classList.add('hidden');sb.classList.remove('hidden')}
+}
+function toggleAlerts(){
+  var b=document.getElementById('alertBody'),c=document.getElementById('alertChev');
+  b.style.display=b.style.display==='none'?'block':'none';
+  c.textContent=b.style.display==='none'?'▸':'▾';
+}
+function flyCmd(cmd,msg){
+  if(confirm('[!] '+cmd+'\n\n'+msg)) toast('已发送 '+cmd+' 指令');
+}
+function updateFlyPage(){
+  var set=(id,v)=>{var e=document.getElementById(id);if(e)e.textContent=v};
+  set('flyHdg',state.heading.toFixed(0));
+  set('flyAlt',state.relAltM.toFixed(1));
+  set('flyGs',state.speedMs.toFixed(1));
+  set('flyVs',(state.climbRate>=0?'+':'')+state.climbRate.toFixed(1));
+  var vsEl=document.getElementById('flyVs');
+  if(vsEl)vsEl.style.color=state.climbRate>0.2?'var(--success)':state.climbRate<-0.2?'var(--danger)':'var(--info)';
+  set('flyRol',state.rollDeg.toFixed(1));
+  set('flyPit',state.pitchDeg.toFixed(1));
+  set('bhBat',Math.round(state.remaining)+'%');
+  var bhBat=document.getElementById('bhBat');
+  if(bhBat)bhBat.style.color=state.remaining<15?'var(--danger)':state.remaining<30?'var(--warning)':'var(--success)';
+  set('bhV',state.voltageV.toFixed(1)+'V');
+  var bhV=document.getElementById('bhV');
+  if(bhV)bhV.style.color=state.voltageV<10.5?'var(--danger)':state.voltageV<11.1?'var(--warning)':'var(--text-primary)';
+  set('bhGps',state.satellites+'颗');
+  set('bhHdop',state.hdop.toFixed(1));
+  var bhHdop=document.getElementById('bhHdop');
+  if(bhHdop)bhHdop.style.color=state.hdop>2.0?'var(--danger)':state.hdop>1.5?'var(--warning)':'var(--success)';
+  set('bhRc',state.signalPct+'%');
+  // Flight timer
+  if(state.armed){
+    if(!state.armedTime)state.armedTime=Date.now();
+    state.flightTime=Math.floor((Date.now()-state.armedTime)/1000);
+  }
+  var hh=Math.floor(state.flightTime/3600),mm=Math.floor((state.flightTime%3600)/60),ss=state.flightTime%60;
+  set('bhFlightTime',(hh<10?'0':'')+hh+':'+(mm<10?'0':'')+mm+':'+(ss<10?'0':'')+ss);
+  set('bhLat',state.lat.toFixed(4)+'°');
+  set('bhLon',state.lon.toFixed(4)+'°');
+  var fm=document.getElementById('flyMode');
+  if(fm){fm.textContent=state.mode;fm.classList.toggle('armed',state.armed)}
+  var adiBall=document.getElementById('adiBallFly');
+  if(adiBall)adiBall.setAttribute('transform','rotate('+(-state.rollDeg)+' 82 82) translate(0 '+(state.pitchDeg*2)+')');
+  if(droneMarkerFly&&flyMap&&!isNaN(state.lon)&&!isNaN(state.lat)){
+    try{
+      droneMarkerFly.setPosition([state.lon,state.lat]);
+      updateDroneIconRotation();
+      var el=droneMarkerFly.getContent();
+      if(el){
+        var altTag=el.querySelector('#flyMarkerAlt');
+        if(altTag)altTag.textContent=state.relAltM.toFixed(1)+'m';
+      }
+      var altOffset=Math.min(state.relAltM*0.4,30);
+      droneMarkerFly.setOffset(new AMap.Pixel(0,-altOffset));
+      if(showTrajectory&&flyPolyline){
+        flyPath.push([state.lon,state.lat]);
+        if(flyPath.length>600)flyPath.shift();
+        flyPolyline.setPath(flyPath);
+        flyPolyline.show();
+      }else if(flyPolyline){
+        flyPolyline.hide();
+      }
+      if(mapFollowMode)flyMap.setCenter([state.lon,state.lat]);
+    }catch(e){
+      console.error('updateFlyPage marker error:',e);
+    }
+  }
+}
+
+/* ===== Plan Page ===== */
+var planMap=null, mapSat=false, waypoints=[], selWp=null, planMarkers=[], planLine=null;
+function initPlanMap(){
+  try{
+    document.getElementById('planMap').innerHTML='<div class="map-loading" id="planMapLoading"><div class="ml-spin"></div>地图加载中...</div>';
+    planMap=new AMap.Map('planMap',{
+      zoom:14,center:[118.793,32.0612],
+      viewMode:'3D',pitch:55,rotation:0,
+      showIndoorMap:false
+    });
+    planMap.on('complete',function(){var l=document.getElementById('planMapLoading');if(l)l.remove();});
+    setTimeout(function(){var l=document.getElementById('planMapLoading');if(l)l.remove();},5000);
+    planMap.addControl(new AMap.Scale({position:'LB'}));
+    planMap.addControl(new AMap.ControlBar({position:{left:'10px',top:'10px'},showZoomBar:true,showControlButton:true}));
+    planMap.on('click',function(e){
+      addWaypoint(e.lngLat.getLat(),e.lngLat.getLng());
+    });
+    fetchWind();
+  }catch(e){
+    console.error('initPlanMap error:',e);
+  }
+}
+var satLayer=null;
+function toggleMapStyle(){
+  mapSat=!mapSat;
+  if(mapSat){
+    if(!satLayer)satLayer=new AMap.TileLayer.Satellite({opacity:0.9});
+    satLayer.setMap(planMap);
+    planMap.setMapStyle('amap://styles/normal');
+  }else{
+    if(satLayer)satLayer.setMap(null);
+    planMap.setMapStyle('amap://styles/dark');
+  }
+  var btn=document.getElementById('mapStyleBtn');
+  if(btn) btn.innerHTML=mapSat?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M9 2 L3 14 L9 14 L6 22 L21 7 L15 7 L18 2 Z"/>':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 0 1 0 20"/></svg>';
+  renderPlanMarkers();
+}
+function haversine(a,b){
+  var R=6371000,la1=a.lat*Math.PI/180,la2=b.lat*Math.PI/180,da=(b.lat-a.lat)*Math.PI/180,do2=(b.lon-a.lon)*Math.PI/180;
+  var h=Math.sin(da/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin(do2/2)**2;
+  return 2*R*Math.asin(Math.sqrt(h));
+}
+function totalDist(list){
+  var d=0;for(var i=1;i<list.length;i++)d+=haversine(list[i-1],list[i]);return d;
+}
+function addWaypoint(lat,lon){
+  waypoints.push({seq:waypoints.length,lat:lat,lon:lon,alt:100,spd:5,hold:0,act:'CRUISE',pri:3});
+  selWp=waypoints.length-1;
+  renderPlan();markDirty();
+}
+function renderPlan(){
+  var list=document.getElementById('wpList');list.innerHTML='';
+  waypoints.forEach(wp=>{
+    var conflict=waypoints.some(w=>w.seq!==wp.seq&&haversine(w,wp)<50);
+    var div=document.createElement('div');
+    div.className='wp-item'+(selWp===wp.seq?' active':'');
+    div.onclick=()=>{selWp=selWp===wp.seq?null:wp.seq;renderPlan()};
+    div.innerHTML='<span class="wp-seq">'+(wp.seq+1)+'</span><span class="wp-coords">'+wp.lat.toFixed(5)+', '+wp.lon.toFixed(5)+'</span><span class="wp-del" onclick="event.stopPropagation();delWp('+wp.seq+')"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M1 1L9 9M9 1L1 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>';
+    list.appendChild(div);
+  });
+  document.getElementById('wpCount').textContent=waypoints.length;
+  document.getElementById('wpDist').textContent=(totalDist(waypoints)/1000).toFixed(2)+' km';
+  // 同步距离到电池续航预测面板（由任务航点自动计算）
+  var bpd=document.getElementById('bpDist');
+  if(bpd)bpd.value=(totalDist(waypoints)/1000).toFixed(2);
+  var hasConflict=waypoints.some((wp,i)=>waypoints.some((w,j)=>i!==j&&haversine(w,wp)<50));
+  var cf=document.getElementById('wpConflict');
+  if(waypoints.length===0){cf.textContent='无航点';cf.style.color='var(--info)'}
+  else if(hasConflict){cf.textContent='航点过近 <50m';cf.style.color='var(--danger)'}
+  else{cf.textContent='无冲突';cf.style.color='var(--success)'}
+  // Editor
+  var ed=document.getElementById('wpEditor');
+  if(selWp===null||!waypoints.find(w=>w.seq===selWp)){ed.classList.add('hidden')}
+  else{
+    var wp=waypoints.find(w=>w.seq===selWp);
+    ed.classList.remove('hidden');
+    document.getElementById('edAlt').value=wp.alt;
+    document.getElementById('edSpd').value=wp.spd;
+    document.getElementById('edHold').value=wp.hold;
+    document.getElementById('edPri').selectedIndex=Math.min(wp.pri-1,4);
+    document.getElementById('edAct').selectedIndex={CRUISE:0,LOITER:1,TAKEPHOTO:2}[wp.act]||0;
+  }
+  renderPlanMarkers();
+}
+function renderPlanMarkers(){
+  if(!planMap)return;
+  planMarkers.forEach(m=>{m.setMap(null)});planMarkers=[];
+  if(planLine){planLine.setMap(null);planLine=null}
+  if(waypoints.length===0)return;
+  var coords=waypoints.map(w=>[w.lon,w.lat]);
+  planLine=new AMap.Polyline({path:coords,strokeColor:'#f0a500',strokeWeight:2,strokeStyle:'dashed'});
+  planLine.setMap(planMap);
+  // Waypoint markers
+  waypoints.forEach((wp,i)=>{
+    var el=document.createElement('div');el.className='wp-marker';
+    var isHome=i===0;
+    el.innerHTML='<svg width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="'+(isHome?'#22c55e':'#f0a500')+'" stroke="#fff" stroke-width="1.5"/><text x="12" y="16" text-anchor="middle" fill="#0d1117" font-size="11" font-weight="bold">'+(i+1)+'</text></svg>';
+    var m=new AMap.Marker({position:[wp.lon,wp.lat],content:el,draggable:true,offset:new AMap.Pixel(-12,-12),anchor:'center'});
+    m.setMap(planMap);
+    m.on('dragend',function(){var p=m.getPosition();wp.lat=p.getLat();wp.lon=p.getLng();renderPlan();markDirty()});
+    planMarkers.push(m);
+  });
+}
+function applyWpEdit(){
+  if(selWp===null)return;
+  var wp=waypoints.find(w=>w.seq===selWp);if(!wp)return;
+  wp.alt=+document.getElementById('edAlt').value;
+  wp.spd=+document.getElementById('edSpd').value;
+  wp.hold=+document.getElementById('edHold').value;
+  wp.pri=+document.getElementById('edPri').value.match(/\d/)[0];
+  wp.act=['CRUISE','LOITER','TAKEPHOTO'][document.getElementById('edAct').selectedIndex];
+  renderPlan();toast('航点 #'+(wp.seq+1)+' 已更新');markDirty();
+}
+function delWp(seq){
+  waypoints=waypoints.filter(w=>w.seq!==seq);
+  waypoints.forEach((w,i)=>w.seq=i);
+  if(selWp===seq)selWp=null;
+  renderPlan();markDirty();
+}
+function clearWaypoints(){
+  if(waypoints.length===0)return;
+  if(confirm('清空全部航点？')){waypoints=[];selWp=null;renderPlan();markDirty();toast('已清空航点')}
+}
+function fitWaypoints(){
+  if(waypoints.length===0||!planMap)return;
+  var markersAndLine=[];
+  if(planLine)markersAndLine.push(planLine);
+  planMarkers.forEach(m=>markersAndLine.push(m));
+  planMap.setFitView(markersAndLine,{padding:[60,60,60,60]});
+}
+function togglePanel(){
+  var p=document.getElementById('missionPanel'),b=document.getElementById('missionPanelBody'),t=document.getElementById('panelToggle');
+  p.classList.toggle('collapsed');
+  b.style.display=p.classList.contains('collapsed')?'none':'block';
+  t.textContent=p.classList.contains('collapsed')?'▶':'◀';
+  if(planMap)setTimeout(()=>planMap.resize(),200);
+}
+function markDirty(){
+  document.getElementById('dirtyDot').classList.remove('hidden');
+}
+function uploadMission(){
+  if(waypoints.length===0){toast('航点列表为空','warn');return}
+  var tp=document.getElementById('transferProgress');tp.classList.remove('hidden');
+  var cur=0,total=waypoints.length;
+  var timer=setInterval(()=>{
+    cur++;
+    document.getElementById('tpLabel').textContent='上传 '+cur+'/'+total;
+    document.getElementById('tpBar').style.width=(cur/total*100)+'%';
+    if(cur>=total){clearInterval(timer);document.getElementById('tpStatus').innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10" style="color:var(--success)"><path d="M20 6 L9 17 L4 12"/></svg>';
+      toast('已上传 '+total+' 个航点');
+      document.getElementById('dirtyDot').classList.add('hidden');
+      document.getElementById('flyHint').classList.remove('hidden');
+      setTimeout(()=>{tp.classList.add('hidden');document.getElementById('tpStatus').innerHTML=''},3000);
+    }
+  },400);
+}
+function downloadMission(){toast('已从飞控读取任务')}
+function saveMissionXml(){toast('已保存为 mission.xml')}
+function loadMissionXml(){toast('已加载任务文件')}
+function optimizePath(){
+  if(waypoints.length<3){toast('至少需要 3 个航点','warn');return}
+  var before=totalDist(waypoints);
+  var home=waypoints[0],rest=waypoints.slice(1).map(w=>Object.assign({},w));
+  var order=[home];
+  while(rest.length){var last=order[order.length-1];rest.sort((a,b)=>haversine(last,a)-haversine(last,b));order.push(rest.shift())}
+  order.forEach((w,i)=>w.seq=i);
+  waypoints=order;
+  var after=totalDist(waypoints);
+  document.getElementById('optResult').classList.remove('hidden');
+  document.getElementById('optBefore').textContent=(before/1000).toFixed(2)+' km';
+  document.getElementById('optAfter').textContent=(after/1000).toFixed(2)+' km';
+  renderPlan();markDirty();toast('路径优化完成');
+}
+function predictBattery(){
+  var d=+document.getElementById('bpDist').value,l=+document.getElementById('bpLoad').value,w=+document.getElementById('bpWind').value;
+  var time=Math.max(1,22-3.2*d-2.1*l-0.8*w);
+  var cost=Math.min(95,18+d*9+l*6+w*2);
+  document.getElementById('bpResult').classList.remove('hidden');
+  document.getElementById('bpTime').textContent=time.toFixed(1)+' min';
+  document.getElementById('bpCost').textContent=Math.round(cost)+'%';
+  toast('预测完成');
+}
+/* 从Open-Meteo免费气象API获取任务区域实时风速（无需API密钥） */
+function fetchWind(){
+  var btn=document.getElementById('btnFetchWind'),info=document.getElementById('windInfo');
+  if(btn){btn.disabled=true;btn.textContent='...';}
+  if(info)info.textContent='正在获取实时气象数据...';
+  var lat=waypoints[0]?waypoints[0].lat:32.0612;
+  var lon=waypoints[0]?waypoints[0].lon:118.793;
+  var url='https://api.open-meteo.com/v1/forecast?latitude='+lat.toFixed(4)+'&longitude='+lon.toFixed(4)+'&current=wind_speed_10m,wind_direction_10m&wind_speed_unit=ms';
+  fetch(url).then(function(r){return r.json()}).then(function(j){
+    if(!j||!j.current||j.current.wind_speed_10m==null)throw new Error('no data');
+    var ws=+j.current.wind_speed_10m,wd=j.current.wind_direction_10m;
+    document.getElementById('bpWind').value=ws.toFixed(1);
+    if(info)info.textContent='实时 '+ws.toFixed(1)+' m/s · 风向 '+Math.round(wd)+'° · Open-Meteo';
+    if(btn){btn.disabled=false;btn.textContent='获取';}
+    toast('风速已获取 '+ws.toFixed(1)+' m/s');
+  }).catch(function(){
+    if(info)info.textContent='获取失败（网络受限），请手动输入风速';
+    if(btn){btn.disabled=false;btn.textContent='获取';}
+    toast('风速获取失败，请手动输入','err');
+  });
+}
+function updatePlanHud(){
+  var set=(id,v)=>{var e=document.getElementById(id);if(e)e.textContent=v};
+  set('pmHudH',state.relAltM.toFixed(1));
+  set('pmHudGs',state.speedMs.toFixed(1));
+  set('pmHudVs',(state.climbRate>=0?'+':'')+state.climbRate.toFixed(1));
+  set('pmHudLat',state.lat.toFixed(6));
+  set('pmHudLon',state.lon.toFixed(6));
+  set('pmHudHdg',state.heading.toFixed(0));
+}
+
+/* ===== Setup Page ===== */
+function setupSection(el,sec){
+  document.querySelectorAll('.setup-menu-item').forEach(i=>i.classList.remove('active'));
+  el.classList.add('active');
+  renderSetupSection(sec);
+}
+function renderSetupSection(sec){
+  var c=document.getElementById('setupContent');
+  var sections={
+    frame:`<div class="setup-section active"><div class="setup-section-title">机架类型</div><div class="setup-section-sub">选择机架后点击应用，重启飞控生效 · FRAME_CLASS / FRAME_TYPE</div>
+      <div style="margin-bottom:12px"><button class="action-btn">读取当前</button></div>
+      <div class="frame-grid" id="frameGrid"></div></div>`,
+    motor:`<div class="setup-section active"><div class="setup-section-title">电机输出</div><div class="setup-section-sub">SERVO_OUTPUT_RAW · M1–M12</div><div class="motor-grid" id="setupMotorGrid"></div></div>`,
+    rc:`<div class="setup-section active"><div class="setup-section-title">遥控通道</div><div class="setup-section-sub">RC_CHANNELS_RAW</div>
+      <div style="display:flex;gap:12px;margin-bottom:12px"><span class="badge" style="color:var(--success);background:#22c55e14;padding:2px 8px;border-radius:10px;font-size:11px">12 通道</span><span style="color:var(--info);font-size:12px">RSSI: 88%</span></div>
+      <div id="setupRcList"></div></div>`,
+    ports:`<div class="setup-section active"><div class="setup-section-title">端口设置</div><div class="setup-section-sub">SERIAL1-6 协议/波特率配置</div>
+      <div style="margin-bottom:12px"><button class="action-btn">读取全部</button></div>
+      <table class="port-table"><thead><tr><th>串口</th><th>协议</th><th>波特率</th><th>操作</th></tr></thead><tbody>
+      ${[1,2,3,4,5,6].map(n=>`<tr><td class="mono">SERIAL${n}</td><td><select><option>MAVLink2</option><option>MAVLink1</option><option>GPS</option><option>关闭</option></select></td><td><select><option>115200</option><option>57600</option><option>921600</option></select></td><td><button class="action-btn">写入</button></td></tr>`).join('')}
+      </tbody></table></div>`,
+    pid:`<div class="setup-section active"><div class="setup-section-title">PID 调参</div><div class="setup-section-sub">已加载 0 / 0 个参数</div>
+      <div style="margin-bottom:12px"><button class="action-btn primary">获取全部参数</button></div>
+      <div class="pid-tabs"><div class="pid-tab active" onclick="pidTab(this)">姿态环</div><div class="pid-tab" onclick="pidTab(this)">角速度环</div><div class="pid-tab" onclick="pidTab(this)">高度控制</div><div class="pid-tab" onclick="pidTab(this)">位置控制</div></div>
+      <table class="pid-table"><thead><tr><th>参数</th><th>名称</th><th>当前值</th><th>范围</th><th>操作</th></tr></thead><tbody>
+      <tr><td>比例 P</td><td class="mono">ATC_RAT_RLL_P</td><td><input type="number" value="0.135" step="0.001" style="width:70px"></td><td>0.0–0.5</td><td><button class="action-btn">写入</button></td></tr>
+      <tr><td>积分 I</td><td class="mono">ATC_RAT_RLL_I</td><td><input type="number" value="0.135" step="0.001" style="width:70px"></td><td>0.0–0.5</td><td><button class="action-btn">写入</button></td></tr>
+      <tr><td>微分 D</td><td class="mono">ATC_RAT_RLL_D</td><td><input type="number" value="0.0036" step="0.0001" style="width:70px"></td><td>0.0–0.01</td><td><button class="action-btn">写入</button></td></tr>
+      </tbody></table></div>`,
+    safety:`<div class="setup-section active"><div class="setup-section-title">安全设置</div><div class="setup-section-sub">故障保护与安全边界</div>
+      <div style="display:flex;flex-direction:column;gap:12px;max-width:480px">
+      <div><label style="font-size:11px;color:var(--info)">低电量阈值 (%)</label><input type="number" value="15" style="width:100px"></div>
+      <div><label style="font-size:11px;color:var(--info)">失控保护动作</label><select><option>返航 RTL</option><option>降落</option><option>悬停</option></select></div>
+      <div><label style="font-size:11px;color:var(--info)">最大飞行高度 (m)</label><input type="number" value="120" style="width:100px"></div>
+      <div><label style="font-size:11px;color:var(--info)">最大飞行距离 (m)</label><input type="number" value="500" style="width:100px"></div>
+      </div></div>`,
+    imu:`<div class="setup-section active"><div class="setup-section-title">IMU 加速度计校准</div><div class="setup-section-sub">六面校准流程（ArduPilot MAV_CMD_PREFLIGHT_CALIBRATION）</div>
+      <div class="cal-card"><div class="cal-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="32" height="32"><path d="M12 2 L20 7 L20 17 L12 22 L4 17 L4 7 Z"/><circle cx="12" cy="12" r="3"/></svg></div><div class="cal-title">IMU 加速度计校准</div><div class="cal-desc">请将飞控依次按六个方向水平放置，每步确认后进入下一步。校准期间请勿移动飞控。</div>
+      <div class="cal-steps" id="calSteps">
+        <div class="cal-step current">① 水平放置</div>
+        <div class="cal-step pending">② 左侧朝上</div>
+        <div class="cal-step pending">③ 右侧朝上</div>
+        <div class="cal-step pending">④ 机头朝上</div>
+        <div class="cal-step pending">⑤ 机头朝下</div>
+        <div class="cal-step pending">⑥ 倒置</div>
+      </div>
+      <button class="action-btn primary" onclick="calStep()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><path d="M20 6 L9 17 L4 12"/></svg> 已摆好，确认此步骤</button></div></div>`,
+    compass:`<div class="setup-section active"><div class="setup-section-title">罗盘校准</div><div class="setup-section-sub">3D 球面校准（旋转飞控使采样均匀分布）</div>
+      <div class="cal-card"><div class="cal-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="32" height="32"><circle cx="12" cy="12" r="10"/><path d="M12 2 L12 14"/><path d="M12 14 L16 10"/><path d="M12 22 L12 14"/></svg></div><div class="cal-title">罗盘校准</div><div class="cal-desc">绕各轴方向充分旋转飞控，移动速度适中，保持流畅。远离金属物体和电磁干扰。</div>
+      <div style="margin-bottom:16px"><div style="font-size:11px;color:var(--info);margin-bottom:4px">校准进度</div><div style="height:6px;background:var(--bg-bar);border-radius:3px"><div id="compassProg" style="height:100%;width:0;background:var(--primary);border-radius:3px;transition:width .3s"></div></div></div>
+      <button class="action-btn primary" onclick="compassCal()">开始校准</button></div></div>`,
+    gps:`<div class="setup-section active"><div class="setup-section-title">GPS 状态</div><div class="setup-section-sub">GPS_RAW_INT · GLOBAL_POSITION_INT</div>
+      <div class="status-cards">
+        <div class="status-card"><div class="status-card-val" style="color:var(--success)">3D</div><div class="status-card-label">定位类型</div></div>
+        <div class="status-card"><div class="status-card-val" style="color:var(--success)">14</div><div class="status-card-label">可见卫星</div></div>
+        <div class="status-card"><div class="status-card-val" style="color:var(--success)">1.20</div><div class="status-card-label">HDOP</div></div>
+        <div class="status-card"><div class="status-card-val">8.2</div><div class="status-card-label">地速 m/s</div></div>
+      </div>
+      <div style="background:var(--bg-panel);border:1px solid var(--border-default);border-radius:8px;padding:12px 14px;max-width:400px">
+        <div style="font-size:11px;color:var(--info);margin-bottom:8px">当前坐标</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px">
+          <div><span style="color:var(--info)">纬度 LAT: </span><span class="mono" id="gpsLat">32.0612000°</span></div>
+          <div><span style="color:var(--info)">经度 LON: </span><span class="mono" id="gpsLon">118.7930000°</span></div>
+          <div><span style="color:var(--info)">海拔 ALT: </span><span class="mono">86.40 m</span></div>
+          <div><span style="color:var(--info)">航向: </span><span class="mono">128.0°</span></div>
+        </div>
+      </div>
+      <div style="color:var(--text-muted);font-size:11px;margin-top:12px">3D Fix 至少需要 4 颗卫星，建议 6 颗以上起飞 · HDOP &lt; 1.0 优秀 · HDOP &lt; 2.0 良好</div>
+      </div>`,
+    baro:`<div class="setup-section active"><div class="setup-section-title">气压计</div><div class="setup-section-sub">SCALED_PRESSURE · SYS_STATUS</div>
+      <div class="status-cards">
+        <div class="status-card"><div class="status-card-val" style="color:var(--success)">正常</div><div class="status-card-label">健康状态</div></div>
+        <div class="status-card"><div class="status-card-val">1013.2</div><div class="status-card-label">气压 hPa</div></div>
+        <div class="status-card"><div class="status-card-val">26.5</div><div class="status-card-label">温度 °C</div></div>
+      </div>
+      <div style="background:var(--bg-panel);border:1px solid var(--border-default);border-radius:6px;padding:10px 14px;font-size:12px;color:var(--text-muted);max-width:480px">气压计校准在飞控上电时自动完成，无需手动操作。修改传感器类型后需重启飞控生效。</div>
+      </div>`,
+    optflow:`<div class="setup-section active"><div class="setup-section-title">光流传感器</div><div class="setup-section-sub">OPTICAL_FLOW (id:100)</div>
+      <div class="status-cards">
+        <div class="status-card"><div class="status-card-val" style="color:var(--success)">98%</div><div class="status-card-label">质量</div></div>
+        <div class="status-card"><div class="status-card-val">0.012</div><div class="status-card-label">X速度 m/s</div></div>
+        <div class="status-card"><div class="status-card-val">-0.008</div><div class="status-card-label">Y速度 m/s</div></div>
+        <div class="status-card"><div class="status-card-val">0.82</div><div class="status-card-label">地面距离 m</div></div>
+      </div></div>`,
+    rangefinder:`<div class="setup-section active"><div class="setup-section-title">激光 / 测距仪</div><div class="setup-section-sub">DISTANCE_SENSOR (id:132)</div>
+      <div class="status-cards">
+        <div class="status-card"><div class="status-card-val" style="color:var(--warning)">异常</div><div class="status-card-label">健康状态</div></div>
+        <div class="status-card"><div class="status-card-val" style="color:var(--warning)">0.82</div><div class="status-card-label">当前距离 m</div></div>
+        <div class="status-card"><div class="status-card-val">0.10</div><div class="status-card-label">最小量程 m</div></div>
+        <div class="status-card"><div class="status-card-val">40.00</div><div class="status-card-label">最大量程 m</div></div>
+      </div></div>`,
+    params:`<div class="setup-section active"><div class="setup-section-title">参数列表</div><div class="setup-section-sub">MAVLink 参数协议 · PARAM_VALUE</div>
+      <div class="param-search"><input type="text" placeholder="搜索参数名..." oninput="filterParams(this.value)"><span style="color:var(--info);font-size:12px" id="paramStat">0 / 0 个参数</span></div>
+      <div style="max-height:calc(100vh - 200px);overflow:auto;border:1px solid var(--border-default);border-radius:6px">
+      <table class="param-table"><thead><tr><th>参数名</th><th>值</th><th>类型</th><th>操作</th></tr></thead><tbody id="paramTbody"></tbody></table>
+      </div></div>`,
+    firmware:`<div class="setup-section active"><div class="setup-section-title">固件升级（OTA）</div><div class="setup-section-sub">HTTP OTA 升级 · POST /update</div>
+      <div class="ota-warn">[!] 升级过程中请勿断开电源或 WiFi 连接。升级失败可能导致飞控变砖。请确保固件文件来源可靠，版本兼容。</div>
+      <div style="margin-bottom:12px"><label style="font-size:11px;color:var(--info)">飞控 IP</label><input type="text" value="192.168.4.1" style="width:200px"></div>
+      <div class="ota-drop" onclick="toast('请选择 .bin 或 .apj 固件文件')"><div style="margin-bottom:8px"><svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="1.5" width="36" height="36"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg></div><div style="font-size:14px;font-weight:600;color:var(--text-primary)">点击选择固件文件</div><div style="font-size:12px;color:var(--info);margin-top:4px">支持 .bin / .apj 格式</div></div>
+      <div style="margin-top:12px"><button class="action-btn primary" onclick="toast('开始升级...')">开始升级</button></div></div>`
+  };
+  c.innerHTML=sections[sec]||'<div class="setup-section active">待实现</div>';
+  if(sec==='frame') renderFrameGrid();
+  if(sec==='motor') renderSetupMotors();
+  if(sec==='rc') renderSetupRc();
+  if(sec==='params') renderParams();
+}
+function renderFrameGrid(){
+  var frames=[
+    {id:'quad-x',name:'四旋翼 X',desc:'标准 X 型四旋翼',cls:1,typ:1,cw:[0,3],ccw:[1,2]},
+    {id:'quad-plus',name:'四旋翼 +',desc:'十字型四旋翼',cls:1,typ:0,cw:[0,2],ccw:[1,3]},
+    {id:'hexa-x',name:'六旋翼 X',desc:'标准 X 型六旋翼',cls:3,typ:1},
+    {id:'octa-x',name:'八旋翼 X',desc:'标准 X 型八旋翼',cls:7,typ:1},
+    {id:'tri',name:'三旋翼 Y',desc:'Y 型三旋翼',cls:2,typ:0}
+  ];
+  var g=document.getElementById('frameGrid');if(!g)return;
+  g.innerHTML=frames.map((f,i)=>
+    '<div class="frame-card'+(i===0?' selected':'')+'" onclick="selectFrame(this)">'+
+    '<svg viewBox="0 0 60 60">'+(f.id.startsWith('quad')?
+      '<line x1="15" y1="15" x2="45" y2="45" stroke="#30363d" stroke-width="2"/><line x1="45" y1="15" x2="15" y2="45" stroke="#30363d" stroke-width="2"/>'+
+      '<circle cx="15" cy="15" r="6" fill="#1c2128" stroke="'+(f.cw&&f.cw.includes(0)?'#4b8bf5':'#ef4444')+'"/>'+
+      '<circle cx="45" cy="15" r="6" fill="#1c2128" stroke="'+(f.cw&&f.cw.includes(1)?'#4b8bf5':'#ef4444')+'"/>'+
+      '<circle cx="15" cy="45" r="6" fill="#1c2128" stroke="'+(f.cw&&f.cw.includes(2)?'#4b8bf5':'#ef4444')+'"/>'+
+      '<circle cx="45" cy="45" r="6" fill="#1c2128" stroke="'+(f.cw&&f.cw.includes(3)?'#4b8bf5':'#ef4444')+'"/>'
+      :'<circle cx="30" cy="30" r="20" fill="none" stroke="#30363d" stroke-width="2"/><circle cx="30" cy="10" r="5" fill="#1c2128" stroke="#4b8bf5"/><circle cx="48" cy="40" r="5" fill="#1c2128" stroke="#ef4444"/><circle cx="12" cy="40" r="5" fill="#1c2128" stroke="#ef4444"/>')+
+    '<rect x="25" y="25" width="10" height="10" rx="2" fill="#21262d" stroke="#4b8bf5"/></svg>'+
+    '<div class="frame-name">'+f.name+'</div><div class="frame-desc">'+f.desc+'</div>'+
+    '<div class="frame-params">CLASS='+f.cls+' TYPE='+f.typ+'</div>'+(i===0?'<div class="frame-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="10" height="10"><path d="M20 6 L9 17 L4 12"/></svg> 当前</div>':'')+
+    '</div>'
+  ).join('');
+}
+function selectFrame(el){
+  document.querySelectorAll('.frame-card').forEach(c=>{c.classList.remove('selected');var b=c.querySelector('.frame-badge');if(b)b.remove()});
+  el.classList.add('selected');
+  var b=document.createElement('div');b.className='frame-badge';b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="10" height="10"><path d="M20 6 L9 17 L4 12"/></svg> 当前';el.appendChild(b);
+  toast('机架类型已选择，需重启飞控生效');
+}
+function renderSetupMotors(){
+  var g=document.getElementById('setupMotorGrid');if(!g)return;
+  g.innerHTML=Array.from({length:12},(_,i)=>{
+    var v=state.servoOutputs[i];var pct=v<800?0:Math.max(0,Math.min(100,(v-1000)/10));
+    var color=pct>85?'#ef4444':pct>65?'#e3b341':'#3fb950';
+    return '<div class="motor-card'+(v<800?' off':'')+'"><span class="motor-name">M'+(i+1)+'</span><div class="motor-bar"><div class="motor-bar-fill" style="height:'+pct+'%;background:'+color+'"></div></div><span class="motor-val">'+(v<800?'—':v)+'</span><span class="motor-pct" style="color:'+color+'">'+pct+'%</span></div>';
+  }).join('');
+}
+function renderSetupRc(){
+  var labels=['横滚 Roll','俯仰 Pitch','油门 Throttle','偏航 Yaw','飞行模式','辅助1','辅助2','辅助3','CH9','CH10','CH11','CH12'];
+  var el=document.getElementById('setupRcList');if(!el)return;
+  el.innerHTML=labels.map((lab,i)=>{
+    var v=state.rcChannels[i];var pct=v<800?0:Math.max(0,Math.min(100,(v-1000)/10));
+    var isCh3=i===2;var abs=Math.abs(pct-50)*2;
+    var color=isCh3?'var(--success)':abs>80?'#ef4444':abs>50?'#e3b341':'var(--primary)';
+    return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border-default)"><span style="width:100px;font-size:12px;color:var(--text-secondary)">CH'+(i+1)+' '+lab+'</span><div style="flex:1;height:6px;background:var(--bg-bar);border-radius:3px;position:relative">'+
+      (isCh3?'<div style="position:absolute;left:0;height:100%;width:'+pct+'%;background:'+color+';border-radius:3px"></div>':
+      '<div style="position:absolute;left:'+(pct>=50?50:pct)+'%;height:100%;width:'+Math.abs(pct-50)+'%;background:'+color+';border-radius:3px"></div>')+
+      '</div><span class="mono" style="width:40px;text-align:right;font-size:11px">'+(v<900?'—':v)+'</span><span class="mono" style="width:40px;text-align:right;font-size:10px;color:var(--info)">'+(isCh3?pct+'%':(pct>=50?'+':'')+(pct-50)*2+'%')+'</span></div>';
+  }).join('');
+}
+var calStepIdx=0;
+function calStep(){
+  var steps=document.querySelectorAll('#calSteps .cal-step');
+  if(calStepIdx>=steps.length-1){
+    steps.forEach(s=>{s.className='cal-step done'});
+    toast('校准完成');
+    return;
+  }
+  steps[calStepIdx].className='cal-step done';
+  calStepIdx++;
+  steps[calStepIdx].className='cal-step current';
+}
+function compassCal(){
+  var p=document.getElementById('compassProg');if(!p)return;
+  var w=0;var t=setInterval(()=>{w+=5;p.style.width=w+'%';if(w>=100){clearInterval(t);toast('罗盘校准完成')}},100);
+}
+function pidTab(el){document.querySelectorAll('.pid-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active')}
+var allParams=[
+  {name:'ARMING_CHECK',value:1,type:'int16'},{name:'AVOID_ENABLE',value:7,type:'int16'},
+  {name:'BAT_LOW_VOLT',value:10.5,type:'float'},{name:'BAT_CRT_VOLT',value:9.8,type:'float'},
+  {name:'DISARM_DELAY',value:10,type:'int16'},{name:'FS_BATT_ENABLE',value:2,type:'int16'},
+  {name:'FS_GCS_ENABLE',value:1,type:'int16'},{name:'GPS_AUTO_SWITCH',value:1,type:'int16'},
+  {name:'LAND_SPEED',value:50,type:'int16'},{name:'PILOT_SPEED_UP',value:250,type:'int16'},
+  {name:'RTL_ALT',value:1500,type:'int16'},{name:'WP_YAW_BEHAVIOR',value:2,type:'int16'}
+];
+function renderParams(){
+  var tb=document.getElementById('paramTbody');if(!tb)return;
+  tb.innerHTML=allParams.map(p=>'<tr><td class="mono" style="color:var(--text-secondary)">'+p.name+'</td><td><input type="'+(p.type==='float'?'number':'number')+'" value="'+p.value+'" style="width:80px" step="'+(p.type==='float'?'0.001':'1')+'"></td><td style="color:var(--info)">'+p.type+'</td><td><button class="action-btn">写入</button></td></tr>').join('');
+  document.getElementById('paramStat').textContent=allParams.length+' / '+allParams.length+' 个参数';
+}
+function filterParams(q){
+  q=q.toLowerCase();var tb=document.getElementById('paramTbody');if(!tb)return;
+  var filtered=allParams.filter(p=>p.name.toLowerCase().includes(q));
+  tb.innerHTML=filtered.map(p=>'<tr><td class="mono" style="color:var(--text-secondary)">'+p.name+'</td><td><input type="number" value="'+p.value+'" style="width:80px"></td><td style="color:var(--info)">'+p.type+'</td><td><button class="action-btn">写入</button></td></tr>').join('');
+  document.getElementById('paramStat').textContent=filtered.length+' / '+allParams.length+' 个参数';
+}
+
+/* ===== Data Page: Waveform Monitor ===== */
+var waveCanvas,waveCtx,waveData={},waveChannels,waveTimeRange=5,wavePaused=false,waveSampleCount=0;
+waveChannels=[
+  {key:'roll',label:'横滚 Roll',unit:'°',group:'姿态',color:'#f0a500',enabled:true},
+  {key:'pitch',label:'俯仰 Pitch',unit:'°',group:'姿态',color:'#22c55e',enabled:true},
+  {key:'yaw',label:'偏航 Yaw',unit:'°',group:'姿态',color:'#60a5fa',enabled:false},
+  {key:'alt',label:'相对高度',unit:'m',group:'飞行',color:'#a78bfa',enabled:true},
+  {key:'climb',label:'爬升率',unit:'m/s',group:'飞行',color:'#34d399',enabled:false},
+  {key:'gspd',label:'地速',unit:'m/s',group:'飞行',color:'#fb923c',enabled:false},
+  {key:'hdg',label:'航向',unit:'°',group:'飞行',color:'#e879f9',enabled:false},
+  {key:'volt',label:'电压',unit:'V',group:'电池',color:'#fbbf24',enabled:true},
+  {key:'curr',label:'电流',unit:'A',group:'电池',color:'#f87171',enabled:false},
+  {key:'batt',label:'电量',unit:'%',group:'电池',color:'#4ade80',enabled:false},
+  {key:'sats',label:'卫星数',unit:'颗',group:'GPS',color:'#38bdf8',enabled:false},
+  {key:'hdop',label:'HDOP',unit:'',group:'GPS',color:'#94a3b8',enabled:false}
+];
+function initWaveCanvas(){
+  waveCanvas=document.getElementById('waveCanvas');waveCtx=waveCanvas.getContext('2d');
+  function resize(){var p=waveCanvas.parentElement;waveCanvas.width=p.offsetWidth;waveCanvas.height=p.offsetHeight}
+  resize();new ResizeObserver(resize).observe(waveCanvas.parentElement);
+  // Sidebar
+  var sb=document.getElementById('waveSidebar');var groups={};
+  waveChannels.forEach(ch=>{if(!groups[ch.group])groups[ch.group]=[];groups[ch.group].push(ch)});
+  var h='';
+  Object.keys(groups).forEach(g=>{
+    h+='<div class="wave-sidebar-group">'+g+'</div>';
+    groups[g].forEach(ch=>{
+      h+='<div class="wave-channel'+(ch.enabled?' enabled':'')+'" onclick="toggleChannel(\''+ch.key+'\')"><span class="ch-dot" style="background:'+ch.color+'"></span><span class="ch-name">'+ch.label+'</span><span class="ch-unit">'+ch.unit+'</span></div>';
+    });
+  });
+  sb.innerHTML=h;
+  setInterval(sampleWave,200);
+  setInterval(drawWave,100);
+}
+function toggleChannel(key){
+  var ch=waveChannels.find(c=>c.key===key);if(!ch)return;
+  ch.enabled=!ch.enabled;
+  if(!ch.enabled)waveData[key]=[];
+  initWaveSidebar();
+}
+function initWaveSidebar(){
+  var sb=document.getElementById('waveSidebar');var groups={};
+  waveChannels.forEach(ch=>{if(!groups[ch.group])groups[ch.group]=[];groups[ch.group].push(ch)});
+  var h='';
+  Object.keys(groups).forEach(g=>{
+    h+='<div class="wave-sidebar-group">'+g+'</div>';
+    groups[g].forEach(ch=>{
+      h+='<div class="wave-channel'+(ch.enabled?' enabled':'')+'" onclick="toggleChannel(\''+ch.key+'\')"><span class="ch-dot" style="background:'+ch.color+'"></span><span class="ch-name">'+ch.label+'</span><span class="ch-unit">'+ch.unit+'</span></div>';
+    });
+  });
+  sb.innerHTML=h;
+}
+function sampleWave(){
+  if(wavePaused)return;
+  var now=Date.now();
+  var vals={roll:state.rollDeg,pitch:state.pitchDeg,yaw:state.heading,alt:state.relAltM,climb:state.climbRate,gspd:state.speedMs,hdg:state.heading,volt:state.voltageV,curr:state.current,batt:state.remaining,sats:state.satellites,hdop:state.hdop};
+  waveChannels.forEach(ch=>{
+    if(!ch.enabled)return;
+    if(!waveData[ch.key])waveData[ch.key]=[];
+    waveData[ch.key].push({t:now,v:vals[ch.key]});
+    if(waveData[ch.key].length>6000)waveData[ch.key].shift();
+  });
+  waveSampleCount++;
+  var enCount=waveChannels.filter(c=>c.enabled).length;
+  var stat=document.getElementById('waveStat');
+  if(stat)stat.textContent=enCount+' 通道 · '+waveSampleCount+' 样本';
+}
+function drawWave(){
+  if(!waveCtx)return;
+  var w=waveCanvas.width,h=waveCanvas.height;
+  waveCtx.clearRect(0,0,w,h);
+  // Grid
+  waveCtx.strokeStyle='#21262d';waveCtx.lineWidth=1;
+  for(var i=0;i<=4;i++){waveCtx.beginPath();waveCtx.moveTo(60,i*h/4);waveCtx.lineTo(w-20,i*h/4);waveCtx.stroke()}
+  // Each enabled channel
+  var now=Date.now();var windowMs=waveTimeRange*1000;
+  var enabled=waveChannels.filter(c=>c.enabled);
+  if(enabled.length===0)return;
+  // Find min/max across all enabled
+  var allVals=[];
+  enabled.forEach(ch=>{
+    (waveData[ch.key]||[]).forEach(d=>{if(d.t>now-windowMs)allVals.push(d.v)});
+  });
+  if(allVals.length===0)return;
+  var mn=Math.min.apply(null,allVals),mx=Math.max.apply(null,allVals);
+  var range=mx-mn||1;mn-=range*0.1;mx+=range*0.1;range=mx-mn;
+  // Draw channels
+  enabled.forEach(ch=>{
+    var data=(waveData[ch.key]||[]).filter(d=>d.t>now-windowMs);
+    if(data.length<2)return;
+    waveCtx.strokeStyle=ch.color;waveCtx.lineWidth=1.5;waveCtx.beginPath();
+    data.forEach((d,i)=>{
+      var x=60+(d.t-(now-windowMs))/windowMs*(w-80);
+      var y=h-20-(d.v-mn)/range*(h-40);
+      if(i===0)waveCtx.moveTo(x,y);else waveCtx.lineTo(x,y);
+    });
+    waveCtx.stroke();
+  });
+  // Axis labels
+  waveCtx.fillStyle='#8b949e';waveCtx.font='10px JetBrains Mono';
+  waveCtx.fillText(mn.toFixed(1),4,h-20);waveCtx.fillText(mx.toFixed(1),4,12);
+  waveCtx.fillText((waveTimeRange+'s ago'),60,h-4);waveCtx.fillText('now',w-30,h-4);
+}
+function setTimeRange(el,s){waveTimeRange=s;document.querySelectorAll('.wave-toolbar .wave-tr-btn').forEach((b,i)=>{if(i<4)b.classList.remove('active')});el.classList.add('active')}
+function togglePause(el){wavePaused=!wavePaused;el.textContent=wavePaused?'▶ 继续':'⏸ 暂停'}
+function clearWave(){waveData={};waveSampleCount=0;document.getElementById('waveStat').textContent='0 通道 · 0 样本'}
+
+/* ===== Data Page: MAVLink Console ===== */
+var mavEntries=[],mavPaused=false,mavFilter='',mavAutoScroll=true,showFreq=true;
+var mavMsgNames={0:'HEARTBEAT',1:'SYS_STATUS',2:'SYSTEM_TIME',22:'ATTITUDE',24:'GPS_RAW_INT',27:'RAW_IMU',29:'SCALED_PRESSURE',30:'ATTITUDE_QUATERNION',33:'GLOBAL_POSITION_INT',35:'RC_CHANNELS_RAW',36:'SERVO_OUTPUT_RAW',62:'NAV_CONTROLLER_OUTPUT',74:'VFR_HUD',76:'COMMAND_ACK',131:'SAFETY_SET_ALLOWED',147:'BATTERY_STATUS',253:'STATUSTEXT'};
+var mavColors={0:'#8b949e',22:'#58a6ff',253:'#e3b341'};
+function getMavColor(id){if(id>=43&&id<=51)return'#3fb950';return mavColors[id]||'#c9d1d9'}
+function addMavEntry(){
+  if(mavPaused)return;
+  var ids=Object.keys(mavMsgNames);var id=+ids[Math.floor(Math.random()*ids.length)];
+  var name=mavMsgNames[id];
+  var payload=Array.from({length:8},()=>'0'+Math.floor(Math.random()*256).toString(16).slice(-2)).join(' ');
+  mavEntries.push({t:Date.now(),id:id,name:name,sys:1,len:8,payload:payload});
+  if(mavEntries.length>500)mavEntries.shift();
+}
+function renderMav(){
+  var filtered=mavEntries.filter(e=>{
+    if(!mavFilter)return true;
+    var q=mavFilter.toLowerCase();
+    return e.name.toLowerCase().includes(q)||String(e.id).includes(q)||String(e.sys).includes(q);
+  });
+  var list=document.getElementById('mavList');
+  var html=filtered.slice(-200).map(e=>{
+    var t=new Date(e.t);
+    var ts=String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0')+':'+String(t.getSeconds()).padStart(2,'0')+'.'+String(t.getMilliseconds()).padStart(3,'0');
+    return '<div class="mav-row"><span class="mono" style="color:var(--text-muted)">'+ts+'</span><span class="mono" style="color:'+getMavColor(e.id)+'">'+e.id+'</span><span style="color:'+getMavColor(e.id)+'">'+e.name+'</span><span class="mono" style="color:var(--info)">'+e.sys+'</span><span class="mono" style="color:var(--info)">'+e.len+'</span><span class="mono" style="color:var(--text-muted);overflow:hidden;text-overflow:ellipsis">'+e.payload+'</span></div>';
+  }).join('');
+  list.innerHTML=html;
+  if(mavAutoScroll)list.scrollTop=list.scrollHeight;
+  document.getElementById('mavStats').textContent=mavEntries.length+' 条';
+  // Freq
+  renderMavFreq();
+}
+function renderMavFreq(){
+  var freq={};
+  mavEntries.forEach(e=>{freq[e.id]=(freq[e.id]||0)+1});
+  var sorted=Object.entries(freq).sort((a,b)=>b[1]-a[1]);
+  var h=sorted.map(([id,c])=>{
+    var hz=(c/30).toFixed(1);
+    return '<div class="mav-freq-row"><span class="mav-freq-name">'+(mavMsgNames[id]||id)+'</span><span class="mav-freq-hz" style="color:'+(hz>30?'var(--primary)':'var(--success)')+'">'+hz+'</span></div>';
+  }).join('');
+  document.getElementById('mavFreqList').innerHTML=h;
+}
+var streamDefaults=[{name:'EXTRA1',hz:50},{name:'EXTRA2',hz:10},{name:'POSITION',hz:5},{name:'RAW_SENSORS',hz:10},{name:'RC_CHANNELS',hz:10},{name:'EXTENDED_STATUS',hz:2},{name:'EXTRA3',hz:5}];
+function renderMavStreams(){
+  var h=streamDefaults.map(s=>{
+    return '<div class="mav-stream-row"><span class="mav-stream-name">'+s.name+'</span><select class="mav-stream-select" onchange="toast(\'已设置 '+s.name+' 频率\')"><option'+(s.hz===0?' selected':'')+'>0Hz</option><option'+(s.hz===1?' selected':'')+'>1Hz</option><option'+(s.hz===2?' selected':'')+'>2Hz</option><option'+(s.hz===5?' selected':'')+'>5Hz</option><option'+(s.hz===10?' selected':'')+'>10Hz</option><option'+(s.hz===20?' selected':'')+'>20Hz</option><option'+(s.hz===50?' selected':'')+'>50Hz</option></select></div>';
+  }).join('');
+  document.getElementById('mavStreamList').innerHTML=h;
+}
+function filterMav(v){mavFilter=v;renderMav()}
+function toggleMavPause(el){mavPaused=!mavPaused;el.textContent=mavPaused?'▶ 继续':'⏸ 暂停'}
+function clearMav(){mavEntries=[];renderMav()}
+function toggleFreqPanel(){showFreq=!showFreq;document.getElementById('mavFreqPanel').style.display=showFreq?'flex':'none'}
+
+/* ===== Data Page: Flight Logs ===== */
+var flightMap=null,dataMapsInited=false;
+var flights=[
+  {id:1,type:'SITL-Quad',started_at:'2026-08-31 14:19:00',ended_at:'2026-08-31 14:35:20',duration_s:980,max_alt:102.5,total_dist:4250},
+  {id:2,type:'SITL-Quad',started_at:'2026-08-30 10:15:00',ended_at:'2026-08-30 10:28:30',duration_s:810,max_alt:85.0,total_dist:3120},
+  {id:3,type:'SITL-Quad',started_at:'2026-08-29 15:42:00',ended_at:'2026-08-29 15:55:10',duration_s:790,max_alt:76.8,total_dist:2680},
+  {id:4,type:'SITL-Quad',started_at:'2026-08-28 09:20:00',ended_at:'2026-08-28 09:32:45',duration_s:765,max_alt:90.2,total_dist:3540}
+];
+function initDataMaps(){
+  renderFlights();renderMavStreams();
+  try{
+    document.getElementById('flightMap').innerHTML='<div class="map-loading" id="flightMapLoading"><div class="ml-spin"></div>地图加载中...</div>';
+    flightMap=new AMap.Map('flightMap',{
+      zoom:14,center:[118.793,32.0612],
+      viewMode:'3D',pitch:55,rotation:0,
+      showIndoorMap:false
+    });
+    flightMap.on('complete',function(){var l=document.getElementById('flightMapLoading');if(l)l.remove();});
+    setTimeout(function(){var l=document.getElementById('flightMapLoading');if(l)l.remove();},5000);
+    flightMap.addControl(new AMap.Scale({position:'LB'}));
+    flightMap.addControl(new AMap.ControlBar({position:{left:'10px',top:'10px'},showZoomBar:true,showControlButton:true}));
+  }catch(e){
+    console.error('initDataMaps error:',e);
+  }
+}
+function renderFlights(){
+  var lb=document.getElementById('flightList');
+  lb.innerHTML=flights.map(f=>{
+    var dur=Math.floor(f.duration_s/60)+'分'+(f.duration_s%60)+'秒';
+    return '<div class="flight-item" onclick="selectFlight('+f.id+')"><div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span class="flight-item-id">#'+f.id+'</span><span class="flight-item-type">'+f.type+'</span></div><div class="flight-item-time">'+f.started_at+'</div><div class="flight-item-stats"><span>'+dur+'</span><span>'+f.max_alt+'m</span><span>'+(f.total_dist/1000).toFixed(2)+'km</span></div></div>';
+  }).join('');
+}
+function selectFlight(id){
+  document.querySelectorAll('.flight-item').forEach((el,i)=>el.classList.toggle('active',flights[i].id===id));
+  var f=flights.find(x=>x.id===id);if(!f)return;
+  document.getElementById('flightDetailTitle').textContent='飞行记录 #'+id;
+  var dur=Math.floor(f.duration_s/60)+'分'+(f.duration_s%60)+'秒';
+  document.getElementById('flightDetailMeta').innerHTML='<span>开始: '+f.started_at+'</span><span>时长: '+dur+'</span><span>最高: '+f.max_alt+'m</span><span>距离: '+(f.total_dist/1000).toFixed(2)+'km</span>';
+  document.getElementById('flightStats').style.display='flex';
+  // Simulated telemetry data
+  var n=Math.floor(f.duration_s/2);
+  document.getElementById('fsPoints').textContent=n;
+  document.getElementById('fsAlt').textContent=f.max_alt.toFixed(1)+'m';
+  document.getElementById('fsSpeed').textContent='12.3m/s';
+  document.getElementById('fsVolt').textContent='11.2V';
+  // Draw trajectory on map
+  if(flightMap)drawTrajectory(id);
+}
+var flightPolyline=null, flightPlaybackMarker=null, flightPlaybackIdx=0, flightPlaybackTimer=null, flightPlaybackPath=[];
+function drawTrajectory(id){
+  if(!flightMap)return;
+  if(flightPolyline){flightPolyline.setMap(null);flightPolyline=null}
+  if(flightPlaybackMarker){flightPlaybackMarker.setMap(null);flightPlaybackMarker=null}
+  if(flightPlaybackTimer){clearInterval(flightPlaybackTimer);flightPlaybackTimer=null}
+  var pts=[];var n=50;
+  for(var i=0;i<n;i++){
+    var t=i/n;
+    pts.push([118.793+Math.sin(t*6)*0.008,32.0612+Math.cos(t*4)*0.006]);
+  }
+  flightPlaybackPath=pts;
+  flightPolyline=new AMap.Polyline({path:pts,strokeColor:'#f0a500',strokeWeight:2,strokeOpacity:0.85});
+  flightPolyline.setMap(flightMap);
+  // Playback marker
+  var pbEl=document.createElement('div');
+  pbEl.innerHTML='<svg width="32" height="32" viewBox="0 0 40 40"><g transform="translate(20,20)"><path d="M0,-14 L10,8 L3,3 L0,12 L-3,3 L-10,8 Z" fill="#3b82f6" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></g></svg>';
+  pbEl.style.filter='drop-shadow(0 0 4px #3b82f688)';
+  flightPlaybackMarker=new AMap.Marker({position:pts[0],content:pbEl,anchor:'center'});
+  flightPlaybackMarker.setMap(flightMap);
+  flightPlaybackIdx=0;
+  flightMap.setFitView([flightPolyline],{padding:[40,40,40,40]});
+  // Auto-play
+  startFlightPlayback();
+}
+function startFlightPlayback(){
+  if(flightPlaybackTimer)clearInterval(flightPlaybackTimer);
+  flightPlaybackTimer=setInterval(function(){
+    if(!flightPlaybackMarker||!flightPlaybackPath.length)return;
+    flightPlaybackIdx=(flightPlaybackIdx+1)%flightPlaybackPath.length;
+    flightPlaybackMarker.setPosition(flightPlaybackPath[flightPlaybackIdx]);
+  },200);
+}
+function stopFlightPlayback(){
+  if(flightPlaybackTimer){clearInterval(flightPlaybackTimer);flightPlaybackTimer=null}
+}
+function refreshFlights(){toast('已刷新飞行记录')}
+
+/* ===== Data Tab Switching ===== */
+function dataTab(el,name){
+  document.querySelectorAll('.data-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.data-tab-content').forEach(c=>c.classList.remove('active'));
+  document.getElementById('dt-'+name).classList.add('active');
+  if(name==='logs'&&flightMap)setTimeout(()=>flightMap.resize(),100);
+}
+
+/* ===== Telemetry Simulation ===== */
+var simT=0;
+function simulate(){
+  simT++;
+  // Disconnect simulation (rare)
+  if(!state.connected){
+    if(Math.random()<0.3){state.connected=true;updateConnStatus();}
+    return;
+  }
+  if(simT>30&&Math.random()<0.002){state.connected=false;updateConnStatus();return;}
+  state.rollDeg=2+Math.sin(simT/6)*3;
+  state.pitchDeg=1+Math.cos(simT/7)*2;
+  state.relAltM=86+Math.sin(simT/8)*4;
+  state.climbRate=Math.sin(simT/7)*0.8;
+  state.remaining=Math.max(10,72-simT*0.015);
+  state.voltageV=12+state.remaining/100;
+  state.signalPct=Math.round(85+Math.sin(simT/3)*5);
+  state.satellites=Math.round(13+Math.sin(simT/9)*2);
+  state.hdop=1.0+Math.abs(Math.sin(simT/11))*0.8;
+  // 无人机绕Home点做圆周飞行；航向与地速由真实位移计算，保证图标指向与轨迹切线一致
+  var ang=simT*0.035, rad=0.0022;
+  var newLat=32.0612+rad*Math.sin(ang), newLon=118.793+rad*Math.cos(ang);
+  var dN=(newLat-state.lat)*111320, dE=(newLon-state.lon)*111320*Math.cos(state.lat*Math.PI/180);
+  var gs=Math.sqrt(dN*dN+dE*dE);
+  if(gs>0.3){
+    var brg=Math.atan2(dE,dN)*180/Math.PI;if(brg<0)brg+=360;
+    state.heading=brg;
+  }
+  state.speedMs=gs;
+  state.lat=newLat;state.lon=newLon;
+  state.rangeDistance=80+Math.sin(simT/10)*5;
+  // RC channels
+  state.rcChannels[0]=1500+Math.sin(simT/4)*300;
+  state.rcChannels[1]=1500+Math.cos(simT/5)*200;
+  state.rcChannels[2]=1200+Math.sin(simT/8)*300;
+  state.rcChannels[3]=1500+Math.sin(simT/6)*150;
+  for(var i=4;i<12;i++)state.rcChannels[i]=1000+Math.random()*1000;
+  // Motors
+  for(var i=0;i<4;i++)state.servoOutputs[i]=1100+Math.sin(simT/5+i)*150+Math.random()*100;
+  // Update UI
+  updateOverview();updateFlyPage();updatePlanHud();updateChannelBars();
+  if(simT%5===0)addMavEntry();
+  if(simT%3===0)renderMav();
+}
+
+/* ===== Init ===== */
+buildChannelBars();
+renderSetupSection('frame');
+renderPlan();
+setInterval(simulate,1000);
+/* Keyboard shortcuts */
+document.addEventListener('keydown',function(e){
+  if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='TEXTAREA')return;
+  if(e.ctrlKey||e.metaKey){
+    var k=e.key.toLowerCase();
+    if(k==='a'){e.preventDefault();flyCmd('解锁','解锁后电机将启动，请确保周围安全！确认解锁？')}
+    else if(k==='t'){e.preventDefault();flyCmd('起飞','起飞至默认高度 2 米，确认？')}
+    else if(k==='l'){e.preventDefault();flyCmd('降落','将在当前位置原地降落，确认？')}
+    else if(k==='r'){e.preventDefault();flyCmd('返航','将返回起飞点（RTL），确认？')}
+    else if(k==='h'){e.preventDefault();flyCmd('悬停','将在当前位置悬停，确认？')}
+  }else{
+    if(e.key==='1')switchPage('overview');
+    else if(e.key==='2')switchPage('fly');
+    else if(e.key==='3')switchPage('plan');
+    else if(e.key==='4')switchPage('setup');
+    else if(e.key==='5')switchPage('data');
+  }
+});
+</script>
+
+
+
+
+
+
+
+
+
+</body></html>
