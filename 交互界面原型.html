@@ -75,7 +75,7 @@ input:disabled,[data-theme="light"] input:disabled{background:var(--bg-hover);co
 .status-strip{display:flex;align-items:stretch;flex-wrap:wrap;background:var(--bg-panel);border-bottom:1px solid var(--border-default)}
 .ss-item{display:flex;flex-direction:column;justify-content:center;gap:3px;padding:12px 20px;border-right:1px solid var(--border-default);min-width:120px}
 .ss-val{color:var(--text-primary);font-family:var(--font-mono);font-size:16px;font-weight:700;line-height:1.15}
-.ss-val.ok{color:var(--success)}
+.ss-val.info{color:var(--primary)}
 .ss-val.warn{color:var(--warning)}
 .ss-val.err{color:var(--danger)}
 .ss-label{color:var(--text-muted);font-size:10px}
@@ -105,7 +105,7 @@ input:disabled,[data-theme="light"] input:disabled{background:var(--bg-hover);co
 .fv-north{fill:var(--text-muted);font-size:9px;font-family:var(--font-mono)}
 .frame-hdg{font-family:var(--font-mono);color:var(--text-primary);font-size:15px;font-weight:700}
 .frame-state{font-size:10px;font-weight:600}
-.frame-state.ok{color:var(--success)}
+.frame-state.ok{color:var(--primary)}
 .frame-state.off{color:var(--text-muted)}
 /* 位置数值 */
 .pos-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border-default);border:1px solid var(--border-default);border-radius:var(--radius-sm);overflow:hidden;flex-shrink:0}
@@ -190,7 +190,7 @@ input:disabled,[data-theme="light"] input:disabled{background:var(--bg-hover);co
 .fly-page{display:flex;flex-direction:column;height:100%}
 .fly-body{flex:1;position:relative;overflow:hidden}
 #flyMap{width:100%;height:100%}
-.fly-banner{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:10;border-radius:20px;padding:5px 16px;font-size:12px;display:flex;align-items:center;gap:8px;transition:opacity .3s}
+.fly-banner{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:10;border-radius:var(--radius-sm);padding:5px 16px;font-size:12px;display:flex;align-items:center;gap:8px;transition:opacity .3s}
 .info-banner{color:var(--info);background:var(--bg-base);opacity:.85;border:1px solid var(--border-default)}
 .warn-banner{color:var(--warning);background:#f59e0b1f;border:1px solid #f59e0b59}
 .banner-link{color:var(--text-link);cursor:pointer;text-decoration:underline}
@@ -203,10 +203,11 @@ input:disabled,[data-theme="light"] input:disabled{background:var(--bg-hover);co
 .hud-unit{color:var(--info);font-size:9px;margin-left:1px}
 .hud-sep{height:1px;background:var(--border-default);margin:4px 0}
 .hud-mode{text-align:center;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;background:var(--bg-bar);color:var(--info)}
-.hud-mode.armed{color:var(--success);background:#22c55e26}
+.hud-mode.armed{color:var(--primary);background:#3b82f626}
 .alerts-panel{position:absolute;bottom:0;left:50%;transform:translateX(-50%);z-index:10;background:var(--bg-panel);border:1px solid var(--border-default);border-bottom:none;border-radius:var(--radius-md) var(--radius-md) 0 0;min-width:320px;max-width:520px}
 .alerts-header{padding:5px 12px;font-size:11px;display:flex;align-items:center;gap:8px;cursor:pointer}
-.alerts-header .alert-count{background:var(--bg-bar);border-radius:10px;padding:0 6px;font-size:10px}
+.alert-latest{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-secondary);display:flex;gap:8px;align-items:baseline}
+.alerts-header .alert-count{background:var(--bg-bar);border-radius:4px;padding:0 6px;font-size:10px}
 .alerts-header .alert-count.warn{color:var(--warning);background:#f59e0b33}
 .alerts-body{max-height:130px;overflow-y:auto;padding:4px 0 6px}
 .alert-item{display:flex;gap:6px;padding:3px 12px;font-size:11px}
@@ -219,15 +220,37 @@ input:disabled,[data-theme="light"] input:disabled{background:var(--bg-hover);co
 .bh-label{color:var(--text-muted);font-size:9px}
 .bh-val{color:var(--text-primary);font-family:var(--font-mono);font-size:13px;font-weight:700}
 .bh-sep{width:1px;height:22px;background:var(--border-hover)}
-.cmd-bar{background:var(--bg-panel);border-top:1px solid var(--border-default);height:64px;padding:0 20px;display:flex;align-items:center;justify-content:center;gap:12px}
-.cmd-sep{width:1px;height:34px;background:var(--border-default);flex-shrink:0}
-.cmd-safe-label{font-size:10px;color:var(--text-muted);letter-spacing:.08em;flex-shrink:0}
-.cmd-safe{display:flex;gap:8px;padding:5px 8px;border:1px solid var(--border-default);border-radius:var(--radius-sm);background:var(--bg-bar)}
-.cmd-btn{min-width:90px;padding:8px 16px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;transition:all .15s;border:1px solid var(--border-default);background:var(--bg-panel);color:var(--text-secondary)}
+.cmd-bar{background:var(--bg-panel);border-top:1px solid var(--border-default);height:64px;padding:0 16px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.cmd-left{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.cmd-arm-ind{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text-muted);border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:3px 8px}
+.cmd-arm-ind.on{color:var(--primary);border-color:var(--primary)}
+.cmd-task{font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cmd-primary{min-width:150px;padding:10px 26px;border-radius:var(--radius-sm);background:var(--primary);color:#fff;border:1px solid var(--primary);font-size:15px;font-weight:700;letter-spacing:.05em;cursor:pointer;flex-shrink:0}
+.cmd-primary:hover{filter:brightness(1.12)}
+.cmd-danger{display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--danger);border-radius:var(--radius-sm);background:#ef444410;flex-shrink:0}
+.cmd-danger-label{font-size:9px;color:var(--danger);letter-spacing:.04em;writing-mode:vertical-rl;line-height:1}
+.cmd-btn{min-width:76px;padding:8px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;transition:all .15s;border:1px solid var(--border-default);background:var(--bg-panel);color:var(--text-secondary)}
 .cmd-btn:hover{background:var(--bg-hover);color:var(--text-primary);border-color:var(--border-hover)}
 .cmd-btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
 .cmd-btn.primary:hover{filter:brightness(1.1)}
 .cmd-btn.warn{background:var(--warning);color:#0d1117;border-color:var(--warning)}
+.cmd-btn.danger{border-color:var(--danger);color:var(--danger);background:var(--bg-panel)}
+.cmd-btn.danger:hover{background:var(--danger);color:#fff;border-color:var(--danger)}
+.cmd-btn.danger.strong{font-weight:700}
+.hold-btn{position:relative;overflow:hidden}
+.hold-fill{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--danger);opacity:.3;pointer-events:none}
+.hold-btn.holding{color:#fff;background:var(--danger);border-color:var(--danger)}
+/* 指令确认模态框 */
+.modal-overlay{position:fixed;inset:0;background:#000000a0;z-index:9000;display:flex;align-items:center;justify-content:center}
+.modal-box{background:var(--bg-panel);border:1px solid var(--border-default);border-radius:6px;box-shadow:var(--shadow-pop);width:360px;max-width:90vw;padding:16px 18px}
+.modal-title{font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:8px}
+.modal-msg{font-size:12px;color:var(--text-secondary);line-height:1.6;margin-bottom:12px}
+.modal-state{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border-default);border:1px solid var(--border-default);border-radius:var(--radius-sm);overflow:hidden;margin-bottom:14px}
+.modal-state>div{background:var(--bg-panel);padding:7px 10px;font-size:10px;color:var(--text-muted)}
+.modal-state b{display:block;font-size:13px;color:var(--text-primary);font-weight:600;margin-top:2px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end}
+.modal-actions .action-btn{flex:0 0 auto;padding:7px 18px;font-size:12px}
+.action-btn.danger{background:var(--danger);color:#fff;border-color:var(--danger)}
 .cmd-btn:disabled{opacity:.4;cursor:not-allowed}
 
 /* ===== Plan Page ===== */
@@ -298,10 +321,10 @@ input:disabled,[data-theme="light"] input:disabled{background:var(--bg-hover);co
 
 /* Frame cards */
 .frame-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
-.frame-card{background:var(--bg-panel);border:1px solid var(--border-default);border-radius:10px;padding:12px;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:6px}
+.frame-card{background:var(--bg-panel);border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:10px;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:4px}
 .frame-card:hover{background:var(--bg-hover);border-color:var(--border-hover)}
 .frame-card.selected{background:var(--bg-hover);border-color:var(--primary)}
-.frame-card svg{width:60px;height:60px}
+.frame-card svg{width:44px;height:44px}
 .frame-name{font-size:13px;font-weight:600;color:var(--text-primary)}
 .frame-desc{font-size:10px;color:var(--info);text-align:center;line-height:1.4}
 .frame-params{font-size:10px;color:var(--text-muted);font-family:var(--font-mono)}
@@ -309,7 +332,7 @@ input:disabled,[data-theme="light"] input:disabled{background:var(--bg-hover);co
 
 /* Motor/RC cards */
 .motor-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:8px}
-.motor-card{background:var(--bg-panel);border:1px solid var(--border-default);border-radius:8px;padding:8px;display:flex;flex-direction:column;align-items:center;gap:4px;transition:border-color .15s}
+.motor-card{background:var(--bg-panel);border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:8px;display:flex;flex-direction:column;align-items:center;gap:4px;transition:border-color .15s}
 .motor-card:hover{border-color:var(--border-hover)}
 .motor-card.off{opacity:.4}
 .motor-name{font-size:11px;font-weight:600;color:var(--text-primary)}
@@ -330,25 +353,25 @@ input:disabled,[data-theme="light"] input:disabled{background:var(--bg-hover);co
 .pid-modified{background:#3b82f60d}
 
 /* Calibration cards */
-.cal-card{background:var(--bg-panel);border:1px solid var(--border-default);border-radius:12px;max-width:480px;padding:32px 24px;text-align:center}
-.cal-icon{font-size:40px;margin-bottom:12px}
-.cal-title{font-size:18px;font-weight:600;color:var(--text-primary);margin-bottom:8px}
-.cal-desc{font-size:13px;color:var(--info);line-height:1.6;margin-bottom:20px}
-.cal-steps{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
-.cal-step{padding:10px;border-radius:6px;font-size:12px;display:flex;align-items:center;gap:8px}
+.cal-card{background:var(--bg-panel);border:1px solid var(--border-default);border-radius:var(--radius-sm);max-width:480px;padding:14px 16px;text-align:left}
+.cal-icon{display:none}
+.cal-title{font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:6px}
+.cal-desc{font-size:11px;color:var(--text-muted);line-height:1.6;margin-bottom:10px}
+.cal-steps{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.cal-step{padding:6px 10px;border-radius:4px;font-size:12px;display:flex;align-items:center;gap:8px}
 .cal-step.done{background:#22c55e0a;color:var(--success)}
 .cal-step.current{background:#3b82f60f;color:var(--primary);border:1px solid var(--primary)}
 .cal-step.pending{background:var(--bg-panel);color:var(--text-muted)}
 
 /* GPS/Baro/OptFlow/Rangefinder status cards */
-.status-cards{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}
-.status-card{background:var(--bg-panel);border:1px solid var(--border-default);border-radius:8px;padding:14px 20px;min-width:110px;text-align:center}
-.status-card-val{font-size:18px;font-weight:600;color:var(--text-primary);font-family:var(--font-mono)}
-.status-card-label{color:var(--info);margin-top:4px;font-size:11px}
+.status-cards{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.status-card{background:var(--bg-panel);border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:8px 12px;min-width:100px}
+.status-card-val{font-size:15px;font-weight:600;color:var(--text-primary);font-family:var(--font-mono)}
+.status-card-label{color:var(--text-muted);margin-top:2px;font-size:10px}
 
 /* OTA */
-.ota-warn{color:var(--highlight-warning);background:#e3b34114;border:1px solid #e3b3414d;border-radius:8px;padding:10px 14px;font-size:12px;line-height:1.6;margin-bottom:16px}
-.ota-drop{border:2px dashed var(--border-hover);border-radius:12px;padding:32px 20px;text-align:center;cursor:pointer;transition:all .15s}
+.ota-warn{color:var(--highlight-warning);background:#e3b34114;border:1px solid #e3b3414d;border-radius:var(--radius-sm);padding:8px 12px;font-size:11px;line-height:1.6;margin-bottom:12px}
+.ota-drop{border:2px dashed var(--border-hover);border-radius:var(--radius-lg);padding:16px;text-align:center;cursor:pointer;transition:all .15s}
 .ota-drop:hover{background:#3b82f608;border-color:var(--primary)}
 
 /* Param table */
@@ -420,7 +443,7 @@ input:disabled,[data-theme="light"] input:disabled{background:var(--bg-hover);co
 .flight-list-head{border-bottom:1px solid var(--border-default);padding:10px 14px;display:flex;align-items:center;justify-content:space-between}
 .flight-list-title{font-size:13px;font-weight:600;color:var(--text-primary)}
 .flight-list-body{flex:1;padding:6px;overflow-y:auto}
-.flight-item{border:1px solid transparent;border-radius:8px;margin-bottom:4px;padding:10px;transition:all .12s;cursor:pointer}
+.flight-item{border:1px solid transparent;border-radius:var(--radius-sm);margin-bottom:4px;padding:8px 10px;transition:all .12s;cursor:pointer}
 .flight-item:hover{background:var(--bg-hover)}
 .flight-item.active{background:var(--bg-hover);border-color:var(--primary)}
 .flight-item-id{color:var(--primary);font-family:var(--font-mono);font-size:11px;font-weight:700}
@@ -439,14 +462,13 @@ input:disabled,[data-theme="light"] input:disabled{background:var(--bg-hover);co
 .flight-stat-label{color:var(--info);margin-top:2px;font-size:10px}
 
 /* ===== AMap overrides ===== */
-.amap-info-content{background:var(--bg-panel)!important;color:var(--text-primary)!important;border:1px solid var(--border-default);border-radius:6px;font-size:11px;padding:8px 12px;box-shadow:0 4px 16px #00000073}
+.amap-info-content{background:var(--bg-panel)!important;color:var(--text-primary)!important;border:1px solid var(--border-default);border-radius:var(--radius-md);font-size:11px;padding:8px 12px;box-shadow:var(--shadow-pop)}
 .amap-info-close{display:none!important}
 .amap-info-sharp{border-top-color:var(--bg-panel)!important}
 
 /* Drone marker */
 .amap-drone-marker{width:40px;height:40px;cursor:pointer;position:relative}
-.amap-drone-marker svg{filter:drop-shadow(0 0 4px #3b82f6cc)}
-.amap-drone-marker .drone-alt-tag{position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--bg-panel);opacity:.92;color:var(--primary);font-size:9px;font-family:var(--font-mono);padding:1px 4px;border-radius:3px;border:1px solid var(--border-default);white-space:nowrap}
+.amap-drone-marker .drone-alt-tag{position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--bg-panel);color:var(--primary);font-size:9px;font-family:var(--font-mono);padding:1px 4px;border-radius:3px;border:1px solid var(--border-default);white-space:nowrap}
 
 /* Map controls */
 .map-ctrl-bar{position:absolute;top:10px;left:112px;z-index:10;display:flex;gap:6px}
@@ -497,12 +519,12 @@ input:disabled,[data-theme="light"] input:disabled{background:var(--bg-hover);co
   <div class="overview-page">
     <!-- 一级信息：全局状态条 -->
     <div class="status-strip">
-      <div class="ss-item"><span class="ss-label">连接</span><span class="ss-val ok" id="ssConn">已连接</span></div>
+      <div class="ss-item"><span class="ss-label">连接</span><span class="ss-val" id="ssConn">已连接</span></div>
       <div class="ss-item"><span class="ss-label">飞行模式</span><span class="ss-val" id="ssMode">AUTO</span></div>
-      <div class="ss-item"><span class="ss-label">解锁状态</span><span class="ss-val warn" id="ssArm">ARMED</span></div>
-      <div class="ss-item"><span class="ss-label">电池</span><span class="ss-val ok" id="ssBatt">72%</span></div>
+      <div class="ss-item"><span class="ss-label">解锁状态</span><span class="ss-val info" id="ssArm">ARMED</span></div>
+      <div class="ss-item"><span class="ss-label">电池</span><span class="ss-val" id="ssBatt">72%</span></div>
       <div class="ss-item"><span class="ss-label">电压</span><span class="ss-val" id="ssVolt">12.4V</span></div>
-      <div class="ss-item"><span class="ss-label">GPS</span><span class="ss-val ok" id="ssGps">3D·14</span></div>
+      <div class="ss-item"><span class="ss-label">GPS</span><span class="ss-val" id="ssGps">3D·14</span></div>
       <div class="ss-alerts" id="ssAlerts"></div>
     </div>
     <!-- 二级信息：主监测区 -->
@@ -747,21 +769,19 @@ input:disabled,[data-theme="light"] input:disabled{background:var(--bg-hover);co
       </div>
       <button class="adi-show hidden" id="adiShowBtn" onclick="toggleAdi()">◎ ADI</button>
       <div class="hud-right">
-        <div class="hud-row"><span class="hud-label">HDG</span><span><span class="hud-val mono" id="flyHdg">148</span><span class="hud-unit">°</span></span></div>
         <div class="hud-row"><span class="hud-label">ALT</span><span><span class="hud-val mono" id="flyAlt">86.2</span><span class="hud-unit">m</span></span></div>
         <div class="hud-row"><span class="hud-label">GS</span><span><span class="hud-val mono" id="flyGs">9.2</span><span class="hud-unit">m/s</span></span></div>
-        <div class="hud-row"><span class="hud-label">VS</span><span><span class="hud-val mono" id="flyVs" style="color: var(--success);">+0.8</span><span class="hud-unit">m/s</span></span></div>
-        <div class="hud-row"><span class="hud-label">ROL</span><span class="hud-val mono" id="flyRol">-0.7</span><span class="hud-unit">°</span></div>
-        <div class="hud-row"><span class="hud-label">PIT</span><span class="hud-val mono" id="flyPit">0.4</span><span class="hud-unit">°</span></div>
-        <div class="hud-sep"></div>
-        <div class="hud-mode armed" id="flyMode">AUTO</div>
+        <div class="hud-row"><span class="hud-label">BAT</span><span class="hud-val mono" id="flyBat">70%</span></div>
+        <div class="hud-row"><span class="hud-label">SAT</span><span class="hud-val mono" id="flySat">11</span></div>
+        <div class="hud-row"><span class="hud-label">TIME</span><span><span class="hud-val mono" id="flyTime">00:00</span><span class="hud-unit">min</span></span></div>
       </div>
-      <div class="alerts-panel">
+      <div class="alerts-panel" id="alertsPanel">
         <div class="alerts-header" onclick="toggleAlerts()">
-          <span>系统消息</span>
-          <span><span class="alert-count warn" id="alertCount">2</span> <span id="alertChev">▾</span></span>
+          <span class="hud-mode armed" id="flyMode">AUTO</span>
+          <span class="alert-latest"><span class="alert-time" id="bhAlertTime">--:--:--</span><span id="bhAlertMsg">无告警</span></span>
+          <span><span class="alert-count warn" id="alertCount">2</span> <span id="alertChev">▸</span></span>
         </div>
-        <div class="alerts-body" id="alertBody">
+        <div class="alerts-body" id="alertBody" style="display:none">
           <div class="alert-item warn"><span class="alert-time">14:22:01</span><span>测距仪信号弱</span></div>
           <div class="alert-item info"><span class="alert-time">14:21:30</span><span>已进入自动模式</span></div>
           <div class="alert-item info"><span class="alert-time">14:20:15</span><span>任务已上传 6 航点</span></div>
@@ -769,33 +789,19 @@ input:disabled,[data-theme="light"] input:disabled{background:var(--bg-hover);co
         </div>
       </div>
     </div>
-    <div class="bottom-hud">
-      <div class="bh-item"><span class="bh-label">电池</span><span class="bh-val mono" id="bhBat" style="color:var(--success)">70%</span></div>
-      <div class="bh-sep"></div>
-      <div class="bh-item"><span class="bh-label">电压</span><span class="bh-val mono" id="bhV">12.7V</span></div>
-      <div class="bh-sep"></div>
-      <div class="bh-item"><span class="bh-label">GPS</span><span class="bh-val mono" id="bhGps" style="color:var(--success)">11颗</span></div>
-      <div class="bh-sep"></div>
-      <div class="bh-item"><span class="bh-label">HDOP</span><span class="bh-val mono" id="bhHdop">1.2</span></div>
-      <div class="bh-sep"></div>
-      <div class="bh-item"><span class="bh-label">RC</span><span class="bh-val mono" id="bhRc">89%</span></div>
-      <div class="bh-sep"></div>
-      <div class="bh-item"><span class="bh-label">飞行时间</span><span class="bh-val mono" id="bhFlightTime" style="color:var(--primary)">00:00:00</span></div>
-      <div class="bh-sep"></div>
-      <div class="bh-item"><span class="bh-label">LAT</span><span class="bh-val mono" id="bhLat">32.0603°</span></div>
-      <div class="bh-sep"></div>
-      <div class="bh-item"><span class="bh-label">LON</span><span class="bh-val mono" id="bhLon">118.7921°</span></div>
-    </div>
     <div class="cmd-bar">
-      <button class="cmd-btn primary" onclick="flyCmd('起飞','起飞至默认高度 2 米，确认？')">起飞</button>
-      <button class="cmd-btn" onclick="flyCmd('任务','将按任务列表依次飞行，确认开始任务？')">任务</button>
-      <div class="cmd-sep"></div>
-      <span class="cmd-safe-label">安全操作</span>
-      <div class="cmd-safe">
-        <button class="cmd-btn warn" onclick="flyCmd('解锁','解锁后电机将启动，请确保周围安全！确认解锁？')">解锁</button>
-        <button class="cmd-btn" onclick="flyCmd('悬停','将在当前位置悬停，确认？')">悬停</button>
-        <button class="cmd-btn" onclick="flyCmd('降落','将在当前位置原地降落，确认？')">降落</button>
-        <button class="cmd-btn" onclick="flyCmd('返航','将返回起飞点（RTL），确认？')">返航</button>
+      <div class="cmd-left">
+        <span class="cmd-arm-ind" id="cmdArm">ARMED</span>
+        <span class="cmd-task mono" id="cmdTask">任务 6 航点 · 已上传</span>
+        <button class="cmd-btn" onclick="cmdHover()">悬停</button>
+        <button class="cmd-btn" onclick="cmdArmToggle()" id="btnArmToggle">解锁</button>
+      </div>
+      <button class="cmd-primary" onclick="cmdTakeoff()">▲ 起飞</button>
+      <div class="cmd-danger">
+        <span class="cmd-danger-label">安全 · 按住1.5s</span>
+        <button class="cmd-btn danger hold-btn" data-hold="cmdRtl">返航</button>
+        <button class="cmd-btn danger hold-btn" data-hold="cmdLand">降落</button>
+        <button class="cmd-btn danger hold-btn strong" data-hold="cmdKill">紧急停机</button>
       </div>
     </div>
   </div>
@@ -920,9 +926,7 @@ input:disabled,[data-theme="light"] input:disabled{background:var(--bg-hover);co
         <div class="setup-menu-item" onclick="setupSection(this,'firmware')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 L22 12 L12 22 L2 12 Z"></path><path d="M12 8v5"></path><path d="M10 15h4"></path></svg>固件升级</div>
       </div>
     </div>
-    <div class="setup-content" id="setupContent"><div class="setup-section active"><div class="setup-section-title">机架类型</div><div class="setup-section-sub">选择机架后点击应用，重启飞控生效 · FRAME_CLASS / FRAME_TYPE</div>
-      <div style="margin-bottom:12px"><button class="action-btn">读取当前</button></div>
-      <div class="frame-grid" id="frameGrid"><div class="frame-card selected" onclick="selectFrame(this)"><svg viewBox="0 0 60 60"><line x1="15" y1="15" x2="45" y2="45" stroke="#30363d" stroke-width="2"></line><line x1="45" y1="15" x2="15" y2="45" stroke="#30363d" stroke-width="2"></line><circle cx="15" cy="15" r="6" fill="#1c2128" stroke="#4b8bf5"></circle><circle cx="45" cy="15" r="6" fill="#1c2128" stroke="#ef4444"></circle><circle cx="15" cy="45" r="6" fill="#1c2128" stroke="#ef4444"></circle><circle cx="45" cy="45" r="6" fill="#1c2128" stroke="#4b8bf5"></circle><rect x="25" y="25" width="10" height="10" rx="2" fill="#21262d" stroke="#4b8bf5"></rect></svg><div class="frame-name">四旋翼 X</div><div class="frame-desc">标准 X 型四旋翼</div><div class="frame-params">CLASS=1 TYPE=1</div><div class="frame-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="10" height="10"><path d="M20 6 L9 17 L4 12"></path></svg> 当前</div></div><div class="frame-card" onclick="selectFrame(this)"><svg viewBox="0 0 60 60"><line x1="15" y1="15" x2="45" y2="45" stroke="#30363d" stroke-width="2"></line><line x1="45" y1="15" x2="15" y2="45" stroke="#30363d" stroke-width="2"></line><circle cx="15" cy="15" r="6" fill="#1c2128" stroke="#4b8bf5"></circle><circle cx="45" cy="15" r="6" fill="#1c2128" stroke="#ef4444"></circle><circle cx="15" cy="45" r="6" fill="#1c2128" stroke="#4b8bf5"></circle><circle cx="45" cy="45" r="6" fill="#1c2128" stroke="#ef4444"></circle><rect x="25" y="25" width="10" height="10" rx="2" fill="#21262d" stroke="#4b8bf5"></rect></svg><div class="frame-name">四旋翼 +</div><div class="frame-desc">十字型四旋翼</div><div class="frame-params">CLASS=1 TYPE=0</div></div><div class="frame-card" onclick="selectFrame(this)"><svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="20" fill="none" stroke="#30363d" stroke-width="2"></circle><circle cx="30" cy="10" r="5" fill="#1c2128" stroke="#4b8bf5"></circle><circle cx="48" cy="40" r="5" fill="#1c2128" stroke="#ef4444"></circle><circle cx="12" cy="40" r="5" fill="#1c2128" stroke="#ef4444"></circle><rect x="25" y="25" width="10" height="10" rx="2" fill="#21262d" stroke="#4b8bf5"></rect></svg><div class="frame-name">六旋翼 X</div><div class="frame-desc">标准 X 型六旋翼</div><div class="frame-params">CLASS=3 TYPE=1</div></div><div class="frame-card" onclick="selectFrame(this)"><svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="20" fill="none" stroke="#30363d" stroke-width="2"></circle><circle cx="30" cy="10" r="5" fill="#1c2128" stroke="#4b8bf5"></circle><circle cx="48" cy="40" r="5" fill="#1c2128" stroke="#ef4444"></circle><circle cx="12" cy="40" r="5" fill="#1c2128" stroke="#ef4444"></circle><rect x="25" y="25" width="10" height="10" rx="2" fill="#21262d" stroke="#4b8bf5"></rect></svg><div class="frame-name">八旋翼 X</div><div class="frame-desc">标准 X 型八旋翼</div><div class="frame-params">CLASS=7 TYPE=1</div></div><div class="frame-card" onclick="selectFrame(this)"><svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="20" fill="none" stroke="#30363d" stroke-width="2"></circle><circle cx="30" cy="10" r="5" fill="#1c2128" stroke="#4b8bf5"></circle><circle cx="48" cy="40" r="5" fill="#1c2128" stroke="#ef4444"></circle><circle cx="12" cy="40" r="5" fill="#1c2128" stroke="#ef4444"></circle><rect x="25" y="25" width="10" height="10" rx="2" fill="#21262d" stroke="#4b8bf5"></rect></svg><div class="frame-name">三旋翼 Y</div><div class="frame-desc">Y 型三旋翼</div><div class="frame-params">CLASS=2 TYPE=0</div></div></div></div></div>
+    <div class="setup-content" id="setupContent"></div>
   </div>
 </div>
 
@@ -945,6 +949,7 @@ input:disabled,[data-theme="light"] input:disabled{background:var(--bg-hover);co
           <div class="tb-divider"></div>
           <button class="wave-tr-btn" onclick="togglePause(this)">⏸ 暂停</button>
           <button class="wave-tr-btn" onclick="clearWave()">清空</button>
+          <button class="wave-tr-btn" onclick="exportWave()">导出CSV</button>
           <span class="stat-info" id="waveStat">4 通道 · 179 样本</span>
         </div>
         <div class="wave-body">
@@ -1003,6 +1008,24 @@ input:disabled,[data-theme="light"] input:disabled{background:var(--bg-hover);co
           </div>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- 指令确认模态框 -->
+<div class="modal-overlay hidden" id="cmdConfirmOverlay" onclick="if(event.target===this)cmdConfirmClose()">
+  <div class="modal-box">
+    <div class="modal-title" id="ccTitle">指令确认</div>
+    <div class="modal-msg" id="ccMsg"></div>
+    <div class="modal-state">
+      <div>当前高度<b class="mono" id="ccAlt">—</b></div>
+      <div>飞行模式<b class="mono" id="ccMode">—</b></div>
+      <div>电池<b class="mono" id="ccBatt">—</b></div>
+      <div>解锁状态<b class="mono" id="ccArm">—</b></div>
+    </div>
+    <div class="modal-actions">
+      <button class="action-btn" onclick="cmdConfirmClose()">取消</button>
+      <button class="action-btn danger" onclick="cmdConfirmOk()">确认执行</button>
     </div>
   </div>
 </div>
@@ -1153,19 +1176,19 @@ function updateChannelBars(){
 /* ===== Overview Update（任务关键型控制台：一级状态条 → 二级主监测区 → 三级诊断） ===== */
 function updateOverview(){
   var el;
-  /* 一级：全局状态条 */
+  /* 一级：全局状态条（三档规则：正常灰白 / 关注黄 / 处置红；ARMED为蓝色中性强调） */
   el=document.getElementById('ssConn');
-  if(el){el.textContent=state.connected?'已连接':'断开';el.className='ss-val '+(state.connected?'ok':'err');}
+  if(el){el.textContent=state.connected?'已连接':'断开';el.className='ss-val '+(state.connected?'':'err');}
   el=document.getElementById('ssMode');
   if(el)el.textContent=state.mode;
   el=document.getElementById('ssArm');
-  if(el){el.textContent=state.armed?'ARMED':'DISARMED';el.className='ss-val '+(state.armed?'warn':'');}
+  if(el){el.textContent=state.armed?'ARMED':'DISARMED';el.className='ss-val '+(state.armed?'info':'');}
   el=document.getElementById('ssBatt');
-  if(el){el.textContent=Math.round(state.remaining)+'%';el.className='ss-val '+(state.remaining<=20?'err':state.remaining<=40?'warn':'ok');}
+  if(el){el.textContent=Math.round(state.remaining)+'%';el.className='ss-val '+(state.remaining<=20?'err':state.remaining<=40?'warn':'');}
   el=document.getElementById('ssVolt');
   if(el){el.textContent=state.voltageV.toFixed(1)+'V';el.className='ss-val '+(state.voltageV<10.5?'err':state.voltageV<11.1?'warn':'');}
   el=document.getElementById('ssGps');
-  if(el)el.textContent=(state.fixType>=3?state.fixType+'D':'NO FIX')+'·'+state.satellites;
+  if(el){el.textContent=(state.fixType>=3?state.fixType+'D':'NO FIX')+'·'+state.satellites;el.className='ss-val '+((state.hdop>2||state.satellites<8)?'warn':'');}
   /* 一级：最新告警（最多两条） */
   var sa=document.getElementById('ssAlerts');
   if(sa){
@@ -1277,7 +1300,6 @@ function initFlyMap(){
     // Home marker
     var homeEl=document.createElement('div');
     homeEl.innerHTML='<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><circle cx="12" cy="14" r="2" fill="#22c55e"/></svg>';
-    homeEl.style.filter='drop-shadow(0 0 3px #22c55e88)';
     homeMarkerFly=new AMap.Marker({position:[state.homeLon,state.homeLat],content:homeEl,anchor:'center',zIndex:50});
     homeMarkerFly.setMap(flyMap);
     // Update drone icon rotation whenever the view changes
@@ -1309,41 +1331,99 @@ function toggleAlerts(){
   b.style.display=b.style.display==='none'?'block':'none';
   c.textContent=b.style.display==='none'?'▸':'▾';
 }
-function flyCmd(cmd,msg){
-  if(confirm('[!] '+cmd+'\n\n'+msg)) toast('已发送 '+cmd+' 指令');
+/* ===== 安全动作指令系统：二次确认 + 按住1.5s执行 ===== */
+var cmdConfirmCb=null;
+function cmdConfirm(title,msg,onOk){
+  document.getElementById('ccTitle').textContent=title;
+  document.getElementById('ccMsg').textContent=msg;
+  document.getElementById('ccAlt').textContent=state.relAltM.toFixed(1)+' m';
+  document.getElementById('ccMode').textContent=state.mode;
+  document.getElementById('ccBatt').textContent=Math.round(state.remaining)+'% · '+state.voltageV.toFixed(1)+'V';
+  document.getElementById('ccArm').textContent=state.armed?'ARMED':'DISARMED';
+  cmdConfirmCb=onOk||null;
+  document.getElementById('cmdConfirmOverlay').classList.remove('hidden');
 }
+function cmdConfirmClose(){document.getElementById('cmdConfirmOverlay').classList.add('hidden');cmdConfirmCb=null;}
+function cmdConfirmOk(){var cb=cmdConfirmCb;cmdConfirmClose();if(cb)cb();}
+function cmdTakeoff(){
+  cmdConfirm('起飞确认','无人机将爬升至默认高度 2 米并进入悬停。起飞前请确认桨叶范围内无人员与障碍物。',function(){
+    toast('已发送 起飞 指令');
+  });
+}
+function cmdArmToggle(){
+  if(!state.armed){
+    cmdConfirm('解锁确认','解锁后电机将立即进入待转状态，存在高速旋转风险。请确保周围安全。',function(){
+      state.armed=true;toast('飞控已解锁');updateCmdBar();
+    });
+  }else{
+    cmdConfirm('上锁确认','上锁后电机将停止响应。请确认无人机已着陆且无人接触。',function(){
+      state.armed=false;state.armedTime=0;toast('飞控已上锁');updateCmdBar();
+    });
+  }
+}
+function cmdHover(){state.mode='LOITER';toast('已发送 悬停 指令 · LOITER');updateCmdBar();}
+/* 以下为红色安全区动作：按住 1.5 秒执行 */
+function cmdRtl(){state.mode='RTL';toast('已发送 返航 指令 · RTL');updateCmdBar();}
+function cmdLand(){state.mode='LAND';toast('已发送 降落 指令 · LAND');updateCmdBar();}
+function cmdKill(){state.armed=false;state.armedTime=0;toast('紧急停机已执行 · 电机已锁定','err');updateCmdBar();}
+function updateCmdBar(){
+  var arm=document.getElementById('cmdArm');
+  if(arm){arm.textContent=state.armed?'ARMED':'DISARMED';arm.classList.toggle('on',state.armed);}
+  var bt=document.getElementById('btnArmToggle');
+  if(bt)bt.textContent=state.armed?'上锁':'解锁';
+  var fm=document.getElementById('flyMode');
+  if(fm){fm.textContent=state.mode;fm.classList.toggle('armed',state.armed)}
+  var ct=document.getElementById('cmdTask');
+  if(ct)ct.textContent='任务 6 航点 · '+(state.armed?'进行中':'已上传');
+}
+function initHoldBtns(){
+  document.querySelectorAll('.hold-btn').forEach(function(btn){
+    var fill=document.createElement('span');fill.className='hold-fill';btn.appendChild(fill);
+    var timer=null;
+    function reset(){if(timer){clearTimeout(timer);timer=null}btn.classList.remove('holding');fill.style.transition='none';fill.style.width='0'}
+    function start(e){
+      e.preventDefault();if(timer)return;
+      reset();void fill.offsetWidth;
+      btn.classList.add('holding');
+      fill.style.transition='width 1.5s linear';fill.style.width='100%';
+      timer=setTimeout(function(){reset();var fn=window[btn.getAttribute('data-hold')];if(typeof fn==='function')fn()},1500);
+    }
+    btn.addEventListener('mousedown',start);
+    btn.addEventListener('touchstart',start,{passive:false});
+    ['mouseup','mouseleave','touchend','touchcancel'].forEach(function(ev){btn.addEventListener(ev,reset)});
+  });
+}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')cmdConfirmClose();});
+initHoldBtns();
+updateCmdBar();
 function updateFlyPage(){
   var set=(id,v)=>{var e=document.getElementById(id);if(e)e.textContent=v};
-  set('flyHdg',state.heading.toFixed(0));
   set('flyAlt',state.relAltM.toFixed(1));
   set('flyGs',state.speedMs.toFixed(1));
-  set('flyVs',(state.climbRate>=0?'+':'')+state.climbRate.toFixed(1));
-  var vsEl=document.getElementById('flyVs');
-  if(vsEl)vsEl.style.color=state.climbRate>0.2?'var(--success)':state.climbRate<-0.2?'var(--danger)':'var(--info)';
-  set('flyRol',state.rollDeg.toFixed(1));
-  set('flyPit',state.pitchDeg.toFixed(1));
-  set('bhBat',Math.round(state.remaining)+'%');
-  var bhBat=document.getElementById('bhBat');
-  if(bhBat)bhBat.style.color=state.remaining<15?'var(--danger)':state.remaining<30?'var(--warning)':'var(--success)';
-  set('bhV',state.voltageV.toFixed(1)+'V');
-  var bhV=document.getElementById('bhV');
-  if(bhV)bhV.style.color=state.voltageV<10.5?'var(--danger)':state.voltageV<11.1?'var(--warning)':'var(--text-primary)';
-  set('bhGps',state.satellites+'颗');
-  set('bhHdop',state.hdop.toFixed(1));
-  var bhHdop=document.getElementById('bhHdop');
-  if(bhHdop)bhHdop.style.color=state.hdop>2.0?'var(--danger)':state.hdop>1.5?'var(--warning)':'var(--success)';
-  set('bhRc',state.signalPct+'%');
-  // Flight timer
+  /* 三档规则：正常灰白 / 关注黄 / 处置红 */
+  set('flyBat',Math.round(state.remaining)+'%');
+  var batEl=document.getElementById('flyBat');
+  if(batEl)batEl.style.color=state.remaining<=20?'var(--danger)':state.remaining<=40?'var(--warning)':'';
+  set('flySat',state.satellites);
+  var satEl=document.getElementById('flySat');
+  if(satEl)satEl.style.color=(state.hdop>2||state.satellites<8)?'var(--warning)':'';
+  /* 飞行时间 */
   if(state.armed){
     if(!state.armedTime)state.armedTime=Date.now();
     state.flightTime=Math.floor((Date.now()-state.armedTime)/1000);
   }
-  var hh=Math.floor(state.flightTime/3600),mm=Math.floor((state.flightTime%3600)/60),ss=state.flightTime%60;
-  set('bhFlightTime',(hh<10?'0':'')+hh+':'+(mm<10?'0':'')+mm+':'+(ss<10?'0':'')+ss);
-  set('bhLat',state.lat.toFixed(4)+'°');
-  set('bhLon',state.lon.toFixed(4)+'°');
-  var fm=document.getElementById('flyMode');
-  if(fm){fm.textContent=state.mode;fm.classList.toggle('armed',state.armed)}
+  var fmin=Math.floor(state.flightTime/60),fsec=state.flightTime%60;
+  set('flyTime',(fmin<10?'0':'')+fmin+':'+(fsec<10?'0':'')+fsec);
+  /* 底部一行：模式状态 + 最新告警（点击展开详情） */
+  var a0=alerts[0];
+  if(a0){
+    var ad=new Date(a0.timestamp);
+    set('bhAlertTime',String(ad.getHours()).padStart(2,'0')+':'+String(ad.getMinutes()).padStart(2,'0')+':'+String(ad.getSeconds()).padStart(2,'0'));
+    set('bhAlertMsg',a0.message);
+    var cnt=document.getElementById('alertCount');
+    if(cnt)cnt.textContent=alerts.length;
+  }
+  updateCmdBar();
   var adiBall=document.getElementById('adiBallFly');
   if(adiBall)adiBall.setAttribute('transform','rotate('+(-state.rollDeg)+' 82 82) translate(0 '+(state.pitchDeg*2)+')');
   if(droneMarkerFly&&flyMap&&!isNaN(state.lon)&&!isNaN(state.lat)){
@@ -1600,7 +1680,7 @@ function renderSetupSection(sec){
       <div class="frame-grid" id="frameGrid"></div></div>`,
     motor:`<div class="setup-section active"><div class="setup-section-title">电机输出</div><div class="setup-section-sub">SERVO_OUTPUT_RAW · M1–M12</div><div class="motor-grid" id="setupMotorGrid"></div></div>`,
     rc:`<div class="setup-section active"><div class="setup-section-title">遥控通道</div><div class="setup-section-sub">RC_CHANNELS_RAW</div>
-      <div style="display:flex;gap:12px;margin-bottom:12px"><span class="badge" style="color:var(--success);background:#22c55e14;padding:2px 8px;border-radius:10px;font-size:11px">12 通道</span><span style="color:var(--info);font-size:12px">RSSI: 88%</span></div>
+      <div style="display:flex;gap:12px;margin-bottom:12px"><span class="badge" style="color:var(--success);background:#22c55e14;padding:2px 8px;border-radius:4px;font-size:11px">12 通道</span><span style="color:var(--info);font-size:12px">RSSI: 88%</span></div>
       <div id="setupRcList"></div></div>`,
     ports:`<div class="setup-section active"><div class="setup-section-title">端口设置</div><div class="setup-section-sub">SERIAL1-6 协议/波特率配置</div>
       <div style="margin-bottom:12px"><button class="action-btn">读取全部</button></div>
@@ -1639,33 +1719,33 @@ function renderSetupSection(sec){
       <button class="action-btn primary" onclick="compassCal()">开始校准</button></div></div>`,
     gps:`<div class="setup-section active"><div class="setup-section-title">GPS 状态</div><div class="setup-section-sub">GPS_RAW_INT · GLOBAL_POSITION_INT</div>
       <div class="status-cards">
-        <div class="status-card"><div class="status-card-val" style="color:var(--success)">3D</div><div class="status-card-label">定位类型</div></div>
-        <div class="status-card"><div class="status-card-val" style="color:var(--success)">14</div><div class="status-card-label">可见卫星</div></div>
-        <div class="status-card"><div class="status-card-val" style="color:var(--success)">1.20</div><div class="status-card-label">HDOP</div></div>
+        <div class="status-card"><div class="status-card-val">3D</div><div class="status-card-label">定位类型</div></div>
+        <div class="status-card"><div class="status-card-val">14</div><div class="status-card-label">可见卫星</div></div>
+        <div class="status-card"><div class="status-card-val">1.20</div><div class="status-card-label">HDOP</div></div>
         <div class="status-card"><div class="status-card-val">8.2</div><div class="status-card-label">地速 m/s</div></div>
       </div>
-      <div style="background:var(--bg-panel);border:1px solid var(--border-default);border-radius:8px;padding:12px 14px;max-width:400px">
-        <div style="font-size:11px;color:var(--info);margin-bottom:8px">当前坐标</div>
+      <div style="background:var(--bg-panel);border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:12px 14px;max-width:400px">
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">当前坐标</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px">
-          <div><span style="color:var(--info)">纬度 LAT: </span><span class="mono" id="gpsLat">32.0612000°</span></div>
-          <div><span style="color:var(--info)">经度 LON: </span><span class="mono" id="gpsLon">118.7930000°</span></div>
-          <div><span style="color:var(--info)">海拔 ALT: </span><span class="mono">86.40 m</span></div>
-          <div><span style="color:var(--info)">航向: </span><span class="mono">128.0°</span></div>
+          <div><span style="color:var(--text-muted)">纬度 LAT: </span><span class="mono" id="gpsLat">32.0612000°</span></div>
+          <div><span style="color:var(--text-muted)">经度 LON: </span><span class="mono" id="gpsLon">118.7930000°</span></div>
+          <div><span style="color:var(--text-muted)">海拔 ALT: </span><span class="mono">86.40 m</span></div>
+          <div><span style="color:var(--text-muted)">航向: </span><span class="mono">128.0°</span></div>
         </div>
       </div>
       <div style="color:var(--text-muted);font-size:11px;margin-top:12px">3D Fix 至少需要 4 颗卫星，建议 6 颗以上起飞 · HDOP &lt; 1.0 优秀 · HDOP &lt; 2.0 良好</div>
       </div>`,
     baro:`<div class="setup-section active"><div class="setup-section-title">气压计</div><div class="setup-section-sub">SCALED_PRESSURE · SYS_STATUS</div>
       <div class="status-cards">
-        <div class="status-card"><div class="status-card-val" style="color:var(--success)">正常</div><div class="status-card-label">健康状态</div></div>
+        <div class="status-card"><div class="status-card-val">正常</div><div class="status-card-label">健康状态</div></div>
         <div class="status-card"><div class="status-card-val">1013.2</div><div class="status-card-label">气压 hPa</div></div>
         <div class="status-card"><div class="status-card-val">26.5</div><div class="status-card-label">温度 °C</div></div>
       </div>
-      <div style="background:var(--bg-panel);border:1px solid var(--border-default);border-radius:6px;padding:10px 14px;font-size:12px;color:var(--text-muted);max-width:480px">气压计校准在飞控上电时自动完成，无需手动操作。修改传感器类型后需重启飞控生效。</div>
+      <div style="background:var(--bg-panel);border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:10px 14px;font-size:12px;color:var(--text-muted);max-width:480px">气压计校准在飞控上电时自动完成，无需手动操作。修改传感器类型后需重启飞控生效。</div>
       </div>`,
     optflow:`<div class="setup-section active"><div class="setup-section-title">光流传感器</div><div class="setup-section-sub">OPTICAL_FLOW (id:100)</div>
       <div class="status-cards">
-        <div class="status-card"><div class="status-card-val" style="color:var(--success)">98%</div><div class="status-card-label">质量</div></div>
+        <div class="status-card"><div class="status-card-val">98%</div><div class="status-card-label">质量</div></div>
         <div class="status-card"><div class="status-card-val">0.012</div><div class="status-card-label">X速度 m/s</div></div>
         <div class="status-card"><div class="status-card-val">-0.008</div><div class="status-card-label">Y速度 m/s</div></div>
         <div class="status-card"><div class="status-card-val">0.82</div><div class="status-card-label">地面距离 m</div></div>
@@ -1679,7 +1759,7 @@ function renderSetupSection(sec){
       </div></div>`,
     params:`<div class="setup-section active"><div class="setup-section-title">参数列表</div><div class="setup-section-sub">MAVLink 参数协议 · PARAM_VALUE</div>
       <div class="param-search"><input type="text" placeholder="搜索参数名..." oninput="filterParams(this.value)"><span style="color:var(--info);font-size:12px" id="paramStat">0 / 0 个参数</span></div>
-      <div style="max-height:calc(100vh - 200px);overflow:auto;border:1px solid var(--border-default);border-radius:6px">
+      <div style="max-height:calc(100vh - 200px);overflow:auto;border:1px solid var(--border-default);border-radius:var(--radius-sm)">
       <table class="param-table"><thead><tr><th>参数名</th><th>值</th><th>类型</th><th>操作</th></tr></thead><tbody id="paramTbody"></tbody></table>
       </div></div>`,
     firmware:`<div class="setup-section active"><div class="setup-section-title">固件升级（OTA）</div><div class="setup-section-sub">HTTP OTA 升级 · POST /update</div>
@@ -1713,7 +1793,7 @@ function renderFrameGrid(){
       '<circle cx="45" cy="45" r="6" fill="#1c2128" stroke="'+(f.cw&&f.cw.includes(3)?'#4b8bf5':'#ef4444')+'"/>'
       :'<circle cx="30" cy="30" r="20" fill="none" stroke="#30363d" stroke-width="2"/><circle cx="30" cy="10" r="5" fill="#1c2128" stroke="#4b8bf5"/><circle cx="48" cy="40" r="5" fill="#1c2128" stroke="#ef4444"/><circle cx="12" cy="40" r="5" fill="#1c2128" stroke="#ef4444"/>')+
     '<rect x="25" y="25" width="10" height="10" rx="2" fill="#21262d" stroke="#4b8bf5"/></svg>'+
-    '<div class="frame-name">'+f.name+'</div><div class="frame-desc">'+f.desc+'</div>'+
+    '<div class="frame-name">'+f.name+'</div>'+
     '<div class="frame-params">CLASS='+f.cls+' TYPE='+f.typ+'</div>'+(i===0?'<div class="frame-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="10" height="10"><path d="M20 6 L9 17 L4 12"/></svg> 当前</div>':'')+
     '</div>'
   ).join('');
@@ -1784,6 +1864,7 @@ function filterParams(q){
 
 /* ===== Data Page: Waveform Monitor ===== */
 var waveCanvas,waveCtx,waveData={},waveChannels,waveTimeRange=5,wavePaused=false,waveSampleCount=0;
+var waveHoverX=-1,waveHoverY=-1;
 waveChannels=[
   {key:'roll',label:'横滚 Roll',unit:'°',group:'姿态',color:'#3b82f6',enabled:true},
   {key:'pitch',label:'俯仰 Pitch',unit:'°',group:'姿态',color:'#22c55e',enabled:true},
@@ -1802,6 +1883,9 @@ function initWaveCanvas(){
   waveCanvas=document.getElementById('waveCanvas');waveCtx=waveCanvas.getContext('2d');
   function resize(){var p=waveCanvas.parentElement;waveCanvas.width=p.offsetWidth;waveCanvas.height=p.offsetHeight}
   resize();new ResizeObserver(resize).observe(waveCanvas.parentElement);
+  /* 悬停十字线 */
+  waveCanvas.addEventListener('mousemove',function(e){var r=waveCanvas.getBoundingClientRect();waveHoverX=e.clientX-r.left;waveHoverY=e.clientY-r.top;});
+  waveCanvas.addEventListener('mouseleave',function(){waveHoverX=-1;});
   // Sidebar
   var sb=document.getElementById('waveSidebar');var groups={};
   waveChannels.forEach(ch=>{if(!groups[ch.group])groups[ch.group]=[];groups[ch.group].push(ch)});
@@ -1853,39 +1937,116 @@ function drawWave(){
   if(!waveCtx)return;
   var w=waveCanvas.width,h=waveCanvas.height;
   waveCtx.clearRect(0,0,w,h);
-  // Grid (theme-aware)
-  var gridColor=getComputedStyle(document.documentElement).getPropertyValue('--border-default').trim()||'#21262d';
-  waveCtx.strokeStyle=gridColor;waveCtx.lineWidth=1;
-  for(var i=0;i<=4;i++){waveCtx.beginPath();waveCtx.moveTo(60,i*h/4);waveCtx.lineTo(w-20,i*h/4);waveCtx.stroke()}
-  // Each enabled channel
-  var now=Date.now();var windowMs=waveTimeRange*1000;
+  var now=Date.now(),windowMs=waveTimeRange*1000;
+  var css=getComputedStyle(document.documentElement);
+  var gridColor=css.getPropertyValue('--border-default').trim()||'#21262d';
+  var labelColor=css.getPropertyValue('--text-muted').trim()||'#8b949e';
+  var L=64,R=w-16;
   var enabled=waveChannels.filter(c=>c.enabled);
-  if(enabled.length===0)return;
-  // Find min/max across all enabled
-  var allVals=[];
+  if(enabled.length===0){
+    waveCtx.fillStyle=labelColor;waveCtx.font='11px JetBrains Mono';
+    waveCtx.fillText('在右侧选择要记录的通道',w/2-80,h/2);
+    return;
+  }
+  /* 按组分泳道：姿态 / 飞行 / 电池 / GPS 各自独立纵轴量程 */
+  var groups=[],gmap={};
   enabled.forEach(ch=>{
-    (waveData[ch.key]||[]).forEach(d=>{if(d.t>now-windowMs)allVals.push(d.v)});
+    if(!gmap[ch.group]){gmap[ch.group]={name:ch.group,unit:ch.unit,chs:[]};groups.push(gmap[ch.group]);}
+    gmap[ch.group].chs.push(ch);
   });
-  if(allVals.length===0)return;
-  var mn=Math.min.apply(null,allVals),mx=Math.max.apply(null,allVals);
-  var range=mx-mn||1;mn-=range*0.1;mx+=range*0.1;range=mx-mn;
-  // Draw channels
-  enabled.forEach(ch=>{
-    var data=(waveData[ch.key]||[]).filter(d=>d.t>now-windowMs);
-    if(data.length<2)return;
-    waveCtx.strokeStyle=ch.color;waveCtx.lineWidth=1.5;waveCtx.beginPath();
-    data.forEach((d,i)=>{
-      var x=60+(d.t-(now-windowMs))/windowMs*(w-80);
-      var y=h-20-(d.v-mn)/range*(h-40);
-      if(i===0)waveCtx.moveTo(x,y);else waveCtx.lineTo(x,y);
+  var laneH=h/groups.length;
+  groups.forEach(function(g,gi){
+    var top=Math.round(gi*laneH),bot=Math.round((gi+1)*laneH);
+    waveCtx.strokeStyle=gridColor;waveCtx.lineWidth=1;
+    waveCtx.beginPath();waveCtx.moveTo(L,bot);waveCtx.lineTo(R,bot);waveCtx.stroke();
+    var all=[];
+    g.chs.forEach(ch=>{(waveData[ch.key]||[]).forEach(d=>{if(d.t>now-windowMs)all.push(d.v)})});
+    if(all.length){
+      var mn=Math.min.apply(null,all),mx=Math.max.apply(null,all);
+      if(mn===mx){mn-=1;mx+=1;}
+      var pad=(mx-mn)*0.12;mn-=pad;mx+=pad;
+      /* 零基准线 */
+      if(mn<0&&mx>0){
+        var zy=bot-6-((0-mn)/(mx-mn))*(bot-top-18);
+        if(waveCtx.setLineDash)waveCtx.setLineDash([3,4]);
+        waveCtx.strokeStyle=labelColor;
+        waveCtx.beginPath();waveCtx.moveTo(L,zy);waveCtx.lineTo(R,zy);waveCtx.stroke();
+        if(waveCtx.setLineDash)waveCtx.setLineDash([]);
+      }
+      /* 曲线 */
+      g.chs.forEach(function(ch){
+        var data=(waveData[ch.key]||[]).filter(d=>d.t>now-windowMs);
+        if(data.length<2)return;
+        waveCtx.strokeStyle=ch.color;waveCtx.lineWidth=1.5;waveCtx.beginPath();
+        data.forEach(function(d,i){
+          var x=L+(d.t-(now-windowMs))/windowMs*(R-L);
+          var y=bot-6-((d.v-mn)/(mx-mn))*(bot-top-18);
+          if(i===0)waveCtx.moveTo(x,y);else waveCtx.lineTo(x,y);
+        });
+        waveCtx.stroke();
+      });
+      /* 纵轴量程 */
+      waveCtx.fillStyle=labelColor;waveCtx.font='9px JetBrains Mono';
+      waveCtx.fillText(mx.toFixed(1),4,top+12);
+      waveCtx.fillText(mn.toFixed(1),4,bot-8);
+    }
+    /* 组名与单位 */
+    waveCtx.fillStyle=labelColor;waveCtx.font='10px JetBrains Mono';
+    waveCtx.fillText(g.name+(g.unit?' ('+g.unit+')':''),L+6,top+13);
+  });
+  /* 时间轴 */
+  waveCtx.fillStyle=labelColor;waveCtx.font='9px JetBrains Mono';
+  waveCtx.fillText('-'+waveTimeRange+'s',L,h-2);waveCtx.fillText('now',R-22,h-2);
+  /* 悬停十字线 + 时间游标 + 数值浮窗 */
+  if(waveHoverX>=L&&waveHoverX<=R&&waveHoverY>0&&waveHoverY<h-14){
+    if(waveCtx.setLineDash)waveCtx.setLineDash([2,3]);
+    waveCtx.strokeStyle=labelColor;
+    waveCtx.beginPath();waveCtx.moveTo(waveHoverX,0);waveCtx.lineTo(waveHoverX,h-14);waveCtx.stroke();
+    if(waveCtx.setLineDash)waveCtx.setLineDash([]);
+    var tAt=now-windowMs+(waveHoverX-L)/(R-L)*windowMs;
+    var td=new Date(tAt);
+    var tstr=String(td.getMinutes()).padStart(2,'0')+':'+String(td.getSeconds()).padStart(2,'0');
+    waveCtx.fillStyle=labelColor;
+    waveCtx.fillText(tstr,Math.min(waveHoverX+4,R-34),waveHoverY>16?waveHoverY-5:12);
+    var lines=[];
+    groups.forEach(function(g){
+      g.chs.forEach(function(ch){
+        var arr=waveData[ch.key]||[];
+        var best=null,bd=1e12;
+        for(var i=0;i<arr.length;i++){var dd=Math.abs(arr[i].t-tAt);if(dd<bd){bd=dd;best=arr[i]}}
+        if(best&&bd<400)lines.push({c:ch.color,t:ch.label+' '+(typeof best.v==='number'?best.v.toFixed(1):best.v)+(ch.unit?' '+ch.unit:'')});
+      });
     });
-    waveCtx.stroke();
+    if(lines.length){
+      var bx=Math.min(waveHoverX+10,w-134),by=Math.min(Math.max(waveHoverY-8,6),h-26-lines.length*13);
+      waveCtx.fillStyle='rgba(0,0,0,0.78)';
+      waveCtx.fillRect(bx-4,by-3,128,lines.length*13+6);
+      lines.forEach(function(ln,i){
+        waveCtx.fillStyle=ln.c;waveCtx.font='10px JetBrains Mono';
+        waveCtx.fillText(ln.t,bx,by+10+i*13);
+      });
+    }
+  }
+}
+function exportWave(){
+  var enabled=waveChannels.filter(c=>c.enabled&&waveData[c.key]&&waveData[c.key].length>1);
+  if(enabled.length===0){toast('无数据可导出','warn');return;}
+  var base=waveData[enabled[0].key];
+  var rows=['time,'+enabled.map(c=>c.label+'_'+(c.unit||'raw')).join(',')];
+  base.forEach(function(d,i){
+    var t=new Date(d.t);
+    var ts=String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0')+':'+String(t.getSeconds()).padStart(2,'0')+'.'+String(t.getMilliseconds()).padStart(3,'0');
+    var line=ts+','+enabled.map(function(c){
+      var arr=waveData[c.key];
+      if(i<arr.length&&Math.abs(arr[i].t-d.t)<250)return typeof arr[i].v==='number'?arr[i].v.toFixed(2):arr[i].v;
+      return '';
+    }).join(',');
+    rows.push(line);
   });
-  // Axis labels (theme-aware)
-  var labelColor=getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim()||'#8b949e';
-  waveCtx.fillStyle=labelColor;waveCtx.font='10px JetBrains Mono';
-  waveCtx.fillText(mn.toFixed(1),4,h-20);waveCtx.fillText(mx.toFixed(1),4,12);
-  waveCtx.fillText((waveTimeRange+'s ago'),60,h-4);waveCtx.fillText('now',w-30,h-4);
+  var blob=new Blob([rows.join('\n')],{type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='skylink_waveform.csv';
+  document.body.appendChild(a);a.click();a.remove();
+  toast('已导出 '+rows.length+' 行 CSV');
 }
 function setTimeRange(el,s){waveTimeRange=s;document.querySelectorAll('.wave-toolbar .wave-tr-btn').forEach((b,i)=>{if(i<4)b.classList.remove('active')});el.classList.add('active')}
 function togglePause(el){wavePaused=!wavePaused;el.textContent=wavePaused?'▶ 继续':'⏸ 暂停'}
@@ -2010,7 +2171,6 @@ function drawTrajectory(id){
   // Playback marker
   var pbEl=document.createElement('div');
   pbEl.innerHTML='<svg width="32" height="32" viewBox="0 0 40 40"><g transform="translate(20,20)"><path d="M0,-14 L10,8 L3,3 L0,12 L-3,3 L-10,8 Z" fill="#3b82f6" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></g></svg>';
-  pbEl.style.filter='drop-shadow(0 0 4px #3b82f688)';
   flightPlaybackMarker=new AMap.Marker({position:pts[0],content:pbEl,anchor:'center'});
   flightPlaybackMarker.setMap(flightMap);
   flightPlaybackIdx=0;
@@ -2095,11 +2255,11 @@ document.addEventListener('keydown',function(e){
   if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='TEXTAREA')return;
   if(e.ctrlKey||e.metaKey){
     var k=e.key.toLowerCase();
-    if(k==='a'){e.preventDefault();flyCmd('解锁','解锁后电机将启动，请确保周围安全！确认解锁？')}
-    else if(k==='t'){e.preventDefault();flyCmd('起飞','起飞至默认高度 2 米，确认？')}
-    else if(k==='l'){e.preventDefault();flyCmd('降落','将在当前位置原地降落，确认？')}
-    else if(k==='r'){e.preventDefault();flyCmd('返航','将返回起飞点（RTL），确认？')}
-    else if(k==='h'){e.preventDefault();flyCmd('悬停','将在当前位置悬停，确认？')}
+    if(k==='a'){e.preventDefault();cmdArmToggle()}
+    else if(k==='t'){e.preventDefault();cmdTakeoff()}
+    else if(k==='l'){e.preventDefault();cmdLand()}
+    else if(k==='r'){e.preventDefault();cmdRtl()}
+    else if(k==='h'){e.preventDefault();cmdHover()}
   }else{
     if(e.key==='1')switchPage('overview');
     else if(e.key==='2')switchPage('fly');
