@@ -14,9 +14,10 @@
   --text-primary:#e6edf3; --text-secondary:#c9d1d9; --text-muted:#6e7681; --text-link:#58a6ff;
   --border-default:#21262d; --border-hover:#30363d; --border-highlight:#3b82f6;
   --bg-base:#0d1117; --bg-panel:#161b22; --bg-hover:#1c2128; --bg-bar:#21262d;
-  --shadow-map:0 4px 16px #00000073; --shadow-joydot:0 0 6px #3b82f673; --shadow-drone:0 0 4px #3b82f6cc;
+  --shadow-map:none; --shadow-joydot:none; --shadow-drone:none; --shadow-pop:0 4px 12px #00000040;
   --font-mono:'JetBrains Mono',monospace;
-  --radius-sm:6px; --radius-md:8px; --radius-lg:12px;
+  --radius-sm:4px; --radius-md:4px; --radius-lg:6px;
+  --data-fill:#7d8590;
   --nav-h:48px;
 }
 [data-theme="light"]{
@@ -26,7 +27,8 @@
   --text-primary:#1a1a1a; --text-secondary:#424242; --text-muted:#8c8c8c; --text-link:#0f6cbd;
   --border-default:#e5e5e5; --border-hover:#d1d1d1; --border-highlight:#0f6cbd;
   --bg-base:#f3f3f3; --bg-panel:#ffffff; --bg-hover:#f0f0f0; --bg-bar:#fafafa;
-  --shadow-map:0 2px 8px #0000001a; --shadow-joydot:0 0 6px #0f6cbd55; --shadow-drone:0 0 4px #0f6cbd88;
+  --shadow-map:none; --shadow-joydot:none; --shadow-drone:none; --shadow-pop:0 2px 8px #00000026;
+  --data-fill:#8c8c8c;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%;overflow:hidden}
@@ -60,109 +62,81 @@ input:disabled,[data-theme="light"] input:disabled{background:var(--bg-hover);co
 .theme-toggle svg{transition:transform .3s}
 .theme-toggle:active svg{transform:rotate(180deg)}
 .conn-dot{width:8px;height:8px;border-radius:50%;background:var(--text-muted);transition:background .15s}
-.conn-dot.on{background:var(--success);box-shadow:0 0 6px var(--success)}
+.conn-dot.on{background:var(--success)}
 .conn-dot.off{background:var(--danger)}
 
 /* ===== Page Container ===== */
 .page{display:none;height:calc(100vh - 48px);overflow:hidden}
 .page.active{display:block}
 
-/* ===== Overview Page ===== */
-.overview-page{display:flex;flex-direction:column;gap:12px;padding:16px;overflow-y:auto;height:100%}
-.ov-top-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;width:100%;max-width:1440px;height:max(300px,min(38vh,380px));margin:0 auto}
-.ov-mid-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;width:100%;max-width:1440px;max-height:240px;margin:0 auto}
-.ov-card{background:var(--bg-panel);border:1px solid var(--border-default);border-radius:var(--radius-md);overflow:hidden;display:flex;flex-direction:column}
-.ov-card-head{border-bottom:1px solid var(--border-default);padding:10px 16px;display:flex;align-items:center;gap:8px}
-.ov-card-title{font-size:12px;font-weight:600;color:var(--text-primary)}
-.ov-card-sub{margin-left:auto;font-size:10px;color:var(--info)}
-.ov-card-body{flex:1;padding:12px;overflow:hidden}
-
-/* Model card - CGC style: model-wrap + model-stats bottom bar */
-.model-wrap{background:var(--bg-base);flex:1;min-height:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
-.model-stats{border-top:1px solid var(--border-default);display:flex;flex-direction:column}
-.mst-row{background:var(--bg-bar);border-top:1px solid var(--border-default);flex-shrink:0;display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px}
-.mst-cell{background:var(--bg-panel);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2px;padding:6px 4px}
-.mst-val{color:var(--text-primary);font-family:var(--font-mono);font-size:12px;font-weight:600}
-.mst-label{color:var(--text-muted);font-size:9px}
-.mst-val.armed,.mst-val.vz-up{color:var(--success)}
-.mst-val.vz-down{color:var(--danger)}
-
-/* 3D Drone - CGC style realistic quadcopter */
-.drone-scene{width:100%;height:100%;perspective:600px;perspective-origin:50% 40%;display:flex;align-items:center;justify-content:center;cursor:grab;user-select:none;position:relative}
-.drone-scene:active{cursor:grabbing}
-.drone-3d-model{width:0;height:0;position:relative;transform-style:preserve-3d;transform:rotateX(-40deg) rotateY(35deg) rotateZ(0deg)}
-.d3-part{position:absolute;transform-style:preserve-3d}
-/* Body - main fuselage with 3D thickness */
-.d3-body-top{width:32px;height:32px;background:linear-gradient(145deg,#3d444d 0%,#1c2128 100%);border:1.5px solid #3b82f6;border-radius:5px;box-shadow:0 0 14px #3b82f655,inset 0 1px 0 #4c5664,inset 0 -1px 0 #0d1117;transform:translate3d(-16px,-16px,9px)}
-.d3-body-bottom{width:32px;height:32px;background:linear-gradient(145deg,#161b22 0%,#0d1117 100%);border:1.5px solid #21262d;border-radius:5px;box-shadow:inset 0 1px 0 #21262d;transform:translate3d(-16px,-16px,-1px)}
-.d3-body-side{background:#1c2128}
-.d3-body-side.bs-front{width:32px;height:10px;background:linear-gradient(180deg,#30363d 0%,#1c2128 100%);transform:translate3d(-16px,-21px,4px) rotateX(90deg)}
-.d3-body-side.bs-back{width:32px;height:10px;background:linear-gradient(0deg,#30363d 0%,#1c2128 100%);transform:translate3d(-16px,11px,4px) rotateX(-90deg)}
-.d3-body-side.bs-left{width:10px;height:32px;background:linear-gradient(90deg,#21262d 0%,#1c2128 100%);transform:translate3d(-21px,-16px,4px) rotateY(-90deg)}
-.d3-body-side.bs-right{width:10px;height:32px;background:linear-gradient(-90deg,#21262d 0%,#1c2128 100%);transform:translate3d(11px,-16px,4px) rotateY(90deg)}
-/* Nose indicator */
-.d3-nose{width:10px;height:5px;background:#3b82f6;border-radius:3px;box-shadow:0 0 10px #3b82f6aa;transform:translate3d(-5px,-22px,10px)}
-/* Arms - X configuration with 3D thickness (tapered arms) */
-.d3-arm{width:8px;height:46px;background:linear-gradient(90deg,#1c2128 0%,#30363d 30%,#3d444d 50%,#30363d 70%,#1c2128 100%);border-radius:4px;box-shadow:inset 0 1px 0 #4c5664,inset 0 -1px 0 #0d1117}
-.d3-arm.a1{transform:translate3d(-4px,-50px,5px)}
-.d3-arm.a2{transform:translate3d(46px,-4px,5px) rotateZ(90deg)}
-.d3-arm.a3{transform:translate3d(-4px,4px,5px) rotateZ(180deg)}
-.d3-arm.a4{transform:translate3d(-50px,-4px,5px) rotateZ(270deg)}
-/* Arm underside (darker) */
-.d3-arm-bottom{width:8px;height:46px;background:linear-gradient(90deg,#0d1117 0%,#161b22 50%,#0d1117 100%);border-radius:4px;box-shadow:inset 0 -1px 0 #21262d}
-.d3-arm-bottom.ab1{transform:translate3d(-4px,-50px,-1px)}
-.d3-arm-bottom.ab2{transform:translate3d(46px,-4px,-1px) rotateZ(90deg)}
-.d3-arm-bottom.ab3{transform:translate3d(-4px,4px,-1px) rotateZ(180deg)}
-.d3-arm-bottom.ab4{transform:translate3d(-50px,-4px,-1px) rotateZ(270deg)}
-/* Motor mounts with 3D depth */
-.d3-motor{width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#3d444d 0%,#21262d 40%,#161b22 100%);border:2px solid #30363d;box-shadow:inset 0 2px 4px #0d1117aa,0 2px 4px #0d111788}
-.d3-motor.m1{transform:translate3d(-11px,-62px,6px)}
-.d3-motor.m2{transform:translate3d(56px,-11px,6px)}
-.d3-motor.m3{transform:translate3d(-11px,40px,6px)}
-.d3-motor.m4{transform:translate3d(-62px,-11px,6px)}
-/* Motor underside (shadow) */
-.d3-motor-bottom{width:22px;height:22px;border-radius:50%;background:#0d1117;border:1px solid #21262d}
-.d3-motor-bottom.mb1{transform:translate3d(-11px,-62px,-1px)}
-.d3-motor-bottom.mb2{transform:translate3d(56px,-11px,-1px)}
-.d3-motor-bottom.mb3{transform:translate3d(-11px,40px,-1px)}
-.d3-motor-bottom.mb4{transform:translate3d(-62px,-11px,-1px)}
-/* Propeller discs (spinning when armed) */
-.d3-rotor{width:40px;height:40px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.12) 0%,rgba(200,200,200,.06) 30%,rgba(150,150,150,.02) 60%,transparent 80%);border:1px solid rgba(255,255,255,.06);top:50%;left:50%;transform:translate(-50%,-50%);transition:opacity .2s;opacity:0;pointer-events:none}
-.d3-rotor.spinning{opacity:1;animation:rotorSpin .025s linear infinite}
-@keyframes rotorSpin{from{transform:translate(-50%,-50%) rotate(0deg)}to{transform:translate(-50%,-50%) rotate(360deg)}}
-.d3-rotor.r1{animation-direction:normal}
-.d3-rotor.r2{animation-direction:reverse}
-.d3-rotor.r3{animation-direction:normal}
-.d3-rotor.r4{animation-direction:reverse}
-/* LED indicators */
-.d3-led{width:5px;height:5px;border-radius:50%;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10}
-.d3-led.led-front-left{background:#22c55e;box-shadow:0 0 8px #22c55e,0 0 12px #22c55e88}
-.d3-led.led-front-right{background:#22c55e;box-shadow:0 0 8px #22c55e,0 0 12px #22c55e88}
-.d3-led.led-back-left{background:#f0a500;box-shadow:0 0 8px #f0a500,0 0 12px #f0a50088}
-.d3-led.led-back-right{background:#f0a500;box-shadow:0 0 8px #f0a500,0 0 12px #f0a50088}
-/* Camera gimbal */
-.d3-gimbal{width:14px;height:10px;background:linear-gradient(180deg,#21262d 0%,#161b22 100%);border:1px solid #30363d;border-radius:3px;box-shadow:0 2px 3px #0d111766;transform:translate3d(-7px,-5px,-4px)}
-.d3-camera-lens{width:7px;height:7px;border-radius:50%;background:radial-gradient(circle at 40% 40%,#3d444d 0%,#0d1117 70%);border:1px solid #30363d;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);box-shadow:inset 0 1px 2px #0d111788}
-/* Landing gear struts */
-.d3-gear{width:3px;height:12px;background:linear-gradient(180deg,#30363d 0%,#21262d 100%);border-radius:1px 1px 2px 2px;box-shadow:1px 0 2px #0d111755}
-.d3-gear.g1{transform:translate3d(-12px,-12px,-2px)}
-.d3-gear.g2{transform:translate3d(9px,-12px,-2px)}
-.d3-gear.g3{transform:translate3d(-12px,9px,-2px)}
-.d3-gear.g4{transform:translate3d(9px,9px,-2px)}
-/* Landing skids */
-.d3-skid{width:16px;height:2px;background:#30363d;border-radius:1px;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)}
-.d3-skid.sk1{transform:translate(-50%,50px)}
-.d3-skid.sk2{transform:translate(-50%,-50px)}
-
-/* ADI card - CGC style */
-.adi-wrap{background:var(--bg-base);flex:1;min-height:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
-.adi-svg{width:140px;height:140px}
-.adi-strip{background:var(--bg-bar);border-top:1px solid var(--border-default);flex-shrink:0;display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px}
-.as-cell{background:var(--bg-panel);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2px;padding:6px 4px}
-.as-val{color:var(--text-primary);font-family:var(--font-mono);font-size:12px;font-weight:600}
+/* ===== Overview Page — 任务关键型信息层级 ===== */
+.overview-page{display:flex;flex-direction:column;gap:0;padding:0;overflow-y:auto;height:100%}
+/* 一级信息：全局状态条 */
+.status-strip{display:flex;align-items:stretch;flex-wrap:wrap;background:var(--bg-panel);border-bottom:1px solid var(--border-default)}
+.ss-item{display:flex;flex-direction:column;justify-content:center;gap:3px;padding:12px 20px;border-right:1px solid var(--border-default);min-width:120px}
+.ss-val{color:var(--text-primary);font-family:var(--font-mono);font-size:16px;font-weight:700;line-height:1.15}
+.ss-val.ok{color:var(--success)}
+.ss-val.warn{color:var(--warning)}
+.ss-val.err{color:var(--danger)}
+.ss-label{color:var(--text-muted);font-size:10px}
+.ss-alerts{flex:1;min-width:240px;display:flex;flex-direction:column;justify-content:center;gap:3px;padding:10px 16px;min-width:240px}
+.ss-alert-line{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-secondary);white-space:nowrap;overflow:hidden}
+.ss-alert-line .alert-time{flex-shrink:0}
+/* 二级信息：主监测区 */
+.ov-main-row{display:grid;grid-template-columns:minmax(320px,5fr) minmax(280px,4fr);border-bottom:1px solid var(--border-default)}
+.ov-panel{background:var(--bg-panel);padding:10px 16px 12px;min-width:0;display:flex;flex-direction:column}
+.ov-panel + .ov-panel{border-left:1px solid var(--border-default)}
+@media (max-width:760px){
+  .ov-main-row{grid-template-columns:1fr}
+  .ov-panel + .ov-panel{border-left:none;border-top:1px solid var(--border-default)}
+  .topnav{flex-wrap:wrap;height:auto;min-height:48px;padding:6px 12px;gap:8px 14px}
+  .nav-tab{padding:4px 8px}
+}
+.ov-panel-title{font-size:11px;font-weight:600;color:var(--text-muted);letter-spacing:.04em;margin-bottom:6px;flex-shrink:0}
+/* 俯视机架示意图（位置与航向面板） */
+.frame-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:0}
+.frame-top-view{display:block}
+.fv-arm{stroke:var(--text-secondary);stroke-width:7;stroke-linecap:round}
+.fv-body{fill:none;stroke:var(--text-secondary);stroke-width:2.5}
+.fv-prop{fill:none;stroke:var(--text-muted);stroke-width:1.5;stroke-dasharray:3 3}
+.fv-motor{fill:var(--bg-hover);stroke:var(--text-muted);stroke-width:1.5}
+.fv-nose{fill:var(--primary)}
+.fv-north-line{stroke:var(--text-muted);stroke-width:1;stroke-dasharray:2 3}
+.fv-north{fill:var(--text-muted);font-size:9px;font-family:var(--font-mono)}
+.frame-hdg{font-family:var(--font-mono);color:var(--text-primary);font-size:15px;font-weight:700}
+.frame-state{font-size:10px;font-weight:600}
+.frame-state.ok{color:var(--success)}
+.frame-state.off{color:var(--text-muted)}
+/* 位置数值 */
+.pos-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border-default);border:1px solid var(--border-default);border-radius:var(--radius-sm);overflow:hidden;flex-shrink:0}
+.pos-cell{background:var(--bg-panel);display:flex;flex-direction:column;gap:2px;padding:8px 10px}
+.pos-val{color:var(--text-primary);font-family:var(--font-mono);font-size:12px;font-weight:600}
+.pos-label{color:var(--text-muted);font-size:9px}
+/* ADI 面板 */
+.adi-wrap{background:var(--bg-panel);flex:1;min-height:0;overflow:hidden;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;padding:4px 0 8px}
+.adi-svg{width:150px;height:150px}
+.adi-strip{border-top:1px solid var(--border-default);flex-shrink:0;display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border-default);width:100%}
+.as-cell{background:var(--bg-panel);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2px;padding:7px 4px}
+.as-val{color:var(--text-primary);font-family:var(--font-mono);font-size:13px;font-weight:600}
 .as-label{color:var(--text-muted);font-size:9px}
 .as-val.vz-up{color:var(--success)}
 .as-val.vz-down{color:var(--danger)}
+/* 三级信息：可展开诊断区 */
+.ov-diag{border-bottom:1px solid var(--border-default)}
+.ov-diag summary{list-style:none;cursor:pointer;padding:10px 16px;font-size:12px;font-weight:600;color:var(--text-secondary);display:flex;align-items:center;gap:8px;user-select:none}
+.ov-diag summary::-webkit-details-marker{display:none}
+.ov-diag summary:hover{background:var(--bg-hover)}
+.ov-diag summary .diag-arrow{transition:transform .15s;color:var(--text-muted)}
+.ov-diag[open] summary .diag-arrow{transform:rotate(90deg)}
+.ov-diag summary .diag-sub{margin-left:auto;font-size:10px;font-weight:400;color:var(--text-muted)}
+.ov-diag-body{padding:0 16px 14px}
+.diag-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--border-default);border-radius:var(--radius-sm);overflow:hidden}
+.ov-card{background:var(--bg-panel);overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.ov-card + .ov-card{border-left:1px solid var(--border-default)}
+.ov-card-head{border-bottom:1px solid var(--border-default);padding:7px 12px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.ov-card-title{font-size:12px;font-weight:600;color:var(--text-primary)}
+.ov-card-sub{margin-left:auto;font-size:10px;color:var(--text-muted)}
+.ov-card-body{flex:1;padding:10px;overflow:hidden;min-height:0}
 
 /* Sensor card - CGC sg-cell structure */
 .sensor-grid{background:var(--bg-bar);flex:1;display:grid;grid-template-rows:repeat(3,1fr);grid-template-columns:1fr 1fr;gap:1px;overflow:hidden;height:100%}
@@ -197,8 +171,8 @@ input:disabled,[data-theme="light"] input:disabled{background:var(--bg-hover);co
 .vbar-val{color:var(--info);writing-mode:vertical-rl;height:28px;font-family:var(--font-mono);font-size:8px;transform:rotate(180deg)}
 .vbar-track{background:var(--bg-bar);border-radius:2px;width:100%;height:80px;position:relative;overflow:hidden}
 .vbar-fill{position:absolute;bottom:0;left:0;right:0;border-radius:2px 2px 0 0;transition:height .1s}
-.rc-fill{background:var(--primary)}
-.motor-fill{background:var(--success)}
+.rc-fill{background:var(--data-fill)}
+.motor-fill{background:var(--data-fill)}
 .vbar-label{color:var(--text-muted);font-size:9px}
 
 /* Joystick sim */
@@ -220,9 +194,9 @@ input:disabled,[data-theme="light"] input:disabled{background:var(--bg-hover);co
 .info-banner{color:var(--info);background:var(--bg-base);opacity:.85;border:1px solid var(--border-default)}
 .warn-banner{color:var(--warning);background:#f59e0b1f;border:1px solid #f59e0b59}
 .banner-link{color:var(--text-link);cursor:pointer;text-decoration:underline}
-.adi-overlay{position:absolute;bottom:12px;left:12px;z-index:10;width:164px;height:164px;border-radius:12px;overflow:hidden}
-.adi-show{position:absolute;bottom:12px;left:12px;z-index:10;background:var(--bg-panel);opacity:.92;border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:6px 10px;font-size:11px;color:var(--text-secondary);cursor:pointer;backdrop-filter:blur(8px)}
-.hud-right{position:absolute;top:50%;right:12px;transform:translateY(-50%);z-index:10;background:var(--bg-base);opacity:.92;backdrop-filter:blur(12px);border:1px solid var(--border-default);border-radius:var(--radius-md);padding:12px 16px;min-width:88px}
+.adi-overlay{position:absolute;bottom:12px;left:12px;z-index:10;width:164px;height:164px;border-radius:var(--radius-sm);overflow:hidden}
+.adi-show{position:absolute;bottom:12px;left:12px;z-index:10;background:var(--bg-panel);border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:6px 10px;font-size:11px;color:var(--text-secondary);cursor:pointer}
+.hud-right{position:absolute;top:50%;right:12px;transform:translateY(-50%);z-index:10;background:var(--bg-base);border:1px solid var(--border-default);border-radius:var(--radius-md);padding:12px 16px;min-width:88px}
 .hud-row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:2px 0}
 .hud-label{color:var(--text-muted);font-size:9px}
 .hud-val{color:var(--text-primary);font-family:var(--font-mono);font-size:15px;font-weight:700}
@@ -230,7 +204,7 @@ input:disabled,[data-theme="light"] input:disabled{background:var(--bg-hover);co
 .hud-sep{height:1px;background:var(--border-default);margin:4px 0}
 .hud-mode{text-align:center;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;background:var(--bg-bar);color:var(--info)}
 .hud-mode.armed{color:var(--success);background:#22c55e26}
-.alerts-panel{position:absolute;bottom:0;left:50%;transform:translateX(-50%);z-index:10;backdrop-filter:blur(12px);background:var(--bg-panel);opacity:.95;border:1px solid var(--border-default);border-bottom:none;border-radius:var(--radius-md) var(--radius-md) 0 0;min-width:320px;max-width:520px}
+.alerts-panel{position:absolute;bottom:0;left:50%;transform:translateX(-50%);z-index:10;background:var(--bg-panel);border:1px solid var(--border-default);border-bottom:none;border-radius:var(--radius-md) var(--radius-md) 0 0;min-width:320px;max-width:520px}
 .alerts-header{padding:5px 12px;font-size:11px;display:flex;align-items:center;gap:8px;cursor:pointer}
 .alerts-header .alert-count{background:var(--bg-bar);border-radius:10px;padding:0 6px;font-size:10px}
 .alerts-header .alert-count.warn{color:var(--warning);background:#f59e0b33}
@@ -246,25 +220,27 @@ input:disabled,[data-theme="light"] input:disabled{background:var(--bg-hover);co
 .bh-val{color:var(--text-primary);font-family:var(--font-mono);font-size:13px;font-weight:700}
 .bh-sep{width:1px;height:22px;background:var(--border-hover)}
 .cmd-bar{background:var(--bg-panel);border-top:1px solid var(--border-default);height:64px;padding:0 20px;display:flex;align-items:center;justify-content:center;gap:12px}
+.cmd-sep{width:1px;height:34px;background:var(--border-default);flex-shrink:0}
+.cmd-safe-label{font-size:10px;color:var(--text-muted);letter-spacing:.08em;flex-shrink:0}
+.cmd-safe{display:flex;gap:8px;padding:5px 8px;border:1px solid var(--border-default);border-radius:var(--radius-sm);background:var(--bg-bar)}
 .cmd-btn{min-width:90px;padding:8px 16px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;transition:all .15s;border:1px solid var(--border-default);background:var(--bg-panel);color:var(--text-secondary)}
 .cmd-btn:hover{background:var(--bg-hover);color:var(--text-primary);border-color:var(--border-hover)}
 .cmd-btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
 .cmd-btn.primary:hover{filter:brightness(1.1)}
 .cmd-btn.warn{background:var(--warning);color:#0d1117;border-color:var(--warning)}
-.cmd-btn.success{background:var(--success);color:#0d1117;border-color:var(--success)}
 .cmd-btn:disabled{opacity:.4;cursor:not-allowed}
 
 /* ===== Plan Page ===== */
 .plan-page{display:flex;height:100%}
 .plan-body{flex:1;position:relative;overflow:hidden}
 #planMap{width:100%;height:100%}
-.map-toolbar{position:absolute;top:12px;right:12px;z-index:5;backdrop-filter:blur(10px);background:var(--bg-panel);opacity:.95;border:1px solid var(--border-hover);border-radius:var(--radius-md);padding:6px 10px;display:flex;gap:4px;align-items:center;box-shadow:var(--shadow-map)}
+.map-toolbar{position:absolute;top:12px;right:12px;z-index:5;background:var(--bg-panel);border:1px solid var(--border-hover);border-radius:var(--radius-md);padding:6px 10px;display:flex;gap:4px;align-items:center}
 .map-toolbar button{color:var(--text-secondary);background:none;border:none;width:28px;height:28px;border-radius:4px;font-size:13px;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s;cursor:pointer}
 .map-toolbar button:hover{color:var(--text-primary);background:var(--bg-hover)}
 .map-toolbar button.active{color:var(--primary)}
 .tb-divider{width:1px;height:20px;background:var(--border-hover);margin:0 4px}
-.map-hint{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);color:var(--text-muted);background:var(--bg-base);opacity:.8;border-radius:20px;padding:3px 10px;font-size:10px;z-index:5}
-.map-hud{position:absolute;bottom:36px;left:50%;transform:translateX(-50%);z-index:5;backdrop-filter:blur(4px);background:var(--bg-base);opacity:.92;border:1px solid var(--border-default);border-radius:24px;padding:5px 16px;display:flex;gap:16px}
+.map-hint{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);color:var(--text-muted);background:var(--bg-base);border-radius:var(--radius-sm);padding:3px 10px;font-size:10px;z-index:5}
+.map-hud{position:absolute;bottom:36px;left:50%;transform:translateX(-50%);z-index:5;background:var(--bg-base);border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:5px 16px;display:flex;gap:16px}
 .map-hud-item{display:flex;align-items:center;gap:4px}
 .map-hud-label{color:var(--info);font-size:10px}
 .map-hud-val{color:var(--text-primary);font-family:var(--font-mono);font-size:13px;font-weight:600}
@@ -474,9 +450,9 @@ input:disabled,[data-theme="light"] input:disabled{background:var(--bg-hover);co
 
 /* Map controls */
 .map-ctrl-bar{position:absolute;top:10px;left:112px;z-index:10;display:flex;gap:6px}
-.map-ctrl-btn{background:var(--bg-base);opacity:.92;border:1.5px solid var(--border-hover);color:var(--text-primary);padding:4px 10px;border-radius:var(--radius-sm);font-size:11px;font-weight:700;letter-spacing:.02em;cursor:pointer;backdrop-filter:blur(6px);box-shadow:var(--shadow-map);transition:all .15s}
+.map-ctrl-btn{background:var(--bg-base);border:1.5px solid var(--border-hover);color:var(--text-primary);padding:4px 10px;border-radius:var(--radius-sm);font-size:11px;font-weight:700;letter-spacing:.02em;cursor:pointer;transition:all .15s}
 .map-ctrl-btn:hover{background:var(--bg-hover);color:var(--text-primary);border-color:var(--primary)}
-.map-ctrl-btn.active{background:var(--primary);border-color:var(--accent-light-blue);color:#fff;box-shadow:0 0 8px var(--shadow-joydot)}
+.map-ctrl-btn.active{background:var(--primary);border-color:var(--accent-light-blue);color:#fff}
 
 /* Waypoint marker on map */
 .wp-marker{width:24px;height:24px;cursor:pointer}
@@ -485,7 +461,7 @@ input:disabled,[data-theme="light"] input:disabled{background:var(--bg-hover);co
 .hidden{display:none!important}
 
 /* Toast */
-.toast{position:fixed;top:60px;right:20px;z-index:9999;padding:10px 16px;border-radius:8px;font-size:12px;transition:opacity .3s;backdrop-filter:blur(10px)}
+.toast{position:fixed;top:60px;right:20px;z-index:9999;padding:10px 16px;border-radius:var(--radius-sm);font-size:12px;transition:opacity .3s;box-shadow:var(--shadow-pop)}
 .toast.success{background:#22c55e14;border:1px solid #22c55e40;color:var(--success)}
 .toast.warn{background:#f59e0b1f;border:1px solid #f59e0b59;color:var(--warning)}
 .toast.err{background:#ef44440d;border:1px solid #ef444440;color:var(--danger)}
@@ -519,59 +495,55 @@ input:disabled,[data-theme="light"] input:disabled{background:var(--bg-hover);co
 <!-- ===== Overview Page ===== -->
 <div class="page active" id="page-overview">
   <div class="overview-page">
-    <div class="ov-top-row">
-      <!-- Model card (CGC style: no header, model-wrap + stats bar) -->
-      <div class="ov-card">
-        <div class="model-wrap">
-          <div class="drone-scene" id="droneScene">
-            <div class="drone-3d-model" id="drone3dModel" style="transform: rotateX(35.4254deg) rotateY(0.707281deg) rotateZ(-148.2deg);">
-              <!-- Body -->
-              <div class="d3-part d3-body-top"></div>
-              <div class="d3-part d3-body-bottom"></div>
-              <div class="d3-part d3-body-side bs-front"></div>
-              <div class="d3-part d3-body-side bs-back"></div>
-              <div class="d3-part d3-body-side bs-left"></div>
-              <div class="d3-part d3-body-side bs-right"></div>
-              <!-- Nose indicator -->
-              <div class="d3-part d3-nose"></div>
-              <!-- Arms (X configuration) -->
-              <div class="d3-part d3-arm a1"></div>
-              <div class="d3-part d3-arm a2"></div>
-              <div class="d3-part d3-arm a3"></div>
-              <div class="d3-part d3-arm a4"></div>
-              <div class="d3-part d3-arm-bottom ab1"></div>
-              <div class="d3-part d3-arm-bottom ab2"></div>
-              <div class="d3-part d3-arm-bottom ab3"></div>
-              <div class="d3-part d3-arm-bottom ab4"></div>
-              <!-- Motors + propellers -->
-              <div class="d3-part d3-motor-bottom mb1"></div>
-              <div class="d3-part d3-motor-bottom mb2"></div>
-              <div class="d3-part d3-motor-bottom mb3"></div>
-              <div class="d3-part d3-motor-bottom mb4"></div>
-              <div class="d3-part d3-motor m1"><div class="d3-rotor r1 spinning" id="rotor1"></div><div class="d3-led led-front-left"></div></div>
-              <div class="d3-part d3-motor m2"><div class="d3-rotor r2 spinning" id="rotor2"></div><div class="d3-led led-front-right"></div></div>
-              <div class="d3-part d3-motor m3"><div class="d3-rotor r3 spinning" id="rotor3"></div><div class="d3-led led-back-right"></div></div>
-              <div class="d3-part d3-motor m4"><div class="d3-rotor r4 spinning" id="rotor4"></div><div class="d3-led led-back-left"></div></div>
-              <!-- Gimbal + camera -->
-              <div class="d3-part d3-gimbal"><div class="d3-camera-lens"></div></div>
-              <!-- Landing gear -->
-              <div class="d3-part d3-gear g1"></div>
-              <div class="d3-part d3-gear g2"></div>
-              <div class="d3-part d3-gear g3"></div>
-              <div class="d3-part d3-gear g4"></div>
-            </div>
+    <!-- 一级信息：全局状态条 -->
+    <div class="status-strip">
+      <div class="ss-item"><span class="ss-label">连接</span><span class="ss-val ok" id="ssConn">已连接</span></div>
+      <div class="ss-item"><span class="ss-label">飞行模式</span><span class="ss-val" id="ssMode">AUTO</span></div>
+      <div class="ss-item"><span class="ss-label">解锁状态</span><span class="ss-val warn" id="ssArm">ARMED</span></div>
+      <div class="ss-item"><span class="ss-label">电池</span><span class="ss-val ok" id="ssBatt">72%</span></div>
+      <div class="ss-item"><span class="ss-label">电压</span><span class="ss-val" id="ssVolt">12.4V</span></div>
+      <div class="ss-item"><span class="ss-label">GPS</span><span class="ss-val ok" id="ssGps">3D·14</span></div>
+      <div class="ss-alerts" id="ssAlerts"></div>
+    </div>
+    <!-- 二级信息：主监测区 -->
+    <div class="ov-main-row">
+      <div class="ov-panel">
+        <div class="ov-panel-title">位置与航向</div>
+        <div class="frame-wrap">
+          <svg class="frame-top-view" width="180" height="180" viewBox="0 0 190 190">
+            <line class="fv-north-line" x1="95" y1="11" x2="95" y2="26"></line>
+            <text class="fv-north" x="95" y="8" text-anchor="middle">N</text>
+            <g id="frameGroup" transform="rotate(128 95 98)">
+              <line class="fv-arm" x1="95" y1="98" x2="128.9" y2="64.1"></line>
+              <line class="fv-arm" x1="95" y1="98" x2="128.9" y2="131.9"></line>
+              <line class="fv-arm" x1="95" y1="98" x2="61.1" y2="131.9"></line>
+              <line class="fv-arm" x1="95" y1="98" x2="61.1" y2="64.1"></line>
+              <circle class="fv-prop" cx="128.9" cy="64.1" r="21"></circle>
+              <circle class="fv-prop" cx="128.9" cy="131.9" r="21"></circle>
+              <circle class="fv-prop" cx="61.1" cy="131.9" r="21"></circle>
+              <circle class="fv-prop" cx="61.1" cy="64.1" r="21"></circle>
+              <circle class="fv-motor" cx="128.9" cy="64.1" r="6.5"></circle>
+              <circle class="fv-motor" cx="128.9" cy="131.9" r="6.5"></circle>
+              <circle class="fv-motor" cx="61.1" cy="131.9" r="6.5"></circle>
+              <circle class="fv-motor" cx="61.1" cy="64.1" r="6.5"></circle>
+              <rect class="fv-body" x="84" y="78" width="22" height="40" rx="3"></rect>
+              <polygon class="fv-nose" points="95,70 88.5,80 101.5,80"></polygon>
+            </g>
+          </svg>
+          <div style="display:flex;align-items:baseline;gap:12px">
+            <span class="frame-hdg" id="frameHdg">128°</span>
+            <span class="frame-state ok" id="frameState">ARMED</span>
           </div>
         </div>
-        <div class="model-stats">
-          <div class="mst-row">
-            <div class="mst-cell"><div class="mst-val mono" id="ovRoll">-0.7°</div><div class="mst-label">横滚 ROL</div></div>
-            <div class="mst-cell"><div class="mst-val mono" id="ovPitch">0.4°</div><div class="mst-label">俯仰 PIT</div></div>
-            <div class="mst-cell"><div class="mst-val mono" id="ovYaw">148°</div><div class="mst-label">航向 YAW</div></div>
-          </div>
+        <div class="pos-grid">
+          <div class="pos-cell"><span class="pos-label">纬度 LAT</span><span class="pos-val" id="posLat">32.060300°</span></div>
+          <div class="pos-cell"><span class="pos-label">经度 LON</span><span class="pos-val" id="posLon">118.792100°</span></div>
+          <div class="pos-cell"><span class="pos-label">相对高度 ALT</span><span class="pos-val" id="ovAlt">86.4 m</span></div>
+          <div class="pos-cell"><span class="pos-label">地速 GS</span><span class="pos-val" id="ovGs">8.2 m/s</span></div>
         </div>
       </div>
-      <!-- ADI card (CGC style: adi-wrap + adi-strip bottom) -->
-      <div class="ov-card">
+      <div class="ov-panel">
+        <div class="ov-panel-title">姿态</div>
         <div class="adi-wrap">
           <svg class="adi-svg" viewBox="0 0 140 140">
             <defs>
@@ -648,24 +620,17 @@ input:disabled,[data-theme="light"] input:disabled{background:var(--bg-hover);co
           </svg>
         </div>
         <div class="adi-strip">
-          <div class="as-cell"><div class="as-val mono" id="ovAlt">86.2m</div><div class="as-label">高度</div></div>
-          <div class="as-cell"><div class="as-val mono" id="ovGs">9.2</div><div class="as-label">地速 m/s</div></div>
-          <div class="as-cell"><div class="as-val mono" id="ovVs" style="color: var(--success);">+0.8</div><div class="as-label">爬升 m/s</div></div>
-        </div>
-      </div>
-      <!-- Sensor card (CGC style: no header, sg-cell grid) -->
-      <div class="ov-card">
-        <div class="sensor-grid">
-          <div class="sg-cell ok"><div class="sg-accent"></div><div class="sg-head"><svg class="sg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 L20 7 L20 17 L12 22 L4 17 L4 7 Z"></path><circle cx="12" cy="12" r="3"></circle></svg><span class="sg-name">IMU</span></div><div class="sg-body"><span class="sg-status">正常</span><span class="sg-value mono" id="sImu">-0.7°/0.4°</span></div></div>
-          <div class="sg-cell ok"><div class="sg-accent"></div><div class="sg-head"><svg class="sg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2 L12 14"></path><path d="M12 14 L16 10"></path></svg><span class="sg-name">罗盘</span></div><div class="sg-body"><span class="sg-status">正常</span><span class="sg-value mono" id="sMag">148°</span></div></div>
-          <div class="sg-cell ok"><div class="sg-accent"></div><div class="sg-head"><svg class="sg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 Q8 8 12 12 Q16 16 12 22"></path><path d="M8 6 L12 10 L16 6"></path></svg><span class="sg-name">气压计</span></div><div class="sg-body"><span class="sg-status">正常</span><span class="sg-value mono" id="sBaro">86.2m</span></div></div>
-          <div class="sg-cell warn"><div class="sg-accent"></div><div class="sg-head"><svg class="sg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 L2 22 L22 22 Z"></path><path d="M12 10 L12 16"></path><circle cx="12" cy="19" r=".5" fill="currentColor"></circle></svg><span class="sg-name">测距仪</span></div><div class="sg-body"><span class="sg-status">异常</span><span class="sg-value mono" id="sRange">0.8m</span></div></div>
-          <div class="sg-cell ok"><div class="sg-accent"></div><div class="sg-head"><svg class="sg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"></path></svg><span class="sg-name">光流</span></div><div class="sg-body"><span class="sg-status">正常</span><span class="sg-value mono" id="sFlow">98%</span></div></div>
-          <div class="sg-cell ok"><div class="sg-accent"></div><div class="sg-head"><svg class="sg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 L18 6 L18 12 L12 16 L6 12 L6 6 Z"></path><circle cx="12" cy="10" r="2"></circle></svg><span class="sg-name">GPS</span></div><div class="sg-body"><span class="sg-status">正常</span><span class="sg-value mono" id="sGps">3D·11颗</span></div></div>
+          <div class="as-cell"><span class="as-val mono" id="ovRoll">-0.7°</span><span class="as-label">横滚 ROL</span></div>
+          <div class="as-cell"><span class="as-val mono" id="ovPitch">0.4°</span><span class="as-label">俯仰 PIT</span></div>
+          <div class="as-cell"><span class="as-val mono" id="ovVs" style="color: var(--success);">+0.8</span><span class="as-label">爬升 m/s</span></div>
         </div>
       </div>
     </div>
-    <div class="ov-mid-row">
+    <!-- 三级信息：可展开诊断区 -->
+    <details class="ov-diag">
+      <summary><svg class="diag-arrow" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6 L15 12 L9 18"></path></svg>状态 / 诊断<span class="diag-sub">遥控输入 · 遥控器模拟 · 电机输出 · 传感器</span></summary>
+      <div class="ov-diag-body">
+        <div class="diag-grid">
       <!-- RC channels -->
       <div class="ov-card">
         <div class="ov-card-head"><span class="ov-card-title">遥控输入</span><span class="ov-card-sub">CH1–12</span></div>
@@ -692,7 +657,21 @@ input:disabled,[data-theme="light"] input:disabled{background:var(--bg-hover);co
         <div class="ov-card-head"><span class="ov-card-title">电机输出</span><span class="ov-card-sub">M1–12</span></div>
         <div class="ch-card-body" id="motorBars"><div class="vbar"><span class="vbar-val mono">1342</span><div class="vbar-track"><div class="vbar-fill motor-fill" style="height: 34.215%; background: rgb(63, 185, 80);"></div></div><span class="vbar-label">M1</span></div><div class="vbar"><span class="vbar-val mono">1232</span><div class="vbar-track"><div class="vbar-fill motor-fill" style="height: 23.1573%; background: rgb(63, 185, 80);"></div></div><span class="vbar-label">M2</span></div><div class="vbar"><span class="vbar-val mono">1087</span><div class="vbar-track"><div class="vbar-fill motor-fill" style="height: 8.6993%; background: rgb(63, 185, 80);"></div></div><span class="vbar-label">M3</span></div><div class="vbar"><span class="vbar-val mono">975</span><div class="vbar-track"><div class="vbar-fill motor-fill" style="height: 0%; background: rgb(63, 185, 80);"></div></div><span class="vbar-label">M4</span></div><div class="vbar"><span class="vbar-val mono">—</span><div class="vbar-track"><div class="vbar-fill motor-fill" style="height: 0%; background: rgb(63, 185, 80);"></div></div><span class="vbar-label">M5</span></div><div class="vbar"><span class="vbar-val mono">—</span><div class="vbar-track"><div class="vbar-fill motor-fill" style="height: 0%; background: rgb(63, 185, 80);"></div></div><span class="vbar-label">M6</span></div><div class="vbar"><span class="vbar-val mono">—</span><div class="vbar-track"><div class="vbar-fill motor-fill" style="height: 0%; background: rgb(63, 185, 80);"></div></div><span class="vbar-label">M7</span></div><div class="vbar"><span class="vbar-val mono">—</span><div class="vbar-track"><div class="vbar-fill motor-fill" style="height: 0%; background: rgb(63, 185, 80);"></div></div><span class="vbar-label">M8</span></div><div class="vbar"><span class="vbar-val mono">—</span><div class="vbar-track"><div class="vbar-fill motor-fill" style="height: 0%; background: rgb(63, 185, 80);"></div></div><span class="vbar-label">M9</span></div><div class="vbar"><span class="vbar-val mono">—</span><div class="vbar-track"><div class="vbar-fill motor-fill" style="height: 0%; background: rgb(63, 185, 80);"></div></div><span class="vbar-label">M10</span></div><div class="vbar"><span class="vbar-val mono">—</span><div class="vbar-track"><div class="vbar-fill motor-fill" style="height: 0%; background: rgb(63, 185, 80);"></div></div><span class="vbar-label">M11</span></div><div class="vbar"><span class="vbar-val mono">—</span><div class="vbar-track"><div class="vbar-fill motor-fill" style="height: 0%; background: rgb(63, 185, 80);"></div></div><span class="vbar-label">M12</span></div></div>
       </div>
-    </div>
+        </div>
+        <!-- 传感器健康度 -->
+        <div class="ov-card" style="margin-top:10px">
+          <div class="ov-card-head"><span class="ov-card-title">传感器健康度</span><span class="ov-card-sub">IMU · 罗盘 · 气压计 · 测距仪 · 光流 · GPS</span></div>
+          <div class="sensor-grid" style="height:210px">
+            <div class="sg-cell ok"><div class="sg-accent"></div><div class="sg-head"><svg class="sg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 L20 7 L20 17 L12 22 L4 17 L4 7 Z"></path><circle cx="12" cy="12" r="3"></circle></svg><span class="sg-name">IMU</span></div><div class="sg-body"><span class="sg-status">正常</span><span class="sg-value mono" id="sImu">-0.7°/0.4°</span></div></div>
+            <div class="sg-cell ok"><div class="sg-accent"></div><div class="sg-head"><svg class="sg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2 L12 14"></path><path d="M12 14 L16 10"></path></svg><span class="sg-name">罗盘</span></div><div class="sg-body"><span class="sg-status">正常</span><span class="sg-value mono" id="sMag">148°</span></div></div>
+            <div class="sg-cell ok"><div class="sg-accent"></div><div class="sg-head"><svg class="sg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 Q8 8 12 12 Q16 16 12 22"></path><path d="M8 6 L12 10 L16 6"></path></svg><span class="sg-name">气压计</span></div><div class="sg-body"><span class="sg-status">正常</span><span class="sg-value mono" id="sBaro">86.2m</span></div></div>
+            <div class="sg-cell warn"><div class="sg-accent"></div><div class="sg-head"><svg class="sg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 L2 22 L22 22 Z"></path><path d="M12 10 L12 16"></path><circle cx="12" cy="19" r=".5" fill="currentColor"></circle></svg><span class="sg-name">测距仪</span></div><div class="sg-body"><span class="sg-status">异常</span><span class="sg-value mono" id="sRange">0.8m</span></div></div>
+            <div class="sg-cell ok"><div class="sg-accent"></div><div class="sg-head"><svg class="sg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"></path></svg><span class="sg-name">光流</span></div><div class="sg-body"><span class="sg-status">正常</span><span class="sg-value mono" id="sFlow">98%</span></div></div>
+            <div class="sg-cell ok"><div class="sg-accent"></div><div class="sg-head"><svg class="sg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 L18 6 L18 12 L12 16 L6 12 L6 6 Z"></path><circle cx="12" cy="10" r="2"></circle></svg><span class="sg-name">GPS</span></div><div class="sg-body"><span class="sg-status">正常</span><span class="sg-value mono" id="sGps">3D·11颗</span></div></div>
+          </div>
+        </div>
+      </div>
+    </details>
   </div>
 </div>
 
@@ -808,12 +787,16 @@ input:disabled,[data-theme="light"] input:disabled{background:var(--bg-hover);co
       <div class="bh-item"><span class="bh-label">LON</span><span class="bh-val mono" id="bhLon">118.7921°</span></div>
     </div>
     <div class="cmd-bar">
-      <button class="cmd-btn warn" onclick="flyCmd('解锁','解锁后电机将启动，请确保周围安全！确认解锁？')">解锁</button>
       <button class="cmd-btn primary" onclick="flyCmd('起飞','起飞至默认高度 2 米，确认？')">起飞</button>
-      <button class="cmd-btn success" onclick="flyCmd('任务','将按任务列表依次飞行，确认开始任务？')">任务</button>
-      <button class="cmd-btn" onclick="flyCmd('降落','将在当前位置原地降落，确认？')">降落</button>
-      <button class="cmd-btn" onclick="flyCmd('返航','将返回起飞点（RTL），确认？')">返航</button>
-      <button class="cmd-btn" onclick="flyCmd('悬停','将在当前位置悬停，确认？')">悬停</button>
+      <button class="cmd-btn" onclick="flyCmd('任务','将按任务列表依次飞行，确认开始任务？')">任务</button>
+      <div class="cmd-sep"></div>
+      <span class="cmd-safe-label">安全操作</span>
+      <div class="cmd-safe">
+        <button class="cmd-btn warn" onclick="flyCmd('解锁','解锁后电机将启动，请确保周围安全！确认解锁？')">解锁</button>
+        <button class="cmd-btn" onclick="flyCmd('悬停','将在当前位置悬停，确认？')">悬停</button>
+        <button class="cmd-btn" onclick="flyCmd('降落','将在当前位置原地降落，确认？')">降落</button>
+        <button class="cmd-btn" onclick="flyCmd('返航','将返回起飞点（RTL），确认？')">返航</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1047,28 +1030,6 @@ var alerts = [
   {level:'info',message:'飞控已解锁',timestamp:Date.now()-216000}
 ];
 
-/* 3D Drone view control */
-var droneView={pitch:35,roll:0,yaw:0};
-var droneDragging=false,dragStart3d={x:0,y:0};
-(function initDroneDrag(){
-  var scene=document.getElementById('droneScene');
-  if(!scene)return;
-  scene.addEventListener('mousedown',function(e){
-    droneDragging=true;dragStart3d={x:e.clientX,y:e.clientY};
-    scene.style.cursor='grabbing';
-  });
-  document.addEventListener('mousemove',function(e){
-    if(!droneDragging)return;
-    droneView.roll+=(e.clientX-dragStart3d.x)*0.3;
-    droneView.pitch+=(e.clientY-dragStart3d.y)*0.3;
-    droneView.pitch=Math.max(-60,Math.min(90,droneView.pitch));
-    dragStart3d={x:e.clientX,y:e.clientY};
-  });
-  document.addEventListener('mouseup',function(){
-    if(droneDragging){droneDragging=false;scene.style.cursor='grab';}
-  });
-})();
-
 /* ===== Theme Switching ===== */
 var currentTheme='dark';
 try{
@@ -1189,42 +1150,71 @@ function updateChannelBars(){
   if(c4)c4.textContent=ch4<900?'—':Math.round(ch4);
 }
 
-/* ===== Overview Update ===== */
+/* ===== Overview Update（任务关键型控制台：一级状态条 → 二级主监测区 → 三级诊断） ===== */
 function updateOverview(){
-  document.getElementById('ovRoll').textContent=state.rollDeg.toFixed(1)+'°';
-  document.getElementById('ovPitch').textContent=state.pitchDeg.toFixed(1)+'°';
-  document.getElementById('ovYaw').textContent=state.heading.toFixed(0)+'°';
-  document.getElementById('ovAlt').textContent=state.relAltM.toFixed(1)+'m';
-  document.getElementById('ovGs').textContent=state.speedMs.toFixed(1);
+  var el;
+  /* 一级：全局状态条 */
+  el=document.getElementById('ssConn');
+  if(el){el.textContent=state.connected?'已连接':'断开';el.className='ss-val '+(state.connected?'ok':'err');}
+  el=document.getElementById('ssMode');
+  if(el)el.textContent=state.mode;
+  el=document.getElementById('ssArm');
+  if(el){el.textContent=state.armed?'ARMED':'DISARMED';el.className='ss-val '+(state.armed?'warn':'');}
+  el=document.getElementById('ssBatt');
+  if(el){el.textContent=Math.round(state.remaining)+'%';el.className='ss-val '+(state.remaining<=20?'err':state.remaining<=40?'warn':'ok');}
+  el=document.getElementById('ssVolt');
+  if(el){el.textContent=state.voltageV.toFixed(1)+'V';el.className='ss-val '+(state.voltageV<10.5?'err':state.voltageV<11.1?'warn':'');}
+  el=document.getElementById('ssGps');
+  if(el)el.textContent=(state.fixType>=3?state.fixType+'D':'NO FIX')+'·'+state.satellites;
+  /* 一级：最新告警（最多两条） */
+  var sa=document.getElementById('ssAlerts');
+  if(sa){
+    var lines='';
+    for(var i=0;i<Math.min(2,alerts.length);i++){
+      var a=alerts[i],d=new Date(a.timestamp);
+      var tt=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0');
+      lines+='<div class="ss-alert-line"><span class="alert-time mono">'+tt+'</span><span>'+a.message+'</span></div>';
+    }
+    sa.innerHTML=lines;
+  }
+  /* 二级：位置与航向（俯视机架随航向旋转，顺时针为正） */
+  var fg=document.getElementById('frameGroup');
+  if(fg)fg.setAttribute('transform','rotate('+state.heading+' 95 98)');
+  el=document.getElementById('frameHdg');
+  if(el)el.textContent=Math.round(state.heading)+'°';
+  el=document.getElementById('frameState');
+  if(el){el.textContent=state.armed?'ARMED':'DISARMED';el.className='frame-state '+(state.armed?'ok':'off');}
+  el=document.getElementById('posLat');
+  if(el)el.textContent=state.lat.toFixed(6)+'°';
+  el=document.getElementById('posLon');
+  if(el)el.textContent=state.lon.toFixed(6)+'°';
+  el=document.getElementById('ovAlt');
+  if(el)el.textContent=state.relAltM.toFixed(1)+' m';
+  el=document.getElementById('ovGs');
+  if(el)el.textContent=state.speedMs.toFixed(1)+' m/s';
+  /* 二级：姿态 */
+  el=document.getElementById('ovRoll');
+  if(el)el.textContent=state.rollDeg.toFixed(1)+'°';
+  el=document.getElementById('ovPitch');
+  if(el)el.textContent=state.pitchDeg.toFixed(1)+'°';
   var vs=state.climbRate;
-  var vsEl=document.getElementById('ovVs');
-  vsEl.textContent=(vs>=0?'+':'')+vs.toFixed(1);
-  vsEl.style.color=vs>0.2?'var(--success)':vs<-0.2?'var(--danger)':'var(--info)';
-  document.getElementById('sImu').textContent=state.rollDeg.toFixed(1)+'°/'+state.pitchDeg.toFixed(1)+'°';
-  document.getElementById('sMag').textContent=state.heading.toFixed(0)+'°';
-  document.getElementById('sBaro').textContent=state.relAltM.toFixed(1)+'m';
-  document.getElementById('sRange').textContent=(state.rangeDistance/100).toFixed(1)+'m';
-  document.getElementById('sFlow').textContent=Math.round(state.optFlowQuality/2.55)+'%';
-  document.getElementById('sGps').textContent=(state.fixType>=3?state.fixType+'D':'No Fix')+'·'+state.satellites+'颗';
-  // ADI ball
+  el=document.getElementById('ovVs');
+  if(el){el.textContent=(vs>=0?'+':'')+vs.toFixed(1);el.style.color=vs>0.2?'var(--success)':vs<-0.2?'var(--danger)':'var(--text-secondary)';}
   var adiBall=document.getElementById('adiBall');
   if(adiBall) adiBall.setAttribute('transform','rotate('+(-state.rollDeg)+' 70 70) translate(0 '+(state.pitchDeg*2)+')');
-  // 3D Drone model rotation
-  var d3m=document.getElementById('drone3dModel');
-  if(d3m){
-    var rx=state.pitchDeg+droneView.pitch;
-    var ry=-state.rollDeg+droneView.roll;
-    var rz=-state.heading+droneView.yaw;
-    d3m.style.transform='rotateX('+rx+'deg) rotateY('+ry+'deg) rotateZ('+rz+'deg)';
-  }
-  // Motor rotors spin
-  for(var ri=1;ri<=4;ri++){
-    var rotor=document.getElementById('rotor'+ri);
-    if(rotor){
-      if(state.armed) rotor.classList.add('spinning');
-      else rotor.classList.remove('spinning');
-    }
-  }
+  /* 三级：传感器健康度 */
+  el=document.getElementById('sImu');
+  if(el)el.textContent=state.rollDeg.toFixed(1)+'°/'+state.pitchDeg.toFixed(1)+'°';
+  el=document.getElementById('sMag');
+  if(el)el.textContent=state.heading.toFixed(0)+'°';
+  el=document.getElementById('sBaro');
+  if(el)el.textContent=state.relAltM.toFixed(1)+'m';
+  el=document.getElementById('sRange');
+  if(el)el.textContent=(state.rangeDistance/100).toFixed(1)+'m';
+  el=document.getElementById('sFlow');
+  if(el)el.textContent=Math.round(state.optFlowQuality/2.55)+'%';
+  el=document.getElementById('sGps');
+  if(el)el.textContent=(state.fixType>=3?state.fixType+'D':'No Fix')+'·'+state.satellites+'颗';
 }
 
 /* ===== Fly Page ===== */
