@@ -52,12 +52,50 @@ class MavlinkParserTest {
 
     private int getCrcExtra(int msgId) {
         return switch (msgId) {
-            case 0  -> 50;   // HEARTBEAT
-            case 1  -> 124;  // SYS_STATUS
-            case 33 -> 104;  // GLOBAL_POSITION_INT
-            case 74 -> 117;  // VFR_HUD
+            case 0   -> 50;   // HEARTBEAT
+            case 1   -> 124;  // SYS_STATUS
+            case 22  -> 220;  // PARAM_VALUE
+            case 26  -> 170;  // SCALED_IMU
+            case 31  -> 246;  // ATTITUDE_QUATERNION
+            case 33  -> 104;  // GLOBAL_POSITION_INT
+            case 35  -> 244;  // RC_CHANNELS_RAW
+            case 44  -> 221;  // MISSION_COUNT
+            case 74  -> 117;  // VFR_HUD
+            case 77  -> 143;  // COMMAND_ACK
+            case 126 -> 220;  // SERIAL_CONTROL
+            case 140 -> 181;  // ACTUATOR_CONTROL_TARGET
+            case 245 -> 130;  // EXTENDED_SYS_STATE
             default -> -1;
         };
+    }
+
+    /** 构造合法 MAVLink v2 帧（0xFD 起始），用于测试 v2 协议解析。 */
+    private byte[] buildV2Frame(int sysId, int compId, int msgId, byte[] payload) {
+        int payloadLen = payload.length;
+        // v2: STX(1) LEN(2) INCOMPAT(1) COMPAT(1) SEQ(1) SYSID(1) COMPID(1) MSGID(3) PAYLOAD(N) CRC(2)
+        byte[] frame = new byte[13 + payloadLen];
+        frame[0] = (byte) 0xFD;
+        frame[1] = (byte) (payloadLen & 0xFF);
+        frame[2] = (byte) ((payloadLen >> 8) & 0xFF);
+        frame[3] = 0;  // incompat flags
+        frame[4] = 0;  // compat flags
+        frame[5] = 0;  // seq
+        frame[6] = (byte) sysId;
+        frame[7] = (byte) compId;
+        frame[8] = (byte) (msgId & 0xFF);
+        frame[9] = (byte) ((msgId >> 8) & 0xFF);
+        frame[10] = (byte) ((msgId >> 16) & 0xFF);
+        System.arraycopy(payload, 0, frame, 11, payloadLen);
+        // CRC 覆盖 LEN..PAYLOAD（10 字节头 + payload）+ CRC_EXTRA
+        int crc = 0xFFFF;
+        for (int i = 1; i <= 10 + payloadLen; i++) {
+            crc = crc16Step(crc, frame[i] & 0xFF);
+        }
+        int extra = getCrcExtra(msgId);
+        if (extra >= 0) crc = crc16Step(crc, extra);
+        frame[11 + payloadLen] = (byte) (crc & 0xFF);
+        frame[12 + payloadLen] = (byte) ((crc >> 8) & 0xFF);
+        return frame;
     }
 
     // ============================================================
@@ -92,12 +130,18 @@ class MavlinkParserTest {
     @Test
     @DisplayName("HEARTBEAT 报文解析 - system_status 字段")
     void testHeartbeat() {
-        // 简化版 HEARTBEAT payload (9 bytes):
-        //   offset 6: system_status
+        // HEARTBEAT payload (9 bytes) 布局：
+        //   [0..3] custom_mode (uint32)
+        //   [4]    type (uint8)
+        //   [5]    autopilot (uint8)
+        //   [6]    base_mode (uint8, bit7=已解锁)
+        //   [7]    system_status (uint8, MAV_STATE)
+        //   [8]    mavlink_version (uint8)
         byte[] payload = new byte[9];
         payload[0] = 2;    // type = QUADROTOR
         payload[1] = 12;   // autopilot = PX4
-        payload[6] = 4;    // system_status = ACTIVE (简化版，偏移 6)
+        payload[6] = 0;    // base_mode = 0（未解锁）
+        payload[7] = 4;    // system_status = ACTIVE(4)
 
         byte[] frame = buildFrame(1, 1, 0, payload);
         MavlinkParser.Telemetry t = MavlinkParser.parse(frame, 0, frame.length);
@@ -105,6 +149,7 @@ class MavlinkParserTest {
         assertTrue(t.valid, "HEARTBEAT 帧应解析为有效");
         assertEquals(0, t.msgId);
         assertEquals(4, t.systemStatus, "system_status 应为 ACTIVE(4)");
+        assertFalse(t.armed, "base_mode=0 不应识别为解锁");
     }
 
     // ============================================================
@@ -331,6 +376,329 @@ class MavlinkParserTest {
     }
 
     // ============================================================
+    // 9. ATTITUDE_QUATERNION (MSGID=31) 解析测试
+    // ============================================================
+
+    @Test
+    @DisplayName("ATTITUDE_QUATERNION 解析 - 四元数转欧拉角")
+    void testAttitudeQuaternion() {
+        // ATTITUDE_QUATERNION payload (32 bytes):
+        //   0: time_boot_ms (uint32)
+        //   4: q1=w (float)
+        //   8: q2=x (float)
+        //  12: q3=y (float)
+        //  16: q4=z (float)
+        //  20: rollspeed (float)
+        //  24: pitchspeed (float)
+        //  28: yawspeed (float)
+        byte[] payload = new byte[32];
+        // 单位四元数 w=1, x=y=z=0 → roll=pitch=yaw=0
+        writeFloat(payload, 4, 1.0f);
+        writeFloat(payload, 8, 0.0f);
+        writeFloat(payload, 12, 0.0f);
+        writeFloat(payload, 16, 0.0f);
+        writeFloat(payload, 20, 0.1f);   // rollspeed
+        writeFloat(payload, 24, 0.2f);   // pitchspeed
+        writeFloat(payload, 28, 0.3f);    // yawspeed
+
+        byte[] frame = buildFrame(1, 1, 31, payload);
+        MavlinkParser.Telemetry t = MavlinkParser.parse(frame, 0, frame.length);
+
+        assertTrue(t.valid && t.hasAttitude, "ATTITUDE_QUATERNION 应置 hasAttitude");
+        assertEquals(0.0, t.roll, 0.001, "单位四元数 roll=0");
+        assertEquals(0.0, t.pitch, 0.001, "单位四元数 pitch=0");
+        assertEquals(0.0, t.yaw, 0.001, "单位四元数 yaw=0");
+        assertEquals(0.1, t.rollSpeed, 0.001);
+        assertEquals(0.3, t.yawSpeed, 0.001);
+    }
+
+    @Test
+    @DisplayName("ATTITUDE_QUATERNION - 90° 偏航四元数")
+    void testAttitudeYaw90() {
+        // 绕 Z 轴 90°: w=cos(45°)=0.7071, z=sin(45°)=0.7071
+        byte[] payload = new byte[32];
+        writeFloat(payload, 4, 0.70710678f);
+        writeFloat(payload, 8, 0.0f);
+        writeFloat(payload, 12, 0.0f);
+        writeFloat(payload, 16, 0.70710678f);
+
+        byte[] frame = buildFrame(1, 1, 31, payload);
+        MavlinkParser.Telemetry t = MavlinkParser.parse(frame, 0, frame.length);
+
+        assertTrue(t.hasAttitude);
+        assertEquals(Math.PI / 2, t.yaw, 0.001, "yaw 应为 90°=π/2 弧度");
+    }
+
+    // ============================================================
+    // 10. SCALED_IMU (MSGID=26) 解析测试
+    // ============================================================
+
+    @Test
+    @DisplayName("SCALED_IMU 解析 - 加速度/角速度/温度")
+    void testScaledImu() {
+        // SCALED_IMU payload:
+        //   0: time_boot_ms (uint32)
+        //   4: xacc (int16, milli-g)
+        //   6: yacc
+        //   8: zacc
+        //  10: xgyro (int16, milli-rad/s)
+        //  12: ygyro
+        //  14: zgyro
+        //  22: temperature (int16, centi-degC)
+        byte[] payload = new byte[24];
+        // xacc = 1000 milli-g = 1 g = 9.80665 m/s²
+        writeInt16(payload, 4, 1000);
+        // yacc = -500 milli-g = -4.903 m/s²
+        writeInt16(payload, 6, -500);
+        // zacc = 2000 milli-g = 19.61 m/s²
+        writeInt16(payload, 8, 2000);
+        // xgyro = 500 milli-rad/s = 0.5 rad/s
+        writeInt16(payload, 10, 500);
+        // temperature = 25.50°C = 2550 centi-degC
+        writeInt16(payload, 22, 2550);
+
+        byte[] frame = buildFrame(1, 1, 26, payload);
+        MavlinkParser.Telemetry t = MavlinkParser.parse(frame, 0, frame.length);
+
+        assertTrue(t.valid && t.hasImu);
+        assertEquals(9.80665, t.accX, 0.01, "accX 应为 1g");
+        assertEquals(-4.903, t.accY, 0.01);
+        assertEquals(19.6133, t.accZ, 0.01);
+        assertEquals(0.5, t.gyroX, 0.001);
+        assertEquals(25.5, t.imuTemp, 0.01, "IMU 温度应为 25.5°C");
+    }
+
+    // ============================================================
+    // 11. RC_CHANNELS_RAW (MSGID=35) 解析测试
+    // ============================================================
+
+    @Test
+    @DisplayName("RC_CHANNELS_RAW 解析 - 8 通道与 RSSI")
+    void testRcChannelsRaw() {
+        // RC_CHANNELS_RAW payload:
+        //   0: time_boot_ms (uint32)
+        //   4-19: chan1..chan8 (uint16 each)
+        //  21: rssi (uint8)
+        byte[] payload = new byte[22];
+        // 8 通道值
+        int[] chans = {1500, 1600, 1700, 1800, 1900, 2000, 1000, 1100};
+        for (int i = 0; i < 8; i++) writeUint16(payload, 4 + i * 2, chans[i]);
+        payload[21] = 80;  // rssi
+
+        byte[] frame = buildFrame(1, 1, 35, payload);
+        MavlinkParser.Telemetry t = MavlinkParser.parse(frame, 0, frame.length);
+
+        assertTrue(t.valid && t.hasRc);
+        for (int i = 0; i < 8; i++) {
+            assertEquals(chans[i], t.rcChannels[i], "通道 " + (i + 1) + " 值应匹配");
+        }
+        assertEquals(80, t.rssi, "RSSI 应为 80");
+    }
+
+    // ============================================================
+    // 12. ACTUATOR_CONTROL_TARGET (MSGID=140) 解析测试
+    // ============================================================
+
+    @Test
+    @DisplayName("ACTUATOR_CONTROL_TARGET 解析 - 8 电机输出")
+    void testActuatorControlTarget() {
+        // payload (40 bytes):
+        //   0: time_usec (uint64)
+        //   8-39: controls[8] (float each)
+        byte[] payload = new byte[40];
+        float[] motors = {0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f};
+        for (int i = 0; i < 8; i++) writeFloat(payload, 8 + i * 4, motors[i]);
+
+        byte[] frame = buildFrame(1, 1, 140, payload);
+        MavlinkParser.Telemetry t = MavlinkParser.parse(frame, 0, frame.length);
+
+        assertTrue(t.valid && t.hasMotors);
+        for (int i = 0; i < 8; i++) {
+            assertEquals(motors[i], t.motorOutputs[i], 0.001, "电机 " + i + " 输出应匹配");
+        }
+    }
+
+    // ============================================================
+    // 13. EXTENDED_SYS_STATE (MSGID=245) 解析测试
+    // ============================================================
+
+    @Test
+    @DisplayName("EXTENDED_SYS_STATE 解析 - 落地状态")
+    void testExtendedSysState() {
+        byte[] payload = new byte[2];
+        payload[0] = 0;   // vtol_state
+        payload[1] = 2;   // landed_state = IN-AIR
+
+        byte[] frame = buildFrame(1, 1, 245, payload);
+        MavlinkParser.Telemetry t = MavlinkParser.parse(frame, 0, frame.length);
+
+        assertTrue(t.valid && t.hasLandedState);
+        assertEquals(2, t.landedState, "landed_state=2 表示在空中");
+    }
+
+    // ============================================================
+    // 14. PARAM_VALUE (MSGID=22) 解析测试
+    // ============================================================
+
+    @Test
+    @DisplayName("PARAM_VALUE 解析 - 参数名/值/索引/总数")
+    void testParamValue() {
+        // PARAM_VALUE payload (25 bytes):
+        //   0: param_value (float)
+        //   4: param_count (uint16)
+        //   6: param_index (uint16)
+        //   8: param_id (char[16])
+        //  24: param_type (uint8)
+        byte[] payload = new byte[25];
+        writeFloat(payload, 0, 1.5f);     // param_value
+        writeUint16(payload, 4, 84);       // param_count (CF-Drone 共 84 参数)
+        writeUint16(payload, 6, 3);        // param_index
+        // param_id = "MOT_THR_LVL"（11 字符 + 5 个 \0）
+        String name = "MOT_THR_LVL";
+        byte[] nameBytes = name.getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+        System.arraycopy(nameBytes, 0, payload, 8, nameBytes.length);
+        payload[24] = 9;  // param_type = MAV_PARAM_TYPE_REAL32
+
+        byte[] frame = buildFrame(1, 1, 22, payload);
+        MavlinkParser.Telemetry t = MavlinkParser.parse(frame, 0, frame.length);
+
+        assertTrue(t.valid && t.hasParam);
+        assertEquals(1.5, t.paramValue, 0.001);
+        assertEquals(84, t.paramCount);
+        assertEquals(3, t.paramIndex);
+        assertEquals("MOT_THR_LVL", t.paramName, "参数名应去除 NULL 后保留");
+        assertEquals(9, t.paramType);
+    }
+
+    // ============================================================
+    // 15. COMMAND_ACK (MSGID=77) 解析测试
+    // ============================================================
+
+    @Test
+    @DisplayName("COMMAND_ACK 解析 - 命令 ID 与结果")
+    void testCommandAck() {
+        // COMMAND_ACK payload (3 bytes):
+        //   0: command (uint16)
+        //   2: result (uint8)
+        byte[] payload = new byte[3];
+        writeUint16(payload, 0, 400);  // CMD_COMPONENT_ARM_DISARM
+        payload[2] = 0;  // ACCEPTED
+
+        byte[] frame = buildFrame(1, 1, 77, payload);
+        MavlinkParser.Telemetry t = MavlinkParser.parse(frame, 0, frame.length);
+
+        assertTrue(t.valid && t.hasAck);
+        assertEquals(400, t.ackCommand);
+        assertEquals(0, t.ackResult, "0=ACCEPTED");
+    }
+
+    // ============================================================
+    // 16. SERIAL_CONTROL (MSGID=126) 解析测试 - Shell 输出
+    // ============================================================
+
+    @Test
+    @DisplayName("SERIAL_CONTROL 解析 - Shell 文本回传")
+    void testSerialControl() {
+        // SERIAL_CONTROL payload (≥9 bytes):
+        //   0: device (uint8)
+        //   1: flags (uint8)
+        //   2: timeout (uint16)
+        //   4: baudrate (uint32)
+        //   8: count (uint8)
+        //   9: data[70]
+        String text = "OK\r\n";
+        byte[] payload = new byte[9 + text.length()];
+        payload[8] = (byte) text.length();  // count
+        byte[] textBytes = text.getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+        System.arraycopy(textBytes, 0, payload, 9, textBytes.length);
+
+        byte[] frame = buildFrame(1, 1, 126, payload);
+        MavlinkParser.Telemetry t = MavlinkParser.parse(frame, 0, frame.length);
+
+        assertTrue(t.valid && t.hasShell);
+        assertEquals("OK\r\n", t.shellText);
+    }
+
+    // ============================================================
+    // 17. MISSION_COUNT (MSGID=44) 解析测试
+    // ============================================================
+
+    @Test
+    @DisplayName("MISSION_COUNT 解析 - 任务数（CF-Drone 恒为 0）")
+    void testMissionCount() {
+        byte[] payload = new byte[2];
+        writeUint16(payload, 0, 0);  // CF-Drone 恒返回 0
+
+        byte[] frame = buildFrame(1, 1, 44, payload);
+        MavlinkParser.Telemetry t = MavlinkParser.parse(frame, 0, frame.length);
+
+        assertTrue(t.valid && t.hasMissionCount);
+        assertEquals(0, t.missionCount, "CF-Drone 任务数恒为 0");
+    }
+
+    // ============================================================
+    // 18. MAVLink v2 帧解析测试（0xFD 起始）
+    // ============================================================
+
+    @Test
+    @DisplayName("v2 帧解析 - HEARTBEAT 通过 0xFD 起始字节")
+    void testV2Heartbeat() {
+        byte[] payload = new byte[9];
+        payload[0] = 2;
+        payload[6] = (byte) 0x80;  // base_mode bit7 = MAV_MODE_FLAG_SAFETY_ARMED
+        payload[7] = 4;    // system_status = ACTIVE
+
+        byte[] frame = buildV2Frame(1, 1, 0, payload);
+        MavlinkParser.Telemetry t = MavlinkParser.parse(frame, 0, frame.length);
+
+        assertTrue(t.valid, "v2 帧应解析为有效");
+        assertEquals(0, t.msgId);
+        assertTrue(t.armed, "bit7=1 表示已解锁");
+        assertEquals(4, t.systemStatus);
+    }
+
+    @Test
+    @DisplayName("v2 帧解析 - ATTITUDE_QUATERNION")
+    void testV2Attitude() {
+        byte[] payload = new byte[32];
+        writeFloat(payload, 4, 1.0f);
+        writeFloat(payload, 8, 0.0f);
+        writeFloat(payload, 12, 0.0f);
+        writeFloat(payload, 16, 0.0f);
+
+        byte[] frame = buildV2Frame(1, 1, 31, payload);
+        MavlinkParser.Telemetry t = MavlinkParser.parse(frame, 0, frame.length);
+
+        assertTrue(t.valid);
+        assertEquals(31, t.msgId);
+        assertTrue(t.hasAttitude);
+        assertEquals(0.0, t.roll, 0.001);
+    }
+
+    @Test
+    @DisplayName("v1 + v2 混合流解析")
+    void testMixedV1V2Stream() {
+        // v1 HEARTBEAT
+        byte[] hb1Payload = new byte[9];
+        hb1Payload[7] = 4;
+        byte[] v1Frame = buildFrame(1, 1, 0, hb1Payload);
+
+        // v2 ATTITUDE_QUATERNION
+        byte[] attPayload = new byte[32];
+        writeFloat(attPayload, 4, 1.0f);
+        byte[] v2Frame = buildV2Frame(1, 1, 31, attPayload);
+
+        byte[] stream = new byte[v1Frame.length + v2Frame.length];
+        System.arraycopy(v1Frame, 0, stream, 0, v1Frame.length);
+        System.arraycopy(v2Frame, 0, stream, v1Frame.length, v2Frame.length);
+
+        MavlinkParser.Telemetry t = MavlinkParser.parse(stream, 0, stream.length);
+        assertTrue(t.valid, "混合流最后一帧应有效");
+        assertEquals(31, t.msgId, "最后一帧为 v2 ATTITUDE_QUATERNION");
+        assertTrue(t.hasAttitude);
+    }
+
+    // ============================================================
     // 辅助方法：小端字节写入
     // ============================================================
 
@@ -348,5 +716,14 @@ class MavlinkParserTest {
         buf[offset + 1] = (byte) ((value >> 8) & 0xFF);
         buf[offset + 2] = (byte) ((value >> 16) & 0xFF);
         buf[offset + 3] = (byte) ((value >> 24) & 0xFF);
+    }
+
+    /** 写入小端 IEEE-754 单精度浮点。 */
+    private void writeFloat(byte[] buf, int offset, float value) {
+        int bits = Float.floatToIntBits(value);
+        buf[offset] = (byte) (bits & 0xFF);
+        buf[offset + 1] = (byte) ((bits >> 8) & 0xFF);
+        buf[offset + 2] = (byte) ((bits >> 16) & 0xFF);
+        buf[offset + 3] = (byte) ((bits >> 24) & 0xFF);
     }
 }

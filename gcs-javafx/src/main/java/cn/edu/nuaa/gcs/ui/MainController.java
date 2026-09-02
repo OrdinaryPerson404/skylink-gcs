@@ -44,6 +44,8 @@ public class MainController {
     @FXML private VBox e1StatusBox;
     @FXML private VBox phoneStatusBox;
     @FXML private Label e1ConnBanner, phoneConnBanner;
+    @FXML private Label e1IpVal, e1PortVal, e1LatencyVal, e1ArmedVal, e1ThrottleVal, e1CtrlSrcVal, e1HeartbeatVal, e1LinkQualityVal;
+    @FXML private Label phoneGpsVal, phoneGpsAccVal, phonePosVal, phoneCompassVal, phoneBaroVal, phoneLastUpdateVal;
     @FXML private GridPane droneStatusGrid;
     @FXML private ListView<Waypoint> wpListView;
     @FXML private Label uploadStatusBadge;
@@ -67,6 +69,7 @@ public class MainController {
     @FXML private Label seTemp, seHum, sePres;
     @FXML private Label hudAlt, hudSpeed, hudHdg, hudBat;
     @FXML private VBox dsDrawer;
+    @FXML private Label dsE1Conn, dsE1Hb, dsE1Loss, dsPhoneGps, dsPhoneAcc;
     @FXML private HBox statusBar;
     @FXML private Label sbPort, sbBaud, sbSample, sbLastUpdate, sbLat, sbLon, sbZoom, sbWp, sbGps, sbHdop, sbMouse;
 
@@ -100,11 +103,13 @@ public class MainController {
     @FXML private ListView<String> aspacePkgList;
     @FXML private ComboBox<String> droneModelCombo;
     @FXML private TextField droneRangeField;
+    @FXML private ComboBox<String> aspaceSrcType;
 
     // Algorithm
     @FXML private Label algoOrigDist, algoOptDist, algoWpCount, algoDelta, algoRate;
     @FXML private TextField distInput, loadInput, windInput;
     @FXML private Label enduranceResult, costResult;
+    @FXML private FlowPane algoFlow;
 
     // Log table (kept for compatibility)
     @FXML private TableView<LogRecord> logTableView;
@@ -119,6 +124,8 @@ public class MainController {
     private final AirspaceService airspace = new AirspaceService();
     private final BatteryPredictor batteryPredictor = new BatteryPredictor();
     private final CommunicationService comm = new CommunicationService();
+    private final ParamService paramService = new ParamService();
+    private boolean paramListRequested = false;
     private MapCanvas mapCanvas;
     private SensorChart sensor;
     private boolean missionDirty = false;
@@ -729,10 +736,14 @@ public class MainController {
             mapZoomCombo.setValue(settings.mapZoom);
         }
         if (droneModelCombo != null) {
-            droneModelCombo.setItems(FXCollections.observableArrayList("DJI-M300", "PX4-Vtol", "Custom"));
+            droneModelCombo.setItems(FXCollections.observableArrayList("CF-Drone E1 Mini", "DJI Matrice 300 RTK", "PX4 VTOL", "自定义"));
             droneModelCombo.setValue(settings.droneModel);
         }
         if (droneRangeField != null) droneRangeField.setText(String.valueOf(settings.droneMaxRange));
+        if (aspaceSrcType != null) {
+            aspaceSrcType.setItems(FXCollections.observableArrayList("GeoJSON", "JSON", "Shapefile"));
+            aspaceSrcType.setValue("GeoJSON");
+        }
     }
 
     // ===== Enhanced Drone Status Grid - Card Style (H-02) =====
@@ -861,8 +872,81 @@ public class MainController {
         if (autoMissionBtn != null) {
             autoMissionBtn.setDisable(!isE1);
         }
+        updateE1StatusDetail();
+        updatePhoneStatusDetail();
         updateConnStatus();
         updateStatusGridSourceTags();
+    }
+
+    /** 更新 E1 飞控状态区各行（IP/端口/延迟/解锁/油门/控制来源/心跳/链路质量） */
+    private void updateE1StatusDetail() {
+        boolean isE1 = "e1_real".equals(settings.runMode);
+        boolean connected = comm != null && comm.isConnected();
+        if (e1IpVal != null) e1IpVal.setText(settings.e1Ip != null ? settings.e1Ip : "—");
+        if (e1PortVal != null) e1PortVal.setText(String.valueOf(settings.e1Port));
+        // 通信延迟/油门/控制来源/心跳/链路质量：飞控不上报时诚实标注 "—"
+        if (e1LatencyVal != null) e1LatencyVal.setText(connected ? "—" : "—");
+        if (e1ThrottleVal != null) e1ThrottleVal.setText(connected ? "—" : "0%");
+        if (e1CtrlSrcVal != null) e1CtrlSrcVal.setText(connected ? "—" : "—");
+        if (e1HeartbeatVal != null) e1HeartbeatVal.setText(connected ? "—" : "—");
+        if (e1LinkQualityVal != null) e1LinkQualityVal.setText(connected ? "—" : "—");
+        // 解锁状态
+        if (e1ArmedVal != null) {
+            boolean armed = drone.isHeartbeatAvailable() && drone.isArmed();
+            e1ArmedVal.setText(armed ? "已解锁" : "未解锁");
+            e1ArmedVal.getStyleClass().removeAll("ok", "off", "warn", "err");
+            e1ArmedVal.getStyleClass().add(armed ? "ok" : "off");
+        }
+        // 同步刷新数据源抽屉 E1 卡片
+        if (dsE1Conn != null) {
+            dsE1Conn.setText(connected ? "已连接" : "未连接");
+            dsE1Conn.getStyleClass().removeAll("ok", "err");
+            dsE1Conn.getStyleClass().add(connected ? "ok" : "err");
+        }
+        if (dsE1Hb != null) dsE1Hb.setText(connected ? "1 Hz" : "-- Hz");
+        if (dsE1Loss != null) dsE1Loss.setText("--");
+    }
+
+    /** 更新手机伴随定位状态区各行（GPS/精度/位置/罗盘/气压计/最后更新） */
+    private void updatePhoneStatusDetail() {
+        boolean gpsOn = phoneGpsToggle != null && phoneGpsToggle.isSelected();
+        boolean compassOn = phoneCompassToggle != null && phoneCompassToggle.isSelected();
+        boolean baroOn = phoneBaroToggle != null && phoneBaroToggle.isSelected();
+        if (phoneGpsVal != null) {
+            phoneGpsVal.setText(gpsOn ? "已接入" : "未接入");
+            phoneGpsVal.getStyleClass().removeAll("ok", "off");
+            phoneGpsVal.getStyleClass().add(gpsOn ? "ok" : "off");
+        }
+        if (phoneGpsAccVal != null) phoneGpsAccVal.setText(gpsOn ? "—" : "—");
+        if (phonePosVal != null) {
+            boolean posOk = drone.isPositionAvailable();
+            phonePosVal.setText(posOk
+                ? String.format("%.5f, %.5f", drone.getLat(), drone.getLon())
+                : "—");
+        }
+        if (phoneCompassVal != null) {
+            phoneCompassVal.setText(compassOn ? "已启用" : "未启用");
+            phoneCompassVal.getStyleClass().removeAll("ok", "off");
+            phoneCompassVal.getStyleClass().add(compassOn ? "ok" : "off");
+        }
+        if (phoneBaroVal != null) {
+            phoneBaroVal.setText(baroOn ? "已启用" : "未启用");
+            phoneBaroVal.getStyleClass().removeAll("ok", "off");
+            phoneBaroVal.getStyleClass().add(baroOn ? "ok" : "off");
+        }
+        if (phoneLastUpdateVal != null) {
+            boolean hbOk = drone.isHeartbeatAvailable();
+            phoneLastUpdateVal.setText(hbOk
+                ? java.time.LocalTime.now().toString().substring(0, 8)
+                : "—");
+        }
+        // 同步刷新数据源抽屉 手机卡片
+        if (dsPhoneGps != null) {
+            dsPhoneGps.setText(gpsOn ? "已接入" : "未接入");
+            dsPhoneGps.getStyleClass().removeAll("ok", "err");
+            dsPhoneGps.getStyleClass().add(gpsOn ? "ok" : "err");
+        }
+        if (dsPhoneAcc != null) dsPhoneAcc.setText("--");
     }
 
     private void updateStatusGridSourceTags() {
@@ -882,7 +966,7 @@ public class MainController {
             var node = droneStatusGrid.lookup("#status_src_" + i);
             if (node instanceof Label lbl) {
                 lbl.setText(tag);
-                lbl.getStyleClass().removeAll("sim", "e1", "phone", "system", "api");
+                lbl.getStyleClass().removeAll("e1", "phone", "system", "api");
                 lbl.getStyleClass().add(tagClass);
             }
         }
@@ -1407,20 +1491,53 @@ public class MainController {
 
     @FXML
     private void onFetchWindApi() {
-        // Simulate API call - in real app would fetch from weather API
-        showToast("正在获取 OpenWeatherMap 风速数据...", "info");
-        new Timer().schedule(new TimerTask() {
-            @Override
-            public void run() {
+        showToast("正在获取 Open-Meteo 实时风速数据...", "info");
+        double lat = drone.isPositionAvailable() ? drone.getLat() : 32.06;
+        double lon = drone.isPositionAvailable() ? drone.getLon() : 118.79;
+        String apiUrl = String.format(
+            "https://api.open-meteo.com/v1/forecast?latitude=%.4f&longitude=%.4f&current=wind_speed_10m,wind_direction_10m", lat, lon);
+        java.net.http.HttpRequest req = java.net.http.HttpRequest.newBuilder()
+            .uri(java.net.URI.create(apiUrl))
+            .timeout(java.time.Duration.ofSeconds(8))
+            .GET()
+            .build();
+        java.net.http.HttpClient client = java.net.http.HttpClient.newBuilder()
+            .connectTimeout(java.time.Duration.ofSeconds(5))
+            .build();
+        client.sendAsync(req, java.net.http.HttpResponse.BodyHandlers.ofString())
+            .thenApply(java.net.http.HttpResponse::body)
+            .thenAccept(body -> {
                 Platform.runLater(() -> {
-                    double windSpeed = 2.5 + Math.random() * 5.0;
-                    if (windInput != null) {
-                        windInput.setText(String.format("%.1f", windSpeed));
+                    try {
+                        int idx = body.indexOf("\"wind_speed_10m\":");
+                        if (idx >= 0) {
+                            String sub = body.substring(idx + 17);
+                            String valStr = sub.split("[,}\\s]")[0].trim();
+                            double windSpeed = Double.parseDouble(valStr);
+                            if (windInput != null) {
+                                windInput.setText(String.format("%.1f", windSpeed));
+                            }
+                            showToast(String.format("风速获取成功 %.1f m/s [API]", windSpeed), "success");
+                        } else {
+                            fallbackWind("API 响应格式异常");
+                        }
+                    } catch (Exception e) {
+                        fallbackWind("解析异常: " + e.getMessage());
                     }
-                    showToast(String.format("风速获取成功 · %.1f m/s（模拟数据）", windSpeed), "success");
                 });
-            }
-        }, 500);
+            })
+            .exceptionally(e -> {
+                Platform.runLater(() -> fallbackWind("网络请求失败"));
+                return null;
+            });
+    }
+
+    private void fallbackWind(String reason) {
+        double windSpeed = 3.0;
+        if (windInput != null) {
+            windInput.setText(String.format("%.1f", windSpeed));
+        }
+        showToast(String.format("风速估算 %.1f m/s（%s）", windSpeed, reason), "warn");
     }
 
     @FXML
@@ -1430,8 +1547,67 @@ public class MainController {
 
     @FXML
     private void onSaveSettings() {
+        // 将设置页字段值回写到 settings 对象
+        if (e1IpField != null) settings.e1Ip = e1IpField.getText();
+        if (e1PortField != null) {
+            try { settings.e1Port = Integer.parseInt(e1PortField.getText()); }
+            catch (NumberFormatException ignored) {}
+        }
+        if (droneRangeField != null) {
+            try { settings.droneMaxRange = Double.parseDouble(droneRangeField.getText()); }
+            catch (NumberFormatException ignored) {}
+        }
         settings.save();
+        // 刷新左侧 E1/手机状态区，使新设置即时生效
+        updateE1StatusDetail();
+        updatePhoneStatusDetail();
+        updateConnStatus();
         showToast("设置已保存", "success");
+    }
+
+    /** 设置页运行模式下拉即时联动 —— 切换 E1/手机模式 */
+    @FXML
+    private void onSettingsRunModeChanged() {
+        if (setRunMode == null) return;
+        int idx = setRunMode.getSelectionModel().getSelectedIndex();
+        if (idx < 0) return;
+        String mode = (idx == 0) ? "e1_real" : "phone_assist";
+        if (!mode.equals(settings.runMode)) {
+            settings.runMode = mode;
+            settings.save();
+            if ("e1_real".equals(mode)) {
+                if (e1Btn != null) e1Btn.setSelected(true);
+                if (phoneBtn != null) phoneBtn.setSelected(false);
+            } else {
+                if (e1Btn != null) e1Btn.setSelected(false);
+                if (phoneBtn != null) phoneBtn.setSelected(true);
+            }
+            applyModeGating();
+            showToast("已切换至" + ("e1_real".equals(mode) ? "E1 实机" : "手机辅助") + "模式", "info");
+        }
+    }
+
+    /** 空域数据文件导入 —— 打开文件选择器 */
+    @FXML
+    private void onImportAirspaceFile() {
+        javafx.stage.FileChooser fc = new javafx.stage.FileChooser();
+        fc.setTitle("选择空域数据文件");
+        String srcType = aspaceSrcType != null ? aspaceSrcType.getValue() : "GeoJSON";
+        fc.getExtensionFilters().add(
+            new javafx.stage.FileChooser.ExtensionFilter(srcType + " 文件", "*." + srcType.toLowerCase().replace("shapefile", "shp")));
+        fc.getExtensionFilters().add(
+            new javafx.stage.FileChooser.ExtensionFilter("所有文件", "*.*"));
+        java.io.File file = fc.showOpenDialog(root.getScene().getWindow());
+        if (file != null) {
+            showToast("已选择文件: " + file.getName() + "（解析功能开发中）", "info");
+        }
+    }
+
+    /** 系统设置菜单 onShowing —— 消费事件防空弹出，直接跳转 */
+    @FXML
+    private void onMenuSettingsShowing(javafx.event.Event event) {
+        onGoSettingsTab();
+        event.consume();
     }
 
     @FXML
@@ -1627,6 +1803,13 @@ public class MainController {
     private void connectE1Serial() {
         String port = settings.serialPort;
         System.out.println("[E1] 连接串口: " + port + " @ " + settings.baudRate);
+        // 切换模式时清理旧数据与可用性标识，确保 E1 模式仅显示飞控真实上报的数据
+        drone.markDisconnected();
+        paramService.clear();
+        paramListRequested = false;
+        if (e1ConnTimer != null) { e1ConnTimer.cancel(); e1ConnTimer = null; }
+        comm.stop();
+        updateDroneStatus();
         if (port == null || port.startsWith("UDP")) {
             int localPort = 14550;
             String remoteHost = "127.0.0.1";
@@ -1636,24 +1819,37 @@ public class MainController {
             comm.setLink(new SerialLink(port, settings.baudRate));
         }
         comm.setCallback(t -> Platform.runLater(() -> {
-            if (t.valid) {
-                System.out.println("[E1] 收到遥测: lat=" + t.lat + " lon=" + t.lon + " bat=" + t.batteryPct);
-                drone.updateTelemetry(t.lat, t.lon, t.alt, t.speed,
-                    t.batteryPct, t.voltage, 0,
-                    t.heading, t.roll, t.pitch, t.yaw,
-                    0, 0);
-                updateDroneStatus();
-                if (mapCanvas != null) {
-                    mapCanvas.setDronePosition(t.lat, t.lon);
-                    mapCanvas.setDroneAlt(t.alt);
-                    mapCanvas.setDroneHeading(t.heading);
-                }
-                if (seTemp != null) seTemp.setText(String.format("%.1f°C", 22 + 3 * Math.sin(System.currentTimeMillis() / 10000.0)));
-                if (sbLat != null) sbLat.setText(String.format("%.5f", t.lat));
-                if (sbLon != null) sbLon.setText(String.format("%.5f", t.lon));
-                if (sbLastUpdate != null) sbLastUpdate.setText(
-                    new Date().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalTime().toString());
+            if (!t.valid) return;
+            System.out.println("[E1] 收到遥测: msgId=" + t.msgId + " hasAtt=" + t.hasAttitude + " hasIMU=" + t.hasImu
+                + " hasParam=" + t.hasParam + " hasAck=" + t.hasAck);
+            // 单点翻译：根据 has* 标志选择性更新 Drone 字段及可用性标识，
+            // 避免飞控不上报的数据被默认值 0 误导 UI
+            drone.updateFromTelemetry(t);
+            // 累积飞控参数（只读，安全；写入受硬约束限制不下发）
+            if (t.hasParam) paramService.onParamValue(t);
+            // 连接建立收到首个心跳后，自动请求飞控参数列表一次（只读，安全）
+            if (!paramListRequested && t.hasHeartbeat) {
+                paramListRequested = true;
+                comm.requestParamList();
+                System.out.println("[E1] 收到首个心跳，已请求飞控参数列表（CF-Drone 84 项）");
             }
+            updateDroneStatus();
+            updateE1StatusDetail();
+            updatePhoneStatusDetail();
+            // 仅在飞控上报位置时更新地图与状态栏经纬度，避免无 GPS 时显示 0
+            if (t.hasPosition && mapCanvas != null) {
+                mapCanvas.setDronePosition(t.lat, t.lon);
+                mapCanvas.setDroneAlt(t.alt);
+                mapCanvas.setDroneHeading(t.heading);
+            }
+            if (sbLat != null) sbLat.setText(t.hasPosition ? String.format("%.5f", t.lat) : "—");
+            if (sbLon != null) sbLon.setText(t.hasPosition ? String.format("%.5f", t.lon) : "—");
+            // 温度：仅 IMU 上报时显示真实值，否则诚实标注 "—"
+            if (seTemp != null) {
+                seTemp.setText(drone.isImuAvailable() ? String.format("%.1f°C", drone.getImuTemp()) : "—");
+            }
+            if (sbLastUpdate != null) sbLastUpdate.setText(
+                new Date().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalTime().toString());
         }));
         comm.start();
         updateConnStatus();
@@ -1670,29 +1866,42 @@ public class MainController {
     private void disconnectSerial() {
         if (e1ConnTimer != null) { e1ConnTimer.cancel(); e1ConnTimer = null; }
         comm.stop();
+        drone.markDisconnected();
+        paramService.clear();
+        paramListRequested = false;
         updateConnStatus();
+        updateDroneStatus();
+        updateE1StatusDetail();
+        updatePhoneStatusDetail();
     }
 
     @SuppressWarnings("unchecked")
     private void updateDroneStatus() {
         if (droneStatusGrid == null) return;
+        // 诚实标注：飞控/固件不上报的数据用 "—" 表示，避免默认值 0 误导用户
+        boolean posOk = drone.isPositionAvailable();
+        boolean attOk = drone.isAttitudeAvailable();
+        boolean battOk = drone.isBatteryAvailable();
+        boolean hbOk = drone.isHeartbeatAvailable();
+        boolean rcOk = drone.isRcAvailable();
+        boolean landOk = drone.isLandedStateAvailable();
         Object[] values = {
-            "AUTO", "info",
-            "待命", "off",
-            drone.getLat(), "",
-            drone.getLon(), "",
-            drone.getAlt(), "",
-            drone.getSpeed(), "",
-            drone.getHeading(), "",
-            drone.getRoll(), "",
-            drone.getPitch(), "",
-            drone.getYaw(), "",
-            drone.getBatteryPct(), "battery",
-            drone.getVoltage(), "",
-            drone.getSignalPct(), "ok",
-            drone.getSatellites(), "ok",
-            drone.getHdop(), "ok",
-            drone.isArmed() ? "已解锁" : "未解锁", drone.isArmed() ? "ok" : "off"
+            hbOk ? drone.getCustomModeName() : "—", "info",
+            landOk ? drone.getLandedStateName() : "—", landOk && drone.getLandedState() == 1 ? "off" : "info",
+            posOk ? drone.getLat() : "—", "",
+            posOk ? drone.getLon() : "—", "",
+            posOk ? drone.getAlt() : "—", "",
+            posOk ? drone.getSpeed() : "—", "",
+            posOk ? drone.getHeading() : "—", "",
+            attOk ? drone.getRoll() : "—", "",
+            attOk ? drone.getPitch() : "—", "",
+            attOk ? drone.getYaw() : "—", "",
+            battOk ? drone.getBatteryPct() : "—", "battery",
+            battOk ? drone.getVoltage() : "—", "",
+            rcOk ? drone.getRssi() : "—", "ok",
+            posOk ? drone.getSatellites() : "—", "ok",
+            posOk ? drone.getHdop() : "—", "ok",
+            hbOk ? (drone.isArmed() ? "已解锁" : "未解锁") : "—", drone.isArmed() ? "ok" : "off"
         };
         String[] formats = {
             "%s", "%s",
@@ -1733,7 +1942,10 @@ public class MainController {
                     Object v = values[i * 2];
                     String fmt = formats[i * 2];
                     String stateClass = (String) values[i * 2 + 1];
-                    if (v instanceof Double d) {
+                    // String 类型（如 "—"）直接显示，避免被 "%.5f°" 等格式串误转
+                    if (v instanceof String s) {
+                        val.setText(s);
+                    } else if (v instanceof Double d) {
                         val.setText(String.format(fmt, d));
                     } else if (v instanceof Integer in) {
                         val.setText(String.format(fmt, in));
@@ -1744,21 +1956,25 @@ public class MainController {
                     val.getStyleClass().removeIf(s -> s.equals("ok") || s.equals("warn") || s.equals("err") || s.equals("info") || s.equals("off") || s.equals("disabled"));
                     // Battery special handling
                     if ("battery".equals(stateClass)) {
-                        double batt = drone.getBatteryPct();
-                        if (batt <= 20) val.getStyleClass().add("err");
-                        else if (batt <= 40) val.getStyleClass().add("warn");
-                        else val.getStyleClass().add("ok");
+                        if (drone.isBatteryAvailable()) {
+                            double batt = drone.getBatteryPct();
+                            if (batt <= 20) val.getStyleClass().add("err");
+                            else if (batt <= 40) val.getStyleClass().add("warn");
+                            else val.getStyleClass().add("ok");
+                        } else {
+                            val.getStyleClass().add("disabled");
+                        }
                     } else if (!stateClass.isEmpty() && !"%s".equals(stateClass)) {
                         val.getStyleClass().add(stateClass);
                     }
                 }
             }
         }
-        // Update status bar
-        if (sbLat != null) sbLat.setText(String.format("%.5f", drone.getLat()).substring(0, Math.min(8, String.format("%.5f", drone.getLat()).length())));
-        if (sbLon != null) sbLon.setText(String.format("%.5f", drone.getLon()).substring(0, Math.min(9, String.format("%.5f", drone.getLon()).length())));
-        if (sbGps != null) sbGps.setText("3D·" + drone.getSatellites());
-        if (sbHdop != null) sbHdop.setText(String.format("%.1f", drone.getHdop()));
+        // 状态栏诚实标注：位置不可用时显示 "—"
+        if (sbLat != null) sbLat.setText(posOk ? String.format("%.5f", drone.getLat()).substring(0, Math.min(8, String.format("%.5f", drone.getLat()).length())) : "—");
+        if (sbLon != null) sbLon.setText(posOk ? String.format("%.5f", drone.getLon()).substring(0, Math.min(9, String.format("%.5f", drone.getLon()).length())) : "—");
+        if (sbGps != null) sbGps.setText(posOk ? ("3D·" + drone.getSatellites()) : "—");
+        if (sbHdop != null) sbHdop.setText(posOk ? String.format("%.1f", drone.getHdop()) : "—");
     }
 
     // ===== Menu / Navigation =====

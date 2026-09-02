@@ -17,7 +17,7 @@
   --radius-sm:4px; --radius-md:4px; --radius-lg:6px;
   --data-fill:#7d8590;
   --nav-h:40px; --ws-tab-h:36px; --status-bar-h:28px; --left-panel-w:280px;
-  --src-e1:#3b82f6; --src-phone:#22c55e; --src-system:#a78bfa; --src-sim:#8b949e; --src-api:#f59e0b;
+  --src-e1:#3b82f6; --src-phone:#22c55e; --src-system:#a78bfa; --src-api:#f59e0b;
 }
 [data-theme="light"]{
   --primary:#0f6cbd; --accent-blue:#0f6cbd; --accent-light-blue:#4a9ee1; --accent-gold:#c47f00;
@@ -27,7 +27,7 @@
   --bg-base:#f3f3f3; --bg-panel:#ffffff; --bg-hover:#f0f0f0; --bg-bar:#fafafa;
   --shadow-pop:0 2px 8px #00000026;
   --data-fill:#8c8c8c;
-  --src-e1:#0f6cbd; --src-phone:#107c10; --src-system:#7c3aed; --src-sim:#8c8c8c; --src-api:#9a6700;
+  --src-e1:#0f6cbd; --src-phone:#107c10; --src-system:#7c3aed; --src-api:#9a6700;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%;overflow:hidden}
@@ -79,7 +79,6 @@ input:disabled{background:var(--bg-hover);color:var(--text-muted)}
 .src-tag.e1{background:var(--src-e1);color:#fff}
 .src-tag.phone{background:var(--src-phone);color:#fff}
 .src-tag.system{background:var(--src-system);color:#fff}
-.src-tag.sim{background:var(--bg-hover);color:var(--text-muted);border:1px solid var(--border-default)}
 .src-tag.api{background:var(--src-api);color:#1a1a1a}
 
 /* ===== Workspace Tabs ===== */
@@ -121,7 +120,6 @@ input:disabled{background:var(--bg-hover);color:var(--text-muted)}
 .dev-conn-banner{display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:4px;font-size:10px;font-weight:600;margin-bottom:4px}
 .dev-conn-banner.online{background:#22c55e15;color:var(--success)}
 .dev-conn-banner.offline{background:#ef44440d;color:var(--danger)}
-.dev-conn-banner.sim{background:#3b82f615;color:var(--primary)}
 
 /* UAV Status */
 .uav-status-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border-default);border:1px solid var(--border-default);border-radius:var(--radius-sm);overflow:hidden}
@@ -419,8 +417,7 @@ input:disabled{background:var(--bg-hover);color:var(--text-muted)}
   <div class="nav-right">
     <!-- Mode Switcher -->
     <div class="mode-switcher" id="modeSwitcher">
-      <button class="ms-btn active" data-mode="simulation" onclick="switchRunMode('simulation')">仿真模式</button>
-      <button class="ms-btn" data-mode="e1_real" onclick="switchRunMode('e1_real')">E1 实机</button>
+      <button class="ms-btn active" data-mode="e1_real" onclick="switchRunMode('e1_real')">E1 实机</button>
       <button class="ms-btn" data-mode="phone_assist" onclick="switchRunMode('phone_assist')">手机辅助</button>
     </div>
     <span class="conn-dot on" id="connDot" title="连接状态"></span>
@@ -534,7 +531,7 @@ input:disabled{background:var(--bg-hover);color:var(--text-muted)}
               <button class="mo-btn mo-btn-gated" id="btnUploadE1" disabled onclick="uploadToE1()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
                 上传至 E1
-                <span class="gate-hint" id="gateUploadHint">当前为仿真模式，上传至 E1 需要 E1 实机模式并启用导航任务协议</span>
+                <span class="gate-hint" id="gateUploadHint">上传至 E1 需要启用导航任务协议</span>
               </button>
               <button class="mo-btn mo-btn-gated" id="btnAutoMission" disabled onclick="startAutoMission()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M5 3 L19 12 L5 21 Z"/></svg>
@@ -654,7 +651,7 @@ input:disabled{background:var(--bg-hover);color:var(--text-muted)}
             <input type="date" id="logDateFilter" style="font-size:11px;padding:3px 6px" onchange="filterFlights()">
             <select id="logModelFilter" style="font-size:11px;padding:3px 6px" onchange="filterFlights()">
               <option value="">全部型号</option>
-              <option value="SITL-Quad">SITL-Quad</option>
+              <option value="CF-Drone-E1">CF-Drone E1 Mini</option>
               <option value="DJI-M300">DJI-M300</option>
               <option value="PX4-Vtol">PX4-Vtol</option>
             </select>
@@ -691,11 +688,10 @@ input:disabled{background:var(--bg-hover);color:var(--text-muted)}
       <div class="settings-field">
         <label>当前模式</label>
         <select id="setRunMode" onchange="switchRunMode(this.value)">
-          <option value="simulation" selected>仿真模式（完整模拟数据）</option>
-          <option value="e1_real">E1 实机模式（真实飞控遥测）</option>
+          <option value="e1_real" selected>E1 实机模式（真实飞控遥测）</option>
           <option value="phone_assist">手机辅助模式（GPS 定位补充）</option>
         </select>
-        <div class="settings-hint">仿真模式：所有数据模拟生成 | E1 实机：姿态/电压/解锁来自飞控 | 手机辅助：GPS 来自手机</div>
+        <div class="settings-hint">E1 实机：姿态/电压/解锁来自飞控 | 手机辅助：GPS 来自手机</div>
       </div>
     </div>
   </div>
@@ -749,7 +745,7 @@ input:disabled{background:var(--bg-hover);color:var(--text-muted)}
   </div>
   <div class="settings-section">
     <div class="settings-section-title">串口通信</div>
-    <div class="settings-section-sub">串口号、波特率与传输频率配置（仿真模式生效）</div>
+    <div class="settings-section-sub">串口号、波特率与传输频率配置（E1 实机模式生效）</div>
     <div class="settings-row">
       <div class="settings-field">
         <label>串口号</label>
@@ -865,7 +861,7 @@ input:disabled{background:var(--bg-hover);color:var(--text-muted)}
       <div class="settings-field">
         <label>无人机型号</label>
         <select id="droneModelSel" style="max-width:300px" onchange="updateDroneParam('model',this.value)">
-          <option value="SITL-Quad">SITL-Quad (四旋翼仿真)</option>
+          <option value="CF-Drone-E1">CF-Drone E1 Mini</option>
           <option value="DJI-M300">DJI Matrice 300 RTK</option>
           <option value="PX4-Vtol">PX4 VTOL (复合翼)</option>
           <option value="Custom">自定义</option>
@@ -944,7 +940,7 @@ input:disabled{background:var(--bg-hover);color:var(--text-muted)}
 <script>
 /* ===== Global State ===== */
 var state = {
-  runMode: 'simulation', // 'simulation' | 'e1_real' | 'phone_assist'
+  runMode: 'e1_real', // 'e1_real' | 'phone_assist'
   connected:true, mode:'AUTO',
   remaining:72, voltageV:12.4, signalPct:88, satellites:14, fixType:3, hdop:1.2,
   heading:128, rollDeg:2.3, pitchDeg:1.5, yawDeg:128, relAltM:86.4, speedMs:8.2, climbRate:0.6,
@@ -955,8 +951,8 @@ var state = {
   missionPhase:'standby', missionState:'idle', missionWpIndex:0, missionWpTotal:6, missionUploaded:false,
   geofenceCenterLat:32.0612, geofenceCenterLon:118.793, geofenceRadiusM:500, geofenceBreached:false,
   dataDelay:12, batteryTimeRemaining:0,
-  droneModel:'SITL-Quad', droneMaxRange:5000, droneSensors:['IMU','COMPASS','BARO','GPS','OPTFLOW'],
-  sampleInterval:1, simTimer:null,
+  droneModel:'CF-Drone-E1', droneMaxRange:5000, droneSensors:['IMU','COMPASS','BARO','GPS','OPTFLOW'],
+  sampleInterval:1, tickTimer:null,
   serialPort:'COM3', baudRate:115200, txRate:10, mapZoom:16,
   safeMode:true, controlTestActive:false,
   // E1 flight controller
@@ -974,9 +970,9 @@ var state = {
   },
   // Data source mapping
   src:{
-    roll:'sim', pitch:'sim', yaw:'sim', voltage:'sim', batt:'sim',
-    lat:'sim', lon:'sim', speedMs:'sim', alt:'sim', signal:'sim',
-    satellites:'sim', hdop:'sim', temp:'sim', humidity:'sim', baroPres:'sim'
+    roll:'e1', pitch:'e1', yaw:'e1', voltage:'e1', batt:'e1',
+    lat:'phone', lon:'phone', speedMs:'phone', alt:'e1', signal:'e1',
+    satellites:'phone', hdop:'phone', temp:'system', humidity:'system', baroPres:'e1'
   },
   // Airspace data management
   airspace:{
@@ -1038,10 +1034,9 @@ function switchRunMode(mode){
   updateE1Status();
   updatePhoneStatus();
   updateDataSources();
-  toast('已切换到'+({simulation:'仿真',e1_real:'E1 实机',phone_assist:'手机辅助'})[mode]+'模式');
+  toast('已切换到'+({e1_real:'E1 实机',phone_assist:'手机辅助'})[mode]+'模式');
 }
 function applyModeGating(){
-  var sim=state.runMode==='simulation';
   var e1=state.runMode==='e1_real';
   var phone=state.runMode==='phone_assist';
   // E1 section
@@ -1069,23 +1064,19 @@ function applyModeGating(){
     gateMission.textContent='需要 E1 实机模式 + 已解锁 + 已上传航点 + GPS 已接入';
   }
   // Data sources
-  if(sim){
-    state.src={roll:'sim',pitch:'sim',yaw:'sim',voltage:'sim',batt:'sim',lat:'sim',lon:'sim',speedMs:'sim',alt:'sim',signal:'sim',satellites:'sim',hdop:'sim',temp:'sim',humidity:'sim',baroPres:'sim'};
-    state.e1.connected=false;
-    state.phone.connected=false;
-  }else if(e1){
-    state.src={roll:'e1',pitch:'e1',yaw:'e1',voltage:'e1',batt:'e1',lat:state.phone.gpsAvailable?'phone':'sim',lon:state.phone.gpsAvailable?'phone':'sim',speedMs:state.phone.gpsAvailable?'phone':'sim',alt:'e1',signal:'e1',satellites:state.phone.gpsAvailable?'phone':'sim',hdop:state.phone.gpsAvailable?'phone':'sim',temp:'sim',humidity:'sim',baroPres:'e1'};
+  if(e1){
+    state.src={roll:'e1',pitch:'e1',yaw:'e1',voltage:'e1',batt:'e1',lat:state.phone.gpsAvailable?'phone':'system',lon:state.phone.gpsAvailable?'phone':'system',speedMs:state.phone.gpsAvailable?'phone':'system',alt:'e1',signal:'e1',satellites:state.phone.gpsAvailable?'phone':'system',hdop:state.phone.gpsAvailable?'phone':'system',temp:'system',humidity:'system',baroPres:'e1'};
     state.e1.connected=true;
     state.phone.connected=state.phone.gpsAvailable;
   }else if(phone){
-    state.src={roll:'e1',pitch:'e1',yaw:'e1',voltage:'e1',batt:'e1',lat:'phone',lon:'phone',speedMs:'phone',alt:'e1',signal:'e1',satellites:'phone',hdop:'phone',temp:'sim',humidity:'sim',baroPres:state.phone.baroAvailable?'phone':'sim'};
+    state.src={roll:'e1',pitch:'e1',yaw:'e1',voltage:'e1',batt:'e1',lat:'phone',lon:'phone',speedMs:'phone',alt:'e1',signal:'e1',satellites:'phone',hdop:'phone',temp:'system',humidity:'system',baroPres:state.phone.baroAvailable?'phone':'system'};
     state.e1.connected=true;
     state.phone.connected=true;
   }
   updateSrcTags();
 }
 function updateSrcTags(){
-  var tagMap={e1:{cls:'e1',txt:'E1'},phone:{cls:'phone',txt:'手机'},system:{cls:'system',txt:'系统'},sim:{cls:'sim',txt:'模拟'},api:{cls:'api',txt:'API'}};
+  var tagMap={e1:{cls:'e1',txt:'E1'},phone:{cls:'phone',txt:'手机'},system:{cls:'system',txt:'系统'},api:{cls:'api',txt:'API'}};
   function setTag(id,src){
     var el=document.getElementById(id);if(!el)return;
     var t=tagMap[src];if(!t)return;
@@ -1102,7 +1093,6 @@ function updateE1Status(){
   var e1=state.e1;
   var banner=document.getElementById('e1ConnBanner');
   if(!banner)return;
-  if(state.runMode==='simulation'){banner.className='dev-conn-banner sim';banner.textContent='仿真模式 · 无实机连接';return;}
   if(e1.connected){
     banner.className='dev-conn-banner online';banner.textContent='E1 已连接';
     document.getElementById('e1Ip').textContent=e1.ip;
@@ -1127,7 +1117,6 @@ function updatePhoneStatus(){
   var p=state.phone;
   var banner=document.getElementById('phoneConnBanner');
   if(!banner)return;
-  if(state.runMode==='simulation'){banner.className='dev-conn-banner sim';banner.textContent='仿真模式 · 无手机连接';return;}
   if(p.connected){
     banner.className='dev-conn-banner online';banner.textContent='手机已连接';
     var gpsEl=document.getElementById('phoneGps');
@@ -1173,9 +1162,9 @@ function updateDataSources(){
   html+='<div class="ds-source-row"><span class="dsr-label">状态</span><span class="dsr-val ok">始终可用</span></div>';
   html+='<div class="ds-source-row"><span class="dsr-label">内容</span><span class="dsr-val">航程/优化/预测</span></div>';
   html+='</div></div>';
-  // Environment sim
-  html+='<div class="ds-source-card"><div class="ds-source-name"><span class="conn-dot on" style="background:var(--src-sim)"></span> 环境模拟数据 <span class="src-tag sim">模拟</span></div><div class="ds-source-rows">';
-  html+='<div class="ds-source-row"><span class="dsr-label">状态</span><span class="dsr-val" style="color:var(--warning)">模拟/手动</span></div>';
+  // Environment data
+  html+='<div class="ds-source-card"><div class="ds-source-name"><span class="conn-dot on" style="background:var(--src-system)"></span> 环境数据 <span class="src-tag system">系统</span></div><div class="ds-source-rows">';
+  html+='<div class="ds-source-row"><span class="dsr-label">状态</span><span class="dsr-val" style="color:var(--warning)">手动/估算</span></div>';
   html+='<div class="ds-source-row"><span class="dsr-label">内容</span><span class="dsr-val">温度/湿度</span></div>';
   html+='<div class="ds-source-row"><span class="dsr-label">说明</span><span class="dsr-val" style="font-size:9px">非飞控实测，仅供演示</span></div>';
   html+='</div></div>';
@@ -1255,10 +1244,7 @@ function toast(msg,type){
 function updateConnStatus(){
   var dot=document.getElementById('connDot');var txt=document.getElementById('connText');
   if(!dot||!txt)return;
-  if(state.runMode==='simulation'){
-    dot.className='conn-dot on';
-    txt.textContent='仿真模式 · '+state.serialPort+' '+state.baudRate;
-  }else if(state.runMode==='e1_real'){
+  if(state.runMode==='e1_real'){
     if(state.e1.connected){dot.className='conn-dot on';txt.textContent='E1 已连接 · '+state.e1.ip+':'+state.e1.udpPort;}
     else{dot.className='conn-dot off';txt.textContent='E1 未连接';}
   }else if(state.runMode==='phone_assist'){
@@ -1280,10 +1266,8 @@ function createAlert(type,message,level){
 function recoverAlert(id){var a=alertLifecycles.find(x=>x.id===id);if(a){a.status='recovered';a.recoverTime=Date.now();}}
 function updateAlertSystem(){
   var r=ALERT_RULES;
-  if(state.runMode!=='simulation'){
-    if(!state.e1.connected){var fca=alertLifecycles.find(a=>a.type==='fc_link_lost'&&a.status==='active');if(!fca)createAlert('fc_link_lost',r.fc_link_lost.msg,r.fc_link_lost.level);}
-    else{var fca2=alertLifecycles.find(a=>a.type==='fc_link_lost'&&a.status==='active');if(fca2)recoverAlert(fca2.id);}
-  }
+  if(!state.e1.connected){var fca=alertLifecycles.find(a=>a.type==='fc_link_lost'&&a.status==='active');if(!fca)createAlert('fc_link_lost',r.fc_link_lost.msg,r.fc_link_lost.level);}
+  else{var fca2=alertLifecycles.find(a=>a.type==='fc_link_lost'&&a.status==='active');if(fca2)recoverAlert(fca2.id);}
   if(state.runMode==='phone_assist'||state.runMode==='e1_real'){
     if(state.phone.gpsAvailable===false){var pga=alertLifecycles.find(a=>a.type==='phone_gps_lost'&&a.status==='active');if(!pga)createAlert('phone_gps_lost',r.phone_gps_lost.msg,r.phone_gps_lost.level);}
   }
@@ -1507,7 +1491,7 @@ function fetchWind(){
     if(btn){btn.disabled=false;btn.textContent='获取';}
     toast('风速已获取 '+ws.toFixed(1)+' m/s');
   }).catch(()=>{
-    if(info)info.innerHTML='获取失败（网络受限），请手动输入风速 <span class="src-tag sim">手动</span>';
+    if(info)info.innerHTML='获取失败（网络受限），请手动输入风速 <span class="src-tag system">手动</span>';
     if(btn){btn.disabled=false;btn.textContent='获取';}
     toast('风速获取失败，请手动输入','err');
   });
@@ -1516,12 +1500,12 @@ function fetchWind(){
 /* ===== Mission Page UI Updaters ===== */
 function updateMissionUI(){
   var set=(id,v,cls)=>{var e=document.getElementById(id);if(e){e.innerHTML=v;if(cls!==undefined)e.className=cls;}};
-  var srcTag=function(src){var map={e1:'<span class="src-tag e1">E1</span>',phone:'<span class="src-tag phone">手机</span>',system:'<span class="src-tag system">系统</span>',sim:'<span class="src-tag sim">模拟</span>'};return map[src]||'';};
+  var srcTag=function(src){var map={e1:'<span class="src-tag e1">E1</span>',phone:'<span class="src-tag phone">手机</span>',system:'<span class="src-tag system">系统</span>'};return map[src]||'';};
   set('usMode',state.mode,'us-val info');
   var phaseLabels={standby:'待命',takeoff:'起飞',mission:'执行任务',rtl:'返航',landing:'降落',landed:'已着陆'};
   set('usPhase',phaseLabels[state.missionPhase]||state.missionPhase);
   // GPS-dependent values
-  var gpsOk=state.runMode==='simulation'||(state.phone.gpsAvailable&&state.phone.connected);
+  var gpsOk=(state.phone.gpsAvailable&&state.phone.connected);
   if(gpsOk){
     set('usLat',state.lat.toFixed(6)+'° '+srcTag(state.src.lat));
     set('usLon',state.lon.toFixed(6)+'° '+srcTag(state.src.lon));
@@ -1577,8 +1561,8 @@ function updateMissionUI(){
 function updateSampleInterval(val){
   state.sampleInterval=parseInt(val);
   var el=document.getElementById('sampleIntervalVal');if(el)el.textContent=val+'s';
-  if(state.simTimer){clearInterval(state.simTimer);}
-  state.simTimer=setInterval(simulate,state.sampleInterval*1000);
+  if(state.tickTimer){clearInterval(state.tickTimer);}
+  state.tickTimer=setInterval(tick,state.sampleInterval*1000);
   var sb=document.getElementById('sbSample');if(sb)sb.textContent=val+'s';
   toast('采样间隔已设为 '+val+' 秒');
 }
@@ -1595,9 +1579,9 @@ waveChannels=[
   {key:'alt',label:'相对高度',unit:'m',group:'飞行',color:'#a78bfa',enabled:true,src:'e1'},
   {key:'volt',label:'电压',unit:'V',group:'电池',color:'#fbbf24',enabled:true,src:'e1'},
   {key:'batt',label:'电量',unit:'%',group:'电池',color:'#4ade80',enabled:false,src:'e1'},
-  {key:'envTemp',label:'温度',unit:'°C',group:'环境(模拟)',color:'#fb7185',enabled:true,src:'sim'},
-  {key:'envPress',label:'气压',unit:'hPa',group:'环境(模拟)',color:'#22d3ee',enabled:true,src:'e1'},
-  {key:'humidity',label:'湿度',unit:'%',group:'环境(模拟)',color:'#34d399',enabled:true,src:'sim'}
+  {key:'envTemp',label:'温度',unit:'°C',group:'环境数据',color:'#fb7185',enabled:true,src:'system'},
+  {key:'envPress',label:'气压',unit:'hPa',group:'环境数据',color:'#22d3ee',enabled:true,src:'e1'},
+  {key:'humidity',label:'湿度',unit:'%',group:'环境数据',color:'#34d399',enabled:true,src:'system'}
 ];
 function initWaveCanvas(){
   waveCanvas=document.getElementById('waveCanvas');waveCtx=waveCanvas.getContext('2d');
@@ -1681,10 +1665,10 @@ function clearWave(){waveData={};waveSampleCount=0;document.getElementById('wave
 /* ===== Data Page: Flight Logs ===== */
 var flightMap=null;
 var flights=[
-  {id:1,type:'SITL-Quad',started_at:'2026-08-31 14:19:00',ended_at:'2026-08-31 14:35:20',duration_s:980,max_alt:102.5,total_dist:4250},
-  {id:2,type:'SITL-Quad',started_at:'2026-08-30 10:15:00',ended_at:'2026-08-30 10:28:30',duration_s:810,max_alt:85.0,total_dist:3120},
+  {id:1,type:'CF-Drone-E1',started_at:'2026-08-31 14:19:00',ended_at:'2026-08-31 14:35:20',duration_s:980,max_alt:102.5,total_dist:4250},
+  {id:2,type:'CF-Drone-E1',started_at:'2026-08-30 10:15:00',ended_at:'2026-08-30 10:28:30',duration_s:810,max_alt:85.0,total_dist:3120},
   {id:3,type:'DJI-M300',started_at:'2026-08-29 15:42:00',ended_at:'2026-08-29 16:12:10',duration_s:1790,max_alt:120.0,total_dist:8650},
-  {id:4,type:'SITL-Quad',started_at:'2026-08-28 09:20:00',ended_at:'2026-08-28 09:32:45',duration_s:765,max_alt:90.2,total_dist:3540},
+  {id:4,type:'CF-Drone-E1',started_at:'2026-08-28 09:20:00',ended_at:'2026-08-28 09:32:45',duration_s:765,max_alt:90.2,total_dist:3540},
   {id:5,type:'DJI-M300',started_at:'2026-08-27 11:00:00',ended_at:'2026-08-27 11:28:30',duration_s:1710,max_alt:95.5,total_dist:6280},
   {id:6,type:'PX4-Vtol',started_at:'2026-08-26 08:30:00',ended_at:'2026-08-26 09:05:20',duration_s:2120,max_alt:150.0,total_dist:12500},
   {id:7,type:'PX4-Vtol',started_at:'2026-08-25 16:10:00',ended_at:'2026-08-25 16:35:40',duration_s:1540,max_alt:130.0,total_dist:9800}
@@ -1776,87 +1760,55 @@ function dataTab(el,name){
   if(name==='logs'&&flightMap)setTimeout(()=>flightMap.resize(),100);
 }
 
-/* ===== Telemetry Simulation ===== */
-var simT=0;
-function simulate(){
-  simT++;
-  if(state.runMode==='simulation'){
-    if(!state.connected){if(Math.random()<0.3){state.connected=true;updateConnStatus();}return;}
-    if(simT>30&&Math.random()<0.002){state.connected=false;updateConnStatus();return;}
-    state.rollDeg=2+Math.sin(simT/6)*3;
-    state.pitchDeg=1+Math.cos(simT/7)*2;
-    state.yawDeg=128+Math.sin(simT/20)*15;
-    state.relAltM=86+Math.sin(simT/8)*4;
-    state.climbRate=Math.sin(simT/7)*0.8;
-    state.remaining=Math.max(10,72-simT*0.015);
-    state.voltageV=12+state.remaining/100;
-    state.batteryTimeRemaining=Math.max(0,state.remaining/100*1800);
-    state.signalPct=Math.round(85+Math.sin(simT/3)*5);
-    state.satellites=Math.round(13+Math.sin(simT/9)*2);
-    state.hdop=1.0+Math.abs(Math.sin(simT/11))*0.8;
-    state.dataDelay=Math.round(10+Math.sin(simT/5)*5);
-    if(state.missionState==='running'&&simT%8===0){
-      if(state.missionWpIndex<state.missionWpTotal-1)state.missionWpIndex++;
-      else{state.missionState='complete';state.missionPhase='landed';}
+/* ===== Telemetry Update ===== */
+var tickT=0;
+function tick(){
+  tickT++;
+  state.e1.latency=8+Math.sin(tickT/5)*4;
+  state.e1.heartbeat=60+Math.round(Math.sin(tickT/10)*5);
+  state.e1.linkQuality=Math.round(85+Math.sin(tickT/15)*10);
+  state.e1.lastUpdate=Date.now();
+  state.e1.rollDeg=2+Math.sin(tickT/6)*3;
+  state.e1.pitchDeg=1+Math.cos(tickT/7)*2;
+  state.e1.yawDeg=128+Math.sin(tickT/20)*15;
+  state.e1.voltageV=12+state.remaining/100;
+  state.e1.current=8+Math.sin(tickT/8)*2;
+  // Copy E1 data to main state
+  state.rollDeg=state.e1.rollDeg;state.pitchDeg=state.e1.pitchDeg;state.yawDeg=state.e1.yawDeg;
+  state.voltageV=state.e1.voltageV;state.current=state.e1.current;
+  state.signalPct=state.e1.linkQuality;
+  state.remaining=Math.max(10,72-tickT*0.015);
+  state.batteryTimeRemaining=Math.max(0,state.remaining/100*1800);
+  state.relAltM=86+Math.sin(tickT/8)*4;
+  state.baroPresAbs=1013.2+Math.sin(tickT/30)*1.5;
+  // Phone data
+  if(state.phone.connected){
+    state.phone.gpsAccuracy=3.5+Math.sin(tickT/12)*1.5;
+    state.phone.lastUpdate=Date.now();
+    if(state.phone.gpsAvailable){
+      var ang2=tickT*0.035, rad2=0.0022;
+      state.phone.lat=32.0612+rad2*Math.sin(ang2);
+      state.phone.lon=118.793+rad2*Math.cos(ang2);
+      state.lat=state.phone.lat;state.lon=state.phone.lon;
+      var dN2=0.001*111320*Math.cos(ang2), dE2=0.001*111320*Math.sin(ang2);
+      state.speedMs=Math.abs(Math.sin(tickT/3))*5+0.5;
+      state.heading=(((Math.atan2(dE2,dN2)*180/Math.PI)+360)%360);
+      state.satellites=Math.round(8+Math.sin(tickT/9)*2);
+      state.hdop=1.5+Math.abs(Math.sin(tickT/11))*0.5;
     }
-    var ang=simT*0.035, rad=0.0022;
-    var newLat=32.0612+rad*Math.sin(ang), newLon=118.793+rad*Math.cos(ang);
-    var dN=(newLat-state.lat)*111320, dE=(newLon-state.lon)*111320*Math.cos(state.lat*Math.PI/180);
-    var gs=Math.sqrt(dN*dN+dE*dE);
-    if(gs>0.3){var brg=Math.atan2(dE,dN)*180/Math.PI;if(brg<0)brg+=360;state.heading=brg;state.yawDeg=brg;}
-    state.speedMs=gs;state.lat=newLat;state.lon=newLon;
-    state.baroPresAbs=1013.2+Math.sin(simT/30)*1.5;
-    state.baroTemp=2650+Math.sin(simT/40)*80;
-    state.humidity=65+Math.sin(simT/25)*8;
-  }else{
-    // E1 real / phone assist mode
-    // Simulate E1 telemetry
-    state.e1.latency=8+Math.sin(simT/5)*4;
-    state.e1.heartbeat=60+Math.round(Math.sin(simT/10)*5);
-    state.e1.linkQuality=Math.round(85+Math.sin(simT/15)*10);
-    state.e1.lastUpdate=Date.now();
-    state.e1.rollDeg=2+Math.sin(simT/6)*3;
-    state.e1.pitchDeg=1+Math.cos(simT/7)*2;
-    state.e1.yawDeg=128+Math.sin(simT/20)*15;
-    state.e1.voltageV=12+state.remaining/100;
-    state.e1.current=8+Math.sin(simT/8)*2;
-    // Copy E1 data to main state
-    state.rollDeg=state.e1.rollDeg;state.pitchDeg=state.e1.pitchDeg;state.yawDeg=state.e1.yawDeg;
-    state.voltageV=state.e1.voltageV;state.current=state.e1.current;
-    state.signalPct=state.e1.linkQuality;
-    state.remaining=Math.max(10,72-simT*0.015);
-    state.batteryTimeRemaining=Math.max(0,state.remaining/100*1800);
-    state.relAltM=86+Math.sin(simT/8)*4;
-    state.baroPresAbs=1013.2+Math.sin(simT/30)*1.5;
-    // Phone data
-    if(state.phone.connected){
-      state.phone.gpsAccuracy=3.5+Math.sin(simT/12)*1.5;
-      state.phone.lastUpdate=Date.now();
-      if(state.phone.gpsAvailable){
-        var ang2=simT*0.035, rad2=0.0022;
-        state.phone.lat=32.0612+rad2*Math.sin(ang2);
-        state.phone.lon=118.793+rad2*Math.cos(ang2);
-        state.lat=state.phone.lat;state.lon=state.phone.lon;
-        var dN2=0.001*111320*Math.cos(ang2), dE2=0.001*111320*Math.sin(ang2);
-        state.speedMs=Math.abs(Math.sin(simT/3))*5+0.5;
-        state.heading=(((Math.atan2(dE2,dN2)*180/Math.PI)+360)%360);
-        state.satellites=Math.round(8+Math.sin(simT/9)*2);
-        state.hdop=1.5+Math.abs(Math.sin(simT/11))*0.5;
-      }
-      if(state.phone.baroAvailable){
-        state.baroPresAbs=1013.0+Math.sin(simT/30)*2;
-      }
+    if(state.phone.baroAvailable){
+      state.baroPresAbs=1013.0+Math.sin(tickT/30)*2;
     }
-    state.baroTemp=2650+Math.sin(simT/40)*80;
-    state.humidity=65+Math.sin(simT/25)*8;
-    state.dataDelay=Math.round(state.e1.latency);
   }
+  state.baroTemp=2650+Math.sin(tickT/40)*80;
+  state.humidity=65+Math.sin(tickT/25)*8;
+  state.dataDelay=Math.round(state.e1.latency);
   updateAlertSystem();
   updateMissionUI();
   updateE1Status();
   updatePhoneStatus();
   applyModeGating();
-  if(simT%5===0)updateDataSources();
+  if(tickT%5===0)updateDataSources();
 }
 
 /* ===== Init ===== */
@@ -1875,7 +1827,7 @@ updateSrcTags();
 updateE1Status();
 updatePhoneStatus();
 updateDataSources();
-state.simTimer=setInterval(simulate,state.sampleInterval*1000);
+state.tickTimer=setInterval(tick,state.sampleInterval*1000);
 setInterval(function(){var el=document.getElementById('sysClock');if(el)el.textContent=new Date().toLocaleTimeString('zh-CN',{hour12:false});},1000);
 document.addEventListener('keydown',function(e){
   if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='TEXTAREA')return;

@@ -32,6 +32,21 @@
     -fx-font-size: 11px;
 }
 
+/* ===== SVG Icon Styles ===== */
+.svg-line { -fx-fill: transparent; -fx-stroke: -fx-text-secondary; -fx-stroke-width: 2; -fx-stroke-line-cap: round; -fx-stroke-line-join: round; }
+.svg-fill { -fx-fill: -fx-text-secondary; -fx-stroke: transparent; }
+.svg-12 { -fx-scale-x: 0.5; -fx-scale-y: 0.5; }
+.svg-14 { -fx-scale-x: 0.58; -fx-scale-y: 0.58; }
+.svg-warn { -fx-stroke: -fx-warning; }
+.mo-btn:hover .svg-line, .mo-btn:hover .svg-fill { -fx-stroke: -fx-text-color; -fx-fill: -fx-text-color; }
+.mo-btn:primary .svg-line { -fx-stroke: white; }
+.mo-btn:primary .svg-fill { -fx-fill: white; }
+.mo-btn:danger .svg-line { -fx-stroke: -fx-danger; }
+.mo-btn:gated .svg-line, .mo-btn:gated .svg-fill { -fx-stroke: -fx-text-muted; -fx-fill: -fx-text-muted; }
+.map-tool-btn .svg-line, .map-tool-btn .svg-fill { -fx-stroke: -fx-text-secondary; -fx-fill: -fx-text-secondary; }
+.map-tool-btn:hover .svg-line, .map-tool-btn:hover .svg-fill { -fx-stroke: -fx-text-color; -fx-fill: -fx-text-color; }
+.safe-banner-text .svg-line { -fx-stroke: -fx-warning; }
+
 /* Top Navigation */
 .topnav { -fx-background-color: -fx-bg-color; -fx-border-color: -fx-border-default; -fx-border-width: 0 0 1 0; -fx-padding: 0 12; }
 .brand-box { -fx-padding: 0 16 0 0; }
@@ -361,6 +376,7 @@
 .wave-channel { -fx-background-radius: 4; -fx-padding: 3 12; -fx-font-size: 11px; -fx-text-fill: -fx-text-secondary; -fx-cursor: hand; -fx-spacing: 6; }
 .wave-channel:hover { -fx-background-color: -fx-bg-hover; }
 .wave-channel:enabled .ch-dot { -fx-opacity: 1.0; }
+.wave-group-label { -fx-text-fill: -fx-text-muted; -fx-font-size: 9px; -fx-font-weight: bold; -fx-padding: 6 12 2 12; }
 .ch-dot { -fx-min-width: 8; -fx-min-height: 8; -fx-background-radius: 4; -fx-opacity: 0.3; }
 .ch-name { -fx-text-fill: -fx-text-secondary; -fx-font-size: 11px; }
 .ch-unit { -fx-text-fill: -fx-text-muted; -fx-font-size: 10px; }
@@ -426,5 +442,6 @@
 .compact-mode .algo-card .ac-metric-label { -fx-font-size: 9px; }
 .compact-mode .wave-sidebar { -fx-pref-width: 130; }
 .compact-mode .wave-channel { -fx-padding: 2 8; -fx-font-size: 10px; }
+.compact-mode .algo-card { -fx-pref-width: -1; -fx-max-width: Infinity; }
 .compact-mode .wave-toolbar { -fx-padding: 4 8; -fx-spacing: 4; }
 .compact-mode .wave-tr-btn { -fx-padding: 2 6; -fx-font-size: 10px; }
