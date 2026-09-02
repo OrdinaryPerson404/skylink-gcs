@@ -1,0 +1,376 @@
+/* ===== SkyLink GCS - Light Theme v2.0 ===== */
+.root {
+    -fx-bg-color: #f3f3f3;
+    -fx-bg-base: #f3f3f3;
+    -fx-text-color: #1a1a1a;
+    -fx-text-secondary: #424242;
+    -fx-text-muted: #8c8c8c;
+    -fx-text-link: #0f6cbd;
+    -fx-primary: #0f6cbd;
+    -fx-accent-blue: #0f6cbd;
+    -fx-accent-light-blue: #4a9ee1;
+    -fx-accent-gold: #c47f00;
+    -fx-success: #107c10;
+    -fx-warning: #9a6700;
+    -fx-danger: #c42b1c;
+    -fx-info: #605e5c;
+    -fx-bg-panel: #ffffff;
+    -fx-bg-hover: #f0f0f0;
+    -fx-bg-bar: #fafafa;
+    -fx-border-default: #e5e5e5;
+    -fx-border-hover: #d1d1d1;
+    -fx-border-highlight: #0f6cbd;
+    -fx-radius-sm: 4;
+    -fx-radius-md: 4;
+    -fx-radius-lg: 6;
+    -fx-data-fill: #8c8c8c;
+    -fx-src-e1: #0f6cbd;
+    -fx-src-phone: #107c10;
+    -fx-src-system: #7c3aed;
+    -fx-src-api: #9a6700;
+    -fx-font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+    -fx-font-size: 11px;
+}
+
+/* Top Navigation */
+.topnav { -fx-background-color: -fx-bg-color; -fx-border-color: -fx-border-default; -fx-border-width: 0 0 1 0; -fx-padding: 0 12; }
+.brand { -fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: -fx-text-color; }
+.menu-bar { -fx-background-color: transparent; }
+.menu-bar .menu-button { -fx-background-color: transparent; -fx-text-fill: -fx-text-secondary; -fx-font-size: 12px; }
+.menu-bar .menu-button:hover { -fx-background-color: -fx-bg-hover; }
+.menu-item { -fx-text-fill: -fx-text-secondary; -fx-font-size: 11px; }
+.context-menu { -fx-background-color: -fx-bg-panel; -fx-border-color: -fx-border-default; }
+
+/* Mode Switcher */
+.mode-btn { -fx-background-color: -fx-bg-panel; -fx-text-fill: -fx-info; -fx-font-size: 10px; -fx-font-weight: bold; -fx-border-color: -fx-border-default; -fx-border-width: 0 1 0 0; -fx-padding: 3 10; -fx-background-radius: 0; }
+.mode-btn:last { -fx-border-width: 0; }
+.mode-btn:hover { -fx-text-fill: -fx-text-secondary; }
+.mode-btn:selected { -fx-background-color: -fx-primary; -fx-text-fill: white; }
+.mode-e1:selected { -fx-background-color: -fx-warning; -fx-text-fill: #1a1a1a; }
+.mode-phone:selected { -fx-background-color: -fx-success; -fx-text-fill: #1a1a1a; }
+
+.conn-label { -fx-text-fill: -fx-success; -fx-font-size: 11px; }
+.clock-label { -fx-text-fill: -fx-info; -fx-font-size: 11px; -fx-font-family: "JetBrains Mono", monospace; }
+.theme-btn { -fx-background-color: transparent; -fx-text-fill: -fx-text-secondary; -fx-border-color: -fx-border-default; -fx-border-radius: 4; -fx-padding: 4 8; }
+
+/* Workspace Tabs */
+.workspace-tabs > .tab-header-area { -fx-background-color: -fx-bg-color; -fx-border-color: -fx-border-default; -fx-border-width: 0 0 1 0; }
+.workspace-tabs > .tab-header-area > .tab-header-background { -fx-background-color: -fx-bg-color; }
+.tab { -fx-background-color: -fx-bg-color; -fx-padding: 0 16; }
+.tab .tab-label { -fx-text-fill: -fx-info; -fx-font-size: 12px; }
+.tab:selected .tab-label { -fx-text-fill: -fx-text-color; }
+.tab:selected { -fx-border-color: -fx-primary; -fx-border-width: 0 0 2 0; }
+.tab-icon { -fx-font-size: 13px; -fx-opacity: 0.7; }
+
+/* ===== Left Panel - Enhanced ===== */
+.left-panel { -fx-background-color: -fx-bg-panel; -fx-padding: 0; -fx-spacing: 0; }
+.lp-section { -fx-background-color: -fx-bg-panel; -fx-border-color: -fx-border-default; -fx-border-width: 0 0 1 0; -fx-padding: 0; -fx-spacing: 0; }
+.lp-section-head { -fx-padding: 8 12 4 12; -fx-spacing: 6; }
+.lp-title { -fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: -fx-text-muted; -fx-letter-spacing: 0.5px; }
+.lp-section-body { -fx-padding: 4 12 8 12; }
+.lp-detail { -fx-font-size: 10px; -fx-text-fill: -fx-text-secondary; }
+
+/* Device status (E1 / Phone) */
+.dev-conn-banner { -fx-padding: 4 8; -fx-border-radius: 4; -fx-font-size: 10px; -fx-font-weight: bold; }
+.dev-conn-banner:online { -fx-background-color: #107c1015; -fx-text-fill: -fx-success; }
+.dev-conn-banner:offline { -fx-background-color: #c42b1c0d; -fx-text-fill: -fx-danger; }
+.dev-row { -fx-padding: 2 0; }
+.dev-label { -fx-font-size: 10px; -fx-text-fill: -fx-text-muted; }
+.dev-val { -fx-font-family: "JetBrains Mono", monospace; -fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: -fx-text-secondary; }
+.dev-val:ok { -fx-text-fill: -fx-success; }
+.dev-val:warn { -fx-text-fill: -fx-warning; }
+.dev-val:err { -fx-text-fill: -fx-danger; }
+.dev-val:off { -fx-text-fill: -fx-text-muted; }
+
+/* ===== UAV Status Grid - Card Style (H-02) ===== */
+.uav-status-grid { -fx-background-color: -fx-border-default; -fx-border-color: -fx-border-default; -fx-border-width: 1; -fx-border-radius: 4; -fx-hgap: 1; -fx-vgap: 1; }
+.us-cell { -fx-background-color: -fx-bg-panel; -fx-padding: 6 8; -fx-spacing: 2; }
+.us-label { -fx-font-size: 9px; -fx-text-fill: -fx-text-muted; }
+.us-val { -fx-font-family: "JetBrains Mono", monospace; -fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: -fx-text-color; }
+.us-val:ok { -fx-text-fill: -fx-success; }
+.us-val:warn { -fx-text-fill: -fx-warning; }
+.us-val:err { -fx-text-fill: -fx-danger; }
+.us-val:info { -fx-text-fill: -fx-primary; }
+.us-val:off { -fx-text-fill: -fx-text-muted; }
+.us-val:disabled { -fx-text-fill: -fx-text-muted; -fx-font-style: italic; -fx-font-weight: normal; }
+
+/* ===== Data Source Tags (H-03) ===== */
+.src-tag { -fx-font-size: 8px; -fx-font-weight: bold; -fx-padding: 0 4; -fx-background-radius: 2; -fx-text-fill: white; }
+.src-tag:e1 { -fx-background-color: -fx-src-e1; }
+.src-tag:phone { -fx-background-color: -fx-src-phone; }
+.src-tag:system { -fx-background-color: -fx-src-system; }
+.src-tag:api { -fx-background-color: -fx-src-api; -fx-text-fill: #1a1a1a; }
+
+/* ===== Waypoint List - Enhanced (H-04) ===== */
+.wp-list { -fx-background-color: -fx-bg-panel; -fx-border-color: transparent; -fx-border-width: 0; -fx-background-insets: 0; }
+.wp-list .list-cell { -fx-background-color: -fx-bg-panel; -fx-padding: 0; -fx-border-width: 0 0 0 3; -fx-border-color: transparent; }
+.wp-list .list-cell:filled:hover { -fx-background-color: -fx-bg-hover; }
+.wp-list .list-cell:filled:selected { -fx-background-color: -fx-bg-hover; -fx-border-color: -fx-primary; }
+.wp-item { -fx-padding: 6 10; -fx-spacing: 8; }
+.wp-seq { -fx-background-color: -fx-primary; -fx-text-fill: white; -fx-font-size: 10px; -fx-font-weight: bold; -fx-background-radius: 9; -fx-min-width: 18; -fx-min-height: 18; -fx-alignment: center; }
+.wp-info { -fx-spacing: 2; }
+.wp-coords { -fx-font-family: "JetBrains Mono", monospace; -fx-font-size: 10px; -fx-text-fill: -fx-info; }
+.wp-meta { -fx-spacing: 8; }
+.wp-meta-label { -fx-font-size: 9px; -fx-text-fill: -fx-text-muted; }
+.wp-meta-val { -fx-font-size: 9px; -fx-text-fill: -fx-text-secondary; -fx-font-weight: bold; }
+.wp-act-tag { -fx-font-size: 9px; -fx-text-fill: -fx-primary; -fx-font-weight: bold; }
+.wp-del-btn { -fx-font-size: 10px; -fx-text-fill: -fx-danger; -fx-background-color: transparent; -fx-padding: 0 2; -fx-opacity: 0.4; }
+.wp-del-btn:hover { -fx-opacity: 1.0; }
+.wp-edit-btn { -fx-font-size: 10px; -fx-text-fill: -fx-primary; -fx-background-color: transparent; -fx-padding: 0 2; -fx-opacity: 0.4; }
+.wp-edit-btn:hover { -fx-opacity: 1.0; }
+
+/* Upload status badge */
+.upload-status { -fx-font-size: 10px; -fx-font-weight: bold; -fx-padding: 2 8; -fx-background-radius: 3; }
+.upload-status:dirty { -fx-background-color: #9a670026; -fx-text-fill: -fx-warning; }
+.upload-status:synced { -fx-background-color: #107c101a; -fx-text-fill: -fx-success; }
+
+/* Airspace status badge */
+.aspace-status { -fx-font-size: 10px; -fx-font-weight: bold; -fx-padding: 2 8; -fx-background-radius: 3; }
+.aspace-status:pass { -fx-background-color: #107c101a; -fx-text-fill: -fx-success; }
+.aspace-status:warn { -fx-background-color: #9a67001f; -fx-text-fill: -fx-warning; }
+.aspace-status:block { -fx-background-color: #c42b1c0d; -fx-text-fill: -fx-danger; }
+.aspace-status:unknown { -fx-background-color: -fx-bg-hover; -fx-text-fill: -fx-text-muted; }
+.aspace-status:idle { -fx-background-color: -fx-bg-hover; -fx-text-fill: -fx-text-muted; }
+
+/* Mission Ops */
+.mo-btn { -fx-background-color: -fx-bg-panel; -fx-text-fill: -fx-text-secondary; -fx-font-size: 11px; -fx-border-color: -fx-border-default; -fx-border-radius: 4; -fx-padding: 5 10; -fx-alignment: CENTER_LEFT; }
+.mo-btn:hover { -fx-background-color: -fx-bg-hover; -fx-text-fill: -fx-text-color; -fx-border-color: -fx-border-hover; }
+.mo-btn:primary { -fx-background-color: -fx-primary; -fx-text-fill: white; -fx-border-color: -fx-primary; }
+.mo-btn:primary:hover { -fx-background-color: -fx-accent-blue; }
+.mo-btn:danger { -fx-text-fill: -fx-danger; }
+.mo-btn:gated { -fx-background-color: -fx-bg-panel; -fx-text-fill: -fx-text-muted; }
+.mo-btn:disabled { -fx-opacity: 0.4; }
+
+.gated-section { -fx-border-color: -fx-border-default; -fx-border-width: 1 0 0 0; -fx-padding: 4 0 0 0; -fx-spacing: 4; }
+.stat-section { -fx-border-color: -fx-border-default; -fx-border-width: 1 0 0 0; -fx-padding: 6 0 0 0; -fx-spacing: 4; }
+.stat-row { -fx-padding: 2 0; -fx-alignment: CENTER_LEFT; }
+.stat-label { -fx-font-size: 11px; -fx-text-fill: -fx-text-muted; }
+.stat-value { -fx-font-size: 11px; -fx-text-fill: -fx-text-color; -fx-font-family: "JetBrains Mono", monospace; }
+
+/* Control Panel - Enhanced */
+.ctrl-panel { -fx-background-color: -fx-bg-panel; -fx-border-color: -fx-border-default; -fx-border-width: 1; -fx-border-radius: 6; -fx-padding: 12; -fx-spacing: 8; }
+.ctrl-title { -fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: -fx-warning; -fx-spacing: 6; }
+.ctrl-grid { -fx-hgap: 6; -fx-vgap: 6; }
+.ctrl-btn { -fx-background-color: -fx-bg-panel; -fx-text-fill: -fx-text-secondary; -fx-border-color: -fx-border-default; -fx-border-radius: 4; -fx-padding: 6 10; -fx-font-size: 11px; }
+.ctrl-btn:hover { -fx-background-color: -fx-bg-hover; -fx-text-fill: -fx-text-color; }
+.ctrl-btn:arm { -fx-border-color: -fx-warning; -fx-text-fill: -fx-warning; }
+.ctrl-btn:arm:hover { -fx-background-color: -fx-warning; -fx-text-fill: #1a1a1a; }
+.ctrl-btn:disarm { -fx-border-color: -fx-danger; -fx-text-fill: -fx-danger; }
+.ctrl-btn:disarm:hover { -fx-background-color: -fx-danger; -fx-text-fill: white; }
+.ctrl-btn:disabled { -fx-opacity: 0.3; }
+.ctrl-status { -fx-font-size: 10px; -fx-text-fill: -fx-text-muted; -fx-alignment: center; }
+
+/* Safe Banner */
+.safe-banner { -fx-background-color: linear-gradient(to right, #9a670015, #9a670008); -fx-border-color: -fx-border-default; -fx-border-width: 0 0 1 0; -fx-padding: 4 12; }
+.safe-banner-text { -fx-text-fill: -fx-warning; -fx-font-size: 11px; }
+.safe-action { -fx-border-color: -fx-warning; -fx-text-fill: -fx-warning; -fx-font-size: 10px; -fx-font-weight: bold; -fx-background-radius: 4; -fx-padding: 3 10; }
+.safe-action:hover { -fx-background-color: -fx-warning; -fx-text-fill: #1a1a1a; }
+.safe-action:danger { -fx-border-color: -fx-danger; -fx-text-fill: -fx-danger; }
+.safe-action:danger:hover { -fx-background-color: -fx-danger; -fx-text-fill: white; }
+
+/* ===== Map Area - Enhanced (H-01) ===== */
+.map-container { -fx-background-color: #e8e8e8; }
+
+/* Map control bar (top-left) */
+.map-ctrl-bar { -fx-padding: 0; -fx-spacing: 6; }
+.map-ctrl-btn { -fx-background-color: -fx-bg-color; -fx-border-color: -fx-border-hover; -fx-border-width: 1.5; -fx-text-fill: -fx-text-color; -fx-padding: 4 10; -fx-border-radius: 4; -fx-font-size: 11px; -fx-font-weight: bold; }
+.map-ctrl-btn:hover { -fx-background-color: -fx-bg-hover; -fx-border-color: -fx-primary; }
+.map-ctrl-btn:active, .map-ctrl-btn:selected { -fx-background-color: -fx-primary; -fx-border-color: -fx-accent-light-blue; -fx-text-fill: white; }
+
+/* Map toolbar (top-right) */
+.map-toolbar { -fx-background-color: -fx-bg-panel; -fx-border-color: -fx-border-hover; -fx-border-width: 1; -fx-border-radius: 4; -fx-padding: 4 8; -fx-spacing: 4; -fx-effect: dropshadow(gaussian, #00000026, 8, 0, 0, 2); }
+.map-tool-btn { -fx-background-color: transparent; -fx-text-fill: -fx-text-secondary; -fx-min-width: 26; -fx-min-height: 26; -fx-background-radius: 4; -fx-font-size: 12px; -fx-padding: 0; }
+.map-tool-btn:hover { -fx-background-color: -fx-bg-hover; -fx-text-fill: -fx-text-color; }
+.map-tool-btn:active, .map-tool-btn:selected { -fx-text-fill: -fx-primary; }
+.tb-divider { -fx-background-color: -fx-border-hover; -fx-pref-width: 1; -fx-pref-height: 18; }
+
+/* Map hint (bottom-center) */
+.map-hint { -fx-text-fill: -fx-text-muted; -fx-background-color: -fx-bg-base; -fx-background-radius: 4; -fx-padding: 3 10; -fx-font-size: 10px; }
+
+/* Sensor entry (bottom-right) */
+.sensor-entry { -fx-spacing: 6; }
+.sensor-entry-item { -fx-background-color: -fx-bg-panel; -fx-border-color: -fx-border-default; -fx-border-width: 1; -fx-border-radius: 4; -fx-padding: 4 10; -fx-spacing: 4; -fx-cursor: hand; }
+.sensor-entry-item:hover { -fx-border-color: -fx-primary; }
+.se-dot { -fx-min-width: 6; -fx-min-height: 6; -fx-background-radius: 3; }
+.se-label { -fx-font-size: 10px; -fx-text-fill: -fx-text-muted; }
+.se-val { -fx-font-family: "JetBrains Mono", monospace; -fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: -fx-text-color; }
+
+/* Drone HUD Card (top-center) */
+.drone-hud { -fx-background-color: -fx-bg-panel; -fx-border-color: -fx-border-hover; -fx-border-width: 1; -fx-border-radius: 6; -fx-padding: 8 16; -fx-effect: dropshadow(gaussian, #00000026, 8, 0, 0, 2); }
+.hud-val { -fx-font-family: "JetBrains Mono", monospace; -fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: -fx-text-color; }
+.hud-val:hud-ok { -fx-text-fill: -fx-success; }
+.hud-val:hud-warn { -fx-text-fill: -fx-warning; }
+.hud-val:hud-err { -fx-text-fill: -fx-danger; }
+.hud-label { -fx-font-size: 9px; -fx-text-fill: -fx-text-muted; }
+
+/* Data source drawer */
+.ds-drawer { -fx-background-color: -fx-bg-panel; -fx-border-color: -fx-border-default; -fx-border-width: 1; -fx-border-radius: 6; -fx-effect: dropshadow(gaussian, #00000026, 8, 0, 0, 2); -fx-pref-width: 280; -fx-max-height: 300; }
+.ds-drawer-head { -fx-border-color: -fx-border-default; -fx-border-width: 0 0 1 0; -fx-padding: 8 12; -fx-font-size: 11px; -fx-font-weight: bold; -fx-spacing: 6; }
+.ds-drawer-body { -fx-padding: 8 12; -fx-spacing: 6; }
+.ds-source-card { -fx-border-color: -fx-border-default; -fx-border-width: 1; -fx-border-radius: 4; -fx-padding: 8 10; -fx-spacing: 4; }
+.ds-source-name { -fx-font-size: 11px; -fx-font-weight: bold; -fx-spacing: 6; }
+.ds-source-row { -fx-padding: 1 0; }
+.dsr-label { -fx-font-size: 10px; -fx-text-fill: -fx-text-muted; }
+.dsr-val { -fx-font-family: "JetBrains Mono", monospace; -fx-font-size: 10px; -fx-text-fill: -fx-text-secondary; }
+.dsr-val:ok { -fx-text-fill: -fx-success; }
+.dsr-val:err { -fx-text-fill: -fx-danger; }
+
+/* ===== Status Bar - Enhanced (H-14) ===== */
+.status-bar { -fx-background-color: -fx-bg-bar; -fx-border-color: -fx-border-default; -fx-border-width: 1 0 0 0; -fx-padding: 0 12; -fx-pref-height: 28; -fx-spacing: 0; }
+.sb-item { -fx-padding: 0 12; -fx-border-color: -fx-border-default; -fx-border-width: 0 1 0 0; -fx-spacing: 5; -fx-alignment: CENTER; }
+.sb-label { -fx-font-size: 9px; -fx-text-fill: -fx-text-muted; }
+.sb-val { -fx-font-family: "JetBrains Mono", monospace; -fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: -fx-text-secondary; }
+.sb-val:ok { -fx-text-fill: -fx-success; }
+.sb-val:warn { -fx-text-fill: -fx-warning; }
+.sb-val:err { -fx-text-fill: -fx-danger; }
+.sb-spacer { -fx-pref-width: 9999; }
+
+/* Sensor Chart */
+.chart { -fx-background-color: -fx-bg-panel; }
+.chart-plot-background { -fx-background-color: -fx-bg-panel; }
+.axis { -fx-tick-label-fill: -fx-text-muted; -fx-axis-line-color: -fx-border-default; }
+
+/* Settings */
+.settings-container { -fx-padding: 20; -fx-background-color: -fx-bg-base; -fx-spacing: 12; }
+.settings-section { -fx-background-color: -fx-bg-panel; -fx-border-color: -fx-border-default; -fx-border-width: 1; -fx-border-radius: 4; -fx-padding: 12; -fx-spacing: 8; -fx-max-width: 600; }
+.settings-title { -fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: -fx-text-color; }
+.settings-subtitle { -fx-font-size: 11px; -fx-text-fill: -fx-info; }
+.settings-field { -fx-spacing: 4; }
+.settings-field-label { -fx-font-size: 11px; -fx-text-fill: -fx-info; }
+.settings-hint { -fx-font-size: 10px; -fx-text-fill: -fx-text-muted; }
+
+/* Airspace layer chips */
+.aspace-layer-chip { -fx-border-color: -fx-border-default; -fx-border-width: 1; -fx-border-radius: 4; -fx-padding: 4 10; -fx-font-size: 11px; -fx-text-fill: -fx-text-secondary; -fx-background-color: transparent; -fx-spacing: 4; }
+.aspace-layer-chip:hover { -fx-border-color: -fx-primary; }
+.aspace-layer-chip:active, .aspace-layer-chip:selected { -fx-border-color: -fx-primary; -fx-background-color: #0f6cbd15; -fx-text-fill: -fx-primary; }
+.lc-dot { -fx-min-width: 8; -fx-min-height: 8; -fx-background-radius: 4; }
+
+/* Airspace package cards */
+.aspace-pkg-card { -fx-border-color: -fx-border-default; -fx-border-width: 1; -fx-border-radius: 4; -fx-padding: 8 10; -fx-spacing: 4; }
+.aspace-pkg-name { -fx-font-size: 11px; -fx-font-weight: bold; -fx-spacing: 6; }
+.aspace-pkg-row { -fx-padding: 1 0; }
+.apr-label { -fx-font-size: 10px; -fx-text-fill: -fx-text-muted; }
+.apr-val { -fx-font-family: "JetBrains Mono", monospace; -fx-font-size: 10px; -fx-text-fill: -fx-text-secondary; }
+.apr-val:warn { -fx-text-fill: -fx-warning; }
+.apr-val:ok { -fx-text-fill: -fx-success; }
+
+/* ===== Algorithm Cards - Enhanced (H-16) ===== */
+.algo-card { -fx-background-color: -fx-bg-panel; -fx-border-color: -fx-border-default; -fx-border-width: 1; -fx-border-radius: 6; -fx-padding: 0; -fx-spacing: 0; }
+.algo-card-head { -fx-border-color: -fx-border-default; -fx-border-width: 0 0 1 0; -fx-padding: 10 14; -fx-spacing: 8; }
+.algo-card-body { -fx-padding: 14; -fx-spacing: 10; }
+.algo-title { -fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: -fx-text-color; }
+.algo-sub { -fx-font-size: 10px; -fx-text-fill: -fx-text-muted; }
+.algo-stat-row { -fx-padding: 4 0; -fx-font-size: 12px; -fx-text-fill: -fx-info; }
+.algo-stat-row .algo-stat-val { -fx-font-family: "JetBrains Mono", monospace; -fx-text-fill: -fx-text-color; }
+.algo-stat-row .algo-stat-val:improved { -fx-text-fill: -fx-success; }
+.algo-stat-row .algo-stat-val:worse { -fx-text-fill: -fx-danger; }
+.algo-input-row { -fx-spacing: 8; }
+.algo-input-label { -fx-font-size: 11px; -fx-text-fill: -fx-info; -fx-pref-width: 80; }
+
+/* Algorithm compare boxes */
+.algo-compare { -fx-hgap: 12; -fx-vgap: 0; }
+.algo-compare-item { -fx-border-color: -fx-border-default; -fx-border-width: 1; -fx-border-radius: 4; -fx-padding: 8 10; -fx-alignment: CENTER; -fx-spacing: 4; }
+.algo-compare-label { -fx-font-size: 10px; -fx-text-fill: -fx-text-muted; }
+.algo-compare-val { -fx-font-family: "JetBrains Mono", monospace; -fx-font-size: 16px; -fx-font-weight: bold; }
+.algo-compare-val:original { -fx-text-fill: -fx-warning; }
+.algo-compare-val:optimized { -fx-text-fill: -fx-success; }
+
+/* Disclaimer */
+.disclaimer { -fx-text-fill: -fx-text-muted; -fx-font-size: 10px; -fx-border-color: -fx-border-default; -fx-border-style: dashed; -fx-border-width: 1; -fx-padding: 8; -fx-border-radius: 4; -fx-line-spacing: 1.5; }
+
+/* Scroll Bar */
+.scroll-bar { -fx-background-color: -fx-bg-color; }
+.scroll-bar .thumb { -fx-background-color: -fx-border-hover; -fx-background-radius: 3; }
+.scroll-bar:vertical { -fx-pref-width: 6; }
+.scroll-bar:horizontal { -fx-pref-height: 6; }
+
+/* Text Field / Combo */
+.text-field { -fx-background-color: -fx-bg-panel; -fx-text-fill: -fx-text-color; -fx-border-color: -fx-border-default; -fx-border-radius: 4; -fx-padding: 4 8; }
+.text-field:focused { -fx-border-color: -fx-primary; }
+.combo-box { -fx-background-color: -fx-bg-panel; -fx-border-color: -fx-border-default; -fx-border-radius: 4; }
+.combo-box .list-cell { -fx-text-fill: -fx-text-secondary; -fx-font-size: 11px; }
+.combo-box:focused { -fx-border-color: -fx-primary; }
+
+/* Table */
+.table-view { -fx-background-color: -fx-bg-panel; -fx-border-color: -fx-border-default; -fx-border-width: 1; }
+.table-view .column-header { -fx-background-color: -fx-bg-bar; -fx-border-color: -fx-border-default; -fx-border-width: 0 0 1 0; }
+.table-view .table-row-cell { -fx-background-color: -fx-bg-panel; }
+.table-view .table-row-cell:filled:hover { -fx-background-color: -fx-bg-hover; }
+.table-view .table-cell { -fx-text-fill: -fx-text-secondary; -fx-font-size: 11px; }
+
+/* Toast notifications */
+.toast { -fx-background-radius: 4; -fx-padding: 10 16; -fx-font-size: 12px; -fx-effect: dropshadow(gaussian, #00000026, 8, 0, 0, 2); }
+.toast:success { -fx-background-color: #107c1014; -fx-border-color: #107c1040; -fx-border-width: 1; -fx-text-fill: -fx-success; }
+.toast:warn { -fx-background-color: #9a67001f; -fx-border-color: #9a670059; -fx-border-width: 1; -fx-text-fill: -fx-warning; }
+.toast:error { -fx-background-color: #c42b1c0d; -fx-border-color: #c42b1c40; -fx-border-width: 1; -fx-text-fill: -fx-danger; }
+.toast:info { -fx-background-color: #0f6cbd14; -fx-border-color: #0f6cbd40; -fx-border-width: 1; -fx-text-fill: -fx-primary; }
+
+/* Flight log list - data page */
+.flight-list { -fx-background-color: -fx-bg-panel; -fx-border-color: -fx-border-default; -fx-border-width: 0 1 0 0; -fx-pref-width: 260; }
+.flight-item { -fx-border-color: transparent; -fx-border-width: 1; -fx-border-radius: 4; -fx-padding: 8 10; -fx-spacing: 2; }
+.flight-item:hover { -fx-background-color: -fx-bg-hover; }
+.flight-item:selected { -fx-background-color: -fx-bg-hover; -fx-border-color: -fx-primary; }
+.flight-item-id { -fx-text-fill: -fx-primary; -fx-font-family: "JetBrains Mono", monospace; -fx-font-size: 11px; -fx-font-weight: bold; }
+.flight-item-type { -fx-text-fill: -fx-text-secondary; -fx-font-size: 11px; }
+.flight-item-time { -fx-text-fill: -fx-info; -fx-font-size: 11px; }
+.flight-item-stats { -fx-text-fill: -fx-info; -fx-font-size: 10px; -fx-spacing: 8; }
+
+.flight-detail-head { -fx-background-color: -fx-bg-panel; -fx-border-color: -fx-border-default; -fx-border-width: 0 0 1 0; -fx-padding: 12 16; -fx-spacing: 4; }
+.flight-detail-title { -fx-text-fill: -fx-text-color; -fx-font-size: 14px; -fx-font-weight: bold; }
+.flight-detail-meta { -fx-text-fill: -fx-info; -fx-font-size: 12px; -fx-spacing: 8; }
+.flight-stat-item { -fx-border-color: -fx-border-default; -fx-border-width: 0 1 0 0; -fx-padding: 10; -fx-alignment: CENTER; -fx-spacing: 2; }
+.flight-stat-item:last { -fx-border-width: 0; }
+.flight-stat-val { -fx-font-family: "JetBrains Mono", monospace; -fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: -fx-text-color; }
+.flight-stat-label { -fx-font-size: 10px; -fx-text-fill: -fx-info; }
+
+/* Data page sub-tabs */
+.data-tab-bar { -fx-background-color: -fx-bg-panel; -fx-border-color: -fx-border-default; -fx-border-width: 0 0 1 0; -fx-padding: 0 8; -fx-spacing: 0; }
+.data-tab { -fx-padding: 8 16; -fx-font-size: 12px; -fx-text-fill: -fx-info; -fx-border-color: transparent; -fx-border-width: 0 0 2 0; -fx-cursor: hand; -fx-spacing: 6; }
+.data-tab:hover { -fx-text-fill: -fx-text-secondary; }
+.data-tab:selected { -fx-text-fill: -fx-text-color; -fx-border-color: -fx-primary; }
+
+/* Waveform sidebar */
+.wave-sidebar { -fx-background-color: -fx-bg-panel; -fx-border-color: -fx-border-default; -fx-border-width: 0 0 0 1; -fx-pref-width: 160; -fx-padding: 0 0 8 0; }
+.wave-channel { -fx-background-radius: 4; -fx-padding: 3 12; -fx-font-size: 11px; -fx-text-fill: -fx-text-secondary; -fx-cursor: hand; -fx-spacing: 6; }
+.wave-channel:hover { -fx-background-color: -fx-bg-hover; }
+.wave-channel:enabled .ch-dot { -fx-opacity: 1.0; }
+.ch-dot { -fx-min-width: 8; -fx-min-height: 8; -fx-background-radius: 4; -fx-opacity: 0.3; }
+.ch-name { -fx-text-fill: -fx-text-secondary; -fx-font-size: 11px; }
+.ch-unit { -fx-text-fill: -fx-text-muted; -fx-font-size: 10px; }
+
+/* Wave toolbar */
+.wave-toolbar { -fx-background-color: -fx-bg-panel; -fx-border-color: -fx-border-default; -fx-border-width: 0 0 1 0; -fx-padding: 8 12; -fx-spacing: 8; }
+.wave-tr-btn { -fx-padding: 3 8; -fx-font-size: 11px; -fx-border-radius: 4; -fx-border-color: -fx-border-default; -fx-background-color: -fx-bg-panel; -fx-text-fill: -fx-info; }
+.wave-tr-btn:hover { -fx-text-fill: -fx-text-secondary; }
+.wave-tr-btn:selected { -fx-background-color: -fx-primary; -fx-text-fill: white; -fx-border-color: -fx-primary; }
+.wave-stat-info { -fx-text-fill: -fx-info; -fx-font-size: 11px; }
+
+/* ===== Responsive / Compact Mode ===== */
+.compact-mode .section-title { -fx-font-size: 11px; -fx-padding: 6 8; }
+.compact-mode .status-grid { -fx-hgap: 6; -fx-vgap: 6; -fx-padding: 6 8; }
+.compact-mode .status-card { -fx-padding: 6 8; }
+.compact-mode .status-card .sc-value { -fx-font-size: 13px; }
+.compact-mode .status-card .sc-label { -fx-font-size: 9px; }
+.compact-mode .wp-item { -fx-padding: 6 8; }
+.compact-mode .wp-idx { -fx-font-size: 10px; -fx-min-width: 20; }
+.compact-mode .wp-coord { -fx-font-size: 10px; }
+.compact-mode .wp-meta { -fx-font-size: 9px; }
+.compact-mode .mission-stats-bar { -fx-padding: 6 8; }
+.compact-mode .ms-item { -fx-font-size: 10px; }
+.compact-mode .ctrl-panel { -fx-padding: 8; }
+.compact-mode .btn-primary,
+.compact-mode .btn-secondary,
+.compact-mode .btn-danger { -fx-padding: 6 10; -fx-font-size: 11px; }
+.compact-mode .map-float-bar { -fx-padding: 4 6; }
+.compact-mode .map-float-btn { -fx-padding: 4 7; -fx-font-size: 11px; }
+.compact-mode .data-source-tag { -fx-font-size: 9px; -fx-padding: 1 6; }
+.compact-mode .upload-badge { -fx-font-size: 9px; -fx-padding: 2 8; }
+.compact-mode .wp-list-toolbar { -fx-padding: 4 8; }
+.compact-mode .algo-card { -fx-padding: 8 10; }
+.compact-mode .algo-card .ac-name { -fx-font-size: 12px; }
+.compact-mode .algo-card .ac-metric-val { -fx-font-size: 13px; }
+.compact-mode .algo-card .ac-metric-label { -fx-font-size: 9px; }
+.compact-mode .wave-sidebar { -fx-pref-width: 130; }
+.compact-mode .wave-channel { -fx-padding: 2 8; -fx-font-size: 10px; }
+.compact-mode .wave-toolbar { -fx-padding: 4 8; -fx-spacing: 4; }
+.compact-mode .wave-tr-btn { -fx-padding: 2 6; -fx-font-size: 10px; }

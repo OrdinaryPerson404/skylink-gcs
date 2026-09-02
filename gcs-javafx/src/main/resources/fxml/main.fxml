@@ -1,0 +1,754 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.chart.*?>
+<?import javafx.scene.canvas.Canvas?>
+<?import javafx.scene.text.*?>
+<?import cn.edu.nuaa.gcs.ui.MapCanvas?>
+
+<VBox fx:id="root" prefWidth="1400" prefHeight="900" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="cn.edu.nuaa.gcs.ui.MainController">
+  <!-- ===== Top Navigation Bar ===== -->
+  <HBox styleClass="topnav" prefHeight="40" spacing="8" alignment="CENTER_LEFT">
+    <HBox alignment="CENTER" spacing="6" styleClass="brand-box">
+      <Region styleClass="brand-logo"/>
+      <Label text="SkyLink " styleClass="brand-text"/>
+      <Label text="天链" styleClass="brand-accent"/>
+    </HBox>
+    <MenuBar styleClass="menu-bar">
+      <Menu text="文件">
+        <MenuItem text="导入任务 XML" onAction="#onImportXml"/>
+        <MenuItem text="导出任务 XML" onAction="#onExportXml"/>
+        <SeparatorMenuItem/>
+        <MenuItem text="导出飞行日志 CSV" onAction="#onExportLogCsv"/>
+        <MenuItem text="导入飞行日志 CSV" onAction="#onImportLogCsv"/>
+      </Menu>
+      <Menu text="任务">
+        <MenuItem text="新增航点" onAction="#onAddWaypoint"/>
+        <MenuItem text="删除航点" onAction="#onDeleteWaypoint"/>
+        <MenuItem text="清空航点" onAction="#onClearWaypoints" style="-fx-text-fill: #ef4444;"/>
+        <SeparatorMenuItem/>
+        <MenuItem text="路径预览" onAction="#onPreviewPath"/>
+        <MenuItem text="路径优化" onAction="#onOptimizePath"/>
+        <MenuItem text="冲突检测" onAction="#onCheckConflicts"/>
+        <MenuItem text="空域校验" onAction="#onAirspaceCheck"/>
+        <SeparatorMenuItem/>
+        <MenuItem text="上传至 E1" onAction="#onUploadToE1" disable="true" fx:id="menuUploadE1" style="-fx-text-fill: #f59e0b;"/>
+        <MenuItem text="开始自动任务" onAction="#onStartAutoMission" disable="true" fx:id="menuAutoMission" style="-fx-text-fill: #f59e0b;"/>
+      </Menu>
+      <Menu text="视图">
+        <MenuItem text="任务与监控" onAction="#onGoMissionTab"/>
+        <MenuItem text="数据与日志" onAction="#onGoDataTab"/>
+        <MenuItem text="系统设置" onAction="#onGoSettingsTab"/>
+        <MenuItem text="算法分析" onAction="#onGoAlgoTab"/>
+        <SeparatorMenuItem/>
+        <MenuItem text="切换主题" onAction="#onToggleTheme"/>
+      </Menu>
+      <Menu text="帮助">
+        <MenuItem text="关于 SkyLink" onAction="#onShowAbout"/>
+        <MenuItem text="快捷键" onAction="#onShowShortcuts"/>
+      </Menu>
+    </MenuBar>
+    <HBox HBox.hgrow="ALWAYS" alignment="CENTER" styleClass="mode-switcher">
+      <ToggleButton fx:id="e1Btn" text="E1 实机" onAction="#onE1Mode" styleClass="mode-btn,mode-e1">
+        <toggleGroup><ToggleGroup fx:id="modeGroup"/></toggleGroup>
+      </ToggleButton>
+      <ToggleButton fx:id="phoneBtn" text="手机辅助" onAction="#onPhoneMode" styleClass="mode-btn,mode-phone">
+        <toggleGroup><fx:reference source="modeGroup"/></toggleGroup>
+      </ToggleButton>
+    </HBox>
+    <Region fx:id="connDot" styleClass="conn-dot,on"/>
+    <Label fx:id="connDetail" text="已连接 · COM3 115200" styleClass="conn-detail"/>
+    <Label fx:id="clockLabel" text="--:--:--" styleClass="clock-label"/>
+    <Button text="主题" onAction="#onToggleTheme" styleClass="theme-btn"/>
+  </HBox>
+
+  <!-- ===== Workspace Tabs ===== -->
+  <TabPane fx:id="workspaceTabs" VBox.vgrow="ALWAYS" styleClass="workspace-tabs">
+    <!-- ===== Tab 1: 任务与监控 ===== -->
+    <Tab fx:id="missionTab" closable="false">
+      <graphic><Label text="🗺" styleClass="tab-icon"/></graphic>
+      <text>任务与监控</text>
+      <VBox fillWidth="true" VBox.vgrow="ALWAYS">
+        <HBox fx:id="safeBanner" styleClass="safe-banner" visible="false" managed="false">
+          <Label text="⚠ 安全测试模式 · 仅限无桨/架台测试 · 实机控制默认只读" styleClass="safe-banner-text"/>
+          <HBox HBox.hgrow="ALWAYS" alignment="CENTER_RIGHT">
+            <Button fx:id="btnEnterCtrl" text="进入控制测试" styleClass="safe-action" onAction="#onEnterCtrlTest"/>
+            <Button fx:id="btnExitCtrl" text="退出控制测试" styleClass="safe-action,danger" visible="false" managed="false" onAction="#onExitCtrlTest"/>
+          </HBox>
+        </HBox>
+        <SplitPane fx:id="mainSplit" dividerPositions="0.22" VBox.vgrow="ALWAYS">
+          <!-- Left Panel - Enhanced -->
+          <VBox fx:id="leftPanel" minWidth="260" prefWidth="280" styleClass="left-panel">
+            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
+              <VBox>
+                <!-- E1 Flight Controller Status -->
+                <VBox fx:id="e1StatusBox" styleClass="lp-section" visible="false" managed="false">
+                  <HBox styleClass="lp-section-head" alignment="CENTER_LEFT">
+                    <Label text="E1 飞控" styleClass="lp-title"/>
+                    <Label text="飞控" styleClass="src-tag,e1"/>
+                  </HBox>
+                  <VBox styleClass="lp-section-body" spacing="4">
+                    <Label fx:id="e1ConnBanner" text="--" styleClass="dev-conn-banner"/>
+                    <HBox styleClass="dev-row"><Label text="IP 地址" styleClass="dev-label"/><Region HBox.hgrow="ALWAYS"/><Label text="192.168.4.1" styleClass="dev-val"/></HBox>
+                    <HBox styleClass="dev-row"><Label text="UDP 端口" styleClass="dev-label"/><Region HBox.hgrow="ALWAYS"/><Label text="14550" styleClass="dev-val"/></HBox>
+                    <HBox styleClass="dev-row"><Label text="心跳" styleClass="dev-label"/><Region HBox.hgrow="ALWAYS"/><Label text="-- bpm" styleClass="dev-val"/></HBox>
+                    <HBox styleClass="dev-row"><Label text="链路质量" styleClass="dev-label"/><Region HBox.hgrow="ALWAYS"/><Label text="--%" styleClass="dev-val"/></HBox>
+                    <HBox styleClass="dev-row"><Label text="解锁状态" styleClass="dev-label"/><Region HBox.hgrow="ALWAYS"/><Label text="未解锁" styleClass="dev-val,off"/></HBox>
+                  </VBox>
+                </VBox>
+
+                <!-- Phone Companion Status -->
+                <VBox fx:id="phoneStatusBox" styleClass="lp-section" visible="false" managed="false">
+                  <HBox styleClass="lp-section-head" alignment="CENTER_LEFT">
+                    <Label text="手机伴随定位" styleClass="lp-title"/>
+                    <Label text="手机" styleClass="src-tag,phone"/>
+                  </HBox>
+                  <VBox styleClass="lp-section-body" spacing="4">
+                    <Label fx:id="phoneConnBanner" text="--" styleClass="dev-conn-banner"/>
+                    <HBox styleClass="dev-row"><Label text="GPS 定位" styleClass="dev-label"/><Region HBox.hgrow="ALWAYS"/><Label text="已接入" styleClass="dev-val,ok"/></HBox>
+                    <HBox styleClass="dev-row"><Label text="定位精度" styleClass="dev-label"/><Region HBox.hgrow="ALWAYS"/><Label text="±3.5m" styleClass="dev-val"/></HBox>
+                    <HBox styleClass="dev-row"><Label text="罗盘" styleClass="dev-label"/><Region HBox.hgrow="ALWAYS"/><Label text="--" styleClass="dev-val,off"/></HBox>
+                    <HBox styleClass="dev-row"><Label text="气压计" styleClass="dev-label"/><Region HBox.hgrow="ALWAYS"/><Label text="--" styleClass="dev-val,off"/></HBox>
+                  </VBox>
+                </VBox>
+
+                <!-- UAV Status Grid - Card Style -->
+                <VBox styleClass="lp-section">
+                  <HBox styleClass="lp-section-head" alignment="CENTER_LEFT">
+                    <Label text="无人机状态" styleClass="lp-title"/>
+                  </HBox>
+                  <VBox styleClass="lp-section-body">
+                    <GridPane fx:id="droneStatusGrid" styleClass="uav-status-grid" hgap="1" vgap="1"/>
+                  </VBox>
+                </VBox>
+
+                <!-- Waypoint List - Enhanced -->
+                <VBox styleClass="lp-section" VBox.vgrow="ALWAYS">
+                  <HBox styleClass="lp-section-head" alignment="CENTER_LEFT">
+                    <Label text="航点列表" styleClass="lp-title"/>
+                    <Label fx:id="uploadStatusBadge" text="已同步" styleClass="upload-status,synced"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Label fx:id="wpCountLabel" text="0 航点" styleClass="wp-count"/>
+                  </HBox>
+                  <VBox styleClass="lp-section-body" VBox.vgrow="ALWAYS">
+                    <ListView fx:id="wpListView" VBox.vgrow="ALWAYS" styleClass="wp-list"/>
+                  </VBox>
+                </VBox>
+
+                <!-- Mission Operations - Enhanced -->
+                <VBox styleClass="lp-section">
+                  <HBox styleClass="lp-section-head" alignment="CENTER_LEFT">
+                    <Label text="任务操作" styleClass="lp-title"/>
+                  </HBox>
+                  <VBox styleClass="lp-section-body" spacing="6">
+                    <VBox spacing="4">
+                      <Button text="📥 导入 XML" onAction="#onImportXml" styleClass="mo-btn"/>
+                      <Button text="📤 导出 XML" onAction="#onExportXml" styleClass="mo-btn"/>
+                      <Button text="➕ 新增航点" onAction="#onAddWaypoint" styleClass="mo-btn,primary"/>
+                      <Button text="🗑 删除航点" onAction="#onDeleteWaypoint" styleClass="mo-btn,danger"/>
+                      <Button text="▶ 路径预览" onAction="#onPreviewPath" styleClass="mo-btn"/>
+                      <Button text="⚠ 冲突检测" onAction="#onCheckConflicts" styleClass="mo-btn"/>
+                      <Button text="🛡 空域校验" onAction="#onAirspaceCheck" styleClass="mo-btn"/>
+                      <Button text="⚡ 路径优化" onAction="#onOptimizePath" styleClass="mo-btn,primary"/>
+                    </VBox>
+                    <VBox styleClass="gated-section" spacing="4">
+                      <Button fx:id="uploadE1Btn" text="📡 上传至 E1" disable="true" styleClass="mo-btn,gated">
+                        <tooltip><Tooltip text="门控：需切换至 E1 实机模式并建立连接"/></tooltip>
+                      </Button>
+                      <Button fx:id="autoMissionBtn" text="🚀 开始自动任务" disable="true" styleClass="mo-btn,gated">
+                        <tooltip><Tooltip text="门控：需先上传航点至飞控，且飞行器解锁"/></tooltip>
+                      </Button>
+                    </VBox>
+                    <VBox styleClass="stat-section" spacing="4">
+                      <HBox styleClass="stat-row">
+                        <Label text="总航程" styleClass="stat-label"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Label fx:id="totalDistLabel" text="0.00 km" styleClass="stat-value"/>
+                        <Label text="系统" styleClass="src-tag,system" style="-fx-padding: 0 3; -fx-font-size: 8px;"/>
+                      </HBox>
+                      <HBox styleClass="stat-row">
+                        <Label text="预计耗时" styleClass="stat-label"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Label fx:id="estTimeLabel" text="--" styleClass="stat-value"/>
+                        <Label text="系统" styleClass="src-tag,system" style="-fx-padding: 0 3; -fx-font-size: 8px;"/>
+                      </HBox>
+                      <HBox styleClass="stat-row">
+                        <Label text="冲突检测" styleClass="stat-label"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Label fx:id="conflictLabel" text="无航点" styleClass="stat-value"/>
+                        <Label text="系统" styleClass="src-tag,system" style="-fx-padding: 0 3; -fx-font-size: 8px;"/>
+                      </HBox>
+                      <HBox styleClass="stat-row">
+                        <Label text="空域校验" styleClass="stat-label"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Label fx:id="airspaceStatusLabel" text="未校验" styleClass="aspace-status,idle"/>
+                        <Label text="系统" styleClass="src-tag,system" style="-fx-padding: 0 3; -fx-font-size: 8px;"/>
+                      </HBox>
+                    </VBox>
+                    <!-- Control Test Panel - Enhanced -->
+                    <VBox fx:id="ctrlPanel" styleClass="ctrl-panel" visible="false" managed="false">
+                      <HBox styleClass="ctrl-title" alignment="CENTER_LEFT">
+                        <Label text="⚙ 控制测试（仅限无桨/架台）"/>
+                      </HBox>
+                      <GridPane styleClass="ctrl-grid" hgap="6" vgap="6">
+                        <Button fx:id="armBtn" text="解锁" styleClass="ctrl-btn,arm" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                        <Button fx:id="disarmBtn" text="急停/上锁" styleClass="ctrl-btn,disarm" disable="true" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                        <Button text="手动模式" styleClass="ctrl-btn" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                        <Button text="自稳模式" styleClass="ctrl-btn" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                      </GridPane>
+                      <Label fx:id="ctrlStatusLabel" text="实机只读 · 需进入控制测试" styleClass="ctrl-status"/>
+                    </VBox>
+                  </VBox>
+                </VBox>
+              </VBox>
+            </ScrollPane>
+          </VBox>
+
+          <!-- Center Map - Enhanced with floating controls -->
+          <AnchorPane fx:id="mapContainer" styleClass="map-container">
+            <!-- Map Canvas will be added programmatically -->
+
+            <!-- Map control bar (top-left) -->
+            <HBox fx:id="mapCtrlBar" styleClass="map-ctrl-bar" AnchorPane.leftAnchor="112" AnchorPane.topAnchor="10">
+              <ToggleButton fx:id="btnFollow" text="跟随" selected="true" styleClass="map-ctrl-btn" onAction="#onToggleFollow"/>
+              <ToggleButton fx:id="btnTrajectory" text="轨迹" selected="true" styleClass="map-ctrl-btn" onAction="#onToggleTrajectory"/>
+            </HBox>
+
+            <!-- Map toolbar (top-right) -->
+            <HBox fx:id="mapToolbar" styleClass="map-toolbar" AnchorPane.rightAnchor="10" AnchorPane.topAnchor="10">
+              <Button text="📊" styleClass="map-tool-btn" onAction="#onToggleDataSourceDrawer" fx:id="btnDataSource">
+                <tooltip><Tooltip text="数据源"/></tooltip>
+              </Button>
+              <Button text="🎯" styleClass="map-tool-btn" onAction="#onFitWaypoints">
+                <tooltip><Tooltip text="适配视图"/></tooltip>
+              </Button>
+              <Region styleClass="tb-divider"/>
+              <Button text="➕" styleClass="map-tool-btn" onAction="#onZoomIn">
+                <tooltip><Tooltip text="放大"/></tooltip>
+              </Button>
+              <Button text="➖" styleClass="map-tool-btn" onAction="#onZoomOut">
+                <tooltip><Tooltip text="缩小"/></tooltip>
+              </Button>
+              <Region styleClass="tb-divider"/>
+              <ToggleButton text="🗺" styleClass="map-tool-btn" fx:id="btnMapStyle" onAction="#onToggleMapStyle">
+                <tooltip><Tooltip text="切换底图"/></tooltip>
+              </ToggleButton>
+              <ToggleButton text="🛡" styleClass="map-tool-btn" selected="true" fx:id="btnAirspace" onAction="#onToggleAirspaceLayer">
+                <tooltip><Tooltip text="空域图层"/></tooltip>
+              </ToggleButton>
+            </HBox>
+
+            <!-- Map hint (bottom-center) -->
+            <HBox AnchorPane.bottomAnchor="8" AnchorPane.leftAnchor="0" AnchorPane.rightAnchor="0" alignment="CENTER">
+              <Label fx:id="mapHint" text="点击地图添加航点 · 拖动调整位置 · 左侧面板管理任务" styleClass="map-hint"/>
+            </HBox>
+
+            <!-- Sensor entry (bottom-right) -->
+            <HBox styleClass="sensor-entry" AnchorPane.rightAnchor="10" AnchorPane.bottomAnchor="8">
+              <VBox styleClass="sensor-entry-item" onMouseClicked="#onSensorEntryClick">
+                <HBox spacing="4" alignment="CENTER">
+                  <Region styleClass="se-dot" style="-fx-background-color: #fb7185;"/>
+                  <Label text="温度" styleClass="se-label"/>
+                  <Label fx:id="seTemp" text="26.5°C" styleClass="se-val"/>
+                </HBox>
+              </VBox>
+              <VBox styleClass="sensor-entry-item" onMouseClicked="#onSensorEntryClick">
+                <HBox spacing="4" alignment="CENTER">
+                  <Region styleClass="se-dot" style="-fx-background-color: #34d399;"/>
+                  <Label text="湿度" styleClass="se-label"/>
+                  <Label fx:id="seHum" text="65%" styleClass="se-val"/>
+                </HBox>
+              </VBox>
+              <VBox styleClass="sensor-entry-item" onMouseClicked="#onSensorEntryClick">
+                <HBox spacing="4" alignment="CENTER">
+                  <Region styleClass="se-dot" style="-fx-background-color: #22d3ee;"/>
+                  <Label text="气压" styleClass="se-label"/>
+                  <Label fx:id="sePres" text="1013.2" styleClass="se-val"/>
+                </HBox>
+              </VBox>
+            </HBox>
+
+            <!-- Drone HUD Card (top-center) - hidden by default, toggle via View menu -->
+            <HBox fx:id="hudContainer" AnchorPane.topAnchor="10" AnchorPane.leftAnchor="0" AnchorPane.rightAnchor="0" alignment="CENTER" visible="false" managed="false">
+              <VBox fx:id="droneHud" styleClass="drone-hud">
+                <HBox spacing="16" alignment="CENTER">
+                <VBox alignment="CENTER" spacing="1">
+                  <Label fx:id="hudAlt" text="86.0 m" styleClass="hud-val"/>
+                  <Label text="高度" styleClass="hud-label"/>
+                </VBox>
+                <VBox alignment="CENTER" spacing="1">
+                  <Label fx:id="hudSpeed" text="8.0 m/s" styleClass="hud-val"/>
+                  <Label text="地速" styleClass="hud-label"/>
+                </VBox>
+                <VBox alignment="CENTER" spacing="1">
+                  <Label fx:id="hudHdg" text="0°" styleClass="hud-val"/>
+                  <Label text="航向" styleClass="hud-label"/>
+                </VBox>
+                <VBox alignment="CENTER" spacing="1">
+                  <Label fx:id="hudBat" text="72%" styleClass="hud-val,hud-ok"/>
+                  <Label text="电量" styleClass="hud-label"/>
+                </VBox>
+              </HBox>
+              </VBox>
+            </HBox>
+
+            <!-- Data Source Drawer (initially hidden) -->
+            <VBox fx:id="dsDrawer" styleClass="ds-drawer" visible="false" managed="false" AnchorPane.rightAnchor="10" AnchorPane.bottomAnchor="46">
+              <HBox styleClass="ds-drawer-head" alignment="CENTER_LEFT">
+                <Label text="📊 数据源状态"/>
+              </HBox>
+              <VBox styleClass="ds-drawer-body" spacing="6">
+                <VBox styleClass="ds-source-card">
+                  <HBox styleClass="ds-source-name" alignment="CENTER_LEFT">
+                    <Label text="E1 飞控" style="-fx-text-fill: #e6edf3;"/>
+                    <Label text="飞控" styleClass="src-tag,e1"/>
+                  </HBox>
+                  <HBox styleClass="ds-source-row"><Label text="连接状态" styleClass="dsr-label"/><Region HBox.hgrow="ALWAYS"/><Label text="未连接" styleClass="dsr-val,err"/></HBox>
+                  <HBox styleClass="ds-source-row"><Label text="心跳频率" styleClass="dsr-label"/><Region HBox.hgrow="ALWAYS"/><Label text="-- Hz" styleClass="dsr-val"/></HBox>
+                  <HBox styleClass="ds-source-row"><Label text="丢包率" styleClass="dsr-label"/><Region HBox.hgrow="ALWAYS"/><Label text="--" styleClass="dsr-val"/></HBox>
+                </VBox>
+                <VBox styleClass="ds-source-card">
+                  <HBox styleClass="ds-source-name" alignment="CENTER_LEFT">
+                    <Label text="手机伴随" style="-fx-text-fill: #e6edf3;"/>
+                    <Label text="手机" styleClass="src-tag,phone"/>
+                  </HBox>
+                  <HBox styleClass="ds-source-row"><Label text="GPS" styleClass="dsr-label"/><Region HBox.hgrow="ALWAYS"/><Label text="未接入" styleClass="dsr-val,err"/></HBox>
+                  <HBox styleClass="ds-source-row"><Label text="精度" styleClass="dsr-label"/><Region HBox.hgrow="ALWAYS"/><Label text="--" styleClass="dsr-val"/></HBox>
+                </VBox>
+                <VBox styleClass="ds-source-card">
+                  <HBox styleClass="ds-source-name" alignment="CENTER_LEFT">
+                    <Label text="系统计算" style="-fx-text-fill: #e6edf3;"/>
+                    <Label text="系统" styleClass="src-tag,system"/>
+                  </HBox>
+                  <HBox styleClass="ds-source-row"><Label text="状态" styleClass="dsr-label"/><Region HBox.hgrow="ALWAYS"/><Label text="可用" styleClass="dsr-val,ok"/></HBox>
+                  <HBox styleClass="ds-source-row"><Label text="航程计算" styleClass="dsr-label"/><Region HBox.hgrow="ALWAYS"/><Label text="实时" styleClass="dsr-val"/></HBox>
+                  <HBox styleClass="ds-source-row"><Label text="路径优化" styleClass="dsr-label"/><Region HBox.hgrow="ALWAYS"/><Label text="贪婪算法" styleClass="dsr-val"/></HBox>
+                  <HBox styleClass="ds-source-row"><Label text="续航预测" styleClass="dsr-label"/><Region HBox.hgrow="ALWAYS"/><Label text="线性回归" styleClass="dsr-val"/></HBox>
+                </VBox>
+              </VBox>
+            </VBox>
+          </AnchorPane>
+        </SplitPane>
+
+        <!-- Enhanced Status Bar -->
+        <HBox fx:id="statusBar" styleClass="status-bar" prefHeight="28" alignment="CENTER_LEFT">
+          <VBox styleClass="sb-item"><Label text="串口" styleClass="sb-label"/><Label fx:id="sbPort" text="COM3" styleClass="sb-val,ok"/></VBox>
+          <VBox styleClass="sb-item"><Label text="波特率" styleClass="sb-label"/><Label fx:id="sbBaud" text="115200" styleClass="sb-val"/></VBox>
+          <VBox styleClass="sb-item"><Label text="采样" styleClass="sb-label"/><Label fx:id="sbSample" text="1s" styleClass="sb-val"/></VBox>
+          <VBox styleClass="sb-item"><Label text="最后更新" styleClass="sb-label"/><Label fx:id="sbLastUpdate" text="--:--:--" styleClass="sb-val"/></VBox>
+          <VBox styleClass="sb-item"><Label text="LAT" styleClass="sb-label"/><Label fx:id="sbLat" text="32.06030" styleClass="sb-val"/></VBox>
+          <VBox styleClass="sb-item"><Label text="LON" styleClass="sb-label"/><Label fx:id="sbLon" text="118.79210" styleClass="sb-val"/></VBox>
+          <VBox styleClass="sb-item"><Label text="缩放" styleClass="sb-label"/><Label fx:id="sbZoom" text="Z:16" styleClass="sb-val"/></VBox>
+          <VBox styleClass="sb-item"><Label text="航点" styleClass="sb-label"/><Label fx:id="sbWp" text="0/0" styleClass="sb-val"/></VBox>
+          <VBox styleClass="sb-item"><Label text="鼠标" styleClass="sb-label"/><Label fx:id="sbMouse" text="--, --" styleClass="sb-val"/></VBox>
+          <Region HBox.hgrow="ALWAYS" styleClass="sb-spacer"/>
+          <VBox styleClass="sb-item"><Label text="GPS" styleClass="sb-label"/><Label fx:id="sbGps" text="3D·14" styleClass="sb-val,ok"/></VBox>
+          <VBox styleClass="sb-item" style="-fx-border-width: 0;"><Label text="HDOP" styleClass="sb-label"/><Label fx:id="sbHdop" text="1.2" styleClass="sb-val"/></VBox>
+        </HBox>
+      </VBox>
+    </Tab>
+
+    <!-- ===== Tab 2: 数据与日志 ===== -->
+    <Tab fx:id="dataTab" closable="false">
+      <graphic><Label text="📊" styleClass="tab-icon"/></graphic>
+      <text>数据与日志</text>
+      <VBox spacing="0">
+        <!-- Sub tabs -->
+        <HBox styleClass="data-tab-bar">
+          <ToggleButton text="📈 传感器曲线" selected="true" styleClass="data-tab" onAction="#onShowWaveform">
+            <toggleGroup><ToggleGroup fx:id="dataTabGroup"/></toggleGroup>
+          </ToggleButton>
+          <ToggleButton text="📋 飞行日志" styleClass="data-tab" onAction="#onShowFlightLog">
+            <toggleGroup><fx:reference source="dataTabGroup"/></toggleGroup>
+          </ToggleButton>
+        </HBox>
+        <StackPane VBox.vgrow="ALWAYS">
+        <VBox fx:id="waveformContent" spacing="0">
+          <HBox styleClass="wave-toolbar" spacing="8" alignment="CENTER_LEFT">
+            <ToggleButton text="5s" selected="true" styleClass="wave-tr-btn" onAction="#onTimeRange5s">
+              <toggleGroup><ToggleGroup fx:id="timeRangeGroup"/></toggleGroup>
+            </ToggleButton>
+            <ToggleButton text="10s" styleClass="wave-tr-btn" onAction="#onTimeRange10s">
+              <toggleGroup><fx:reference source="timeRangeGroup"/></toggleGroup>
+            </ToggleButton>
+            <ToggleButton text="30s" styleClass="wave-tr-btn" onAction="#onTimeRange30s">
+              <toggleGroup><fx:reference source="timeRangeGroup"/></toggleGroup>
+            </ToggleButton>
+            <ToggleButton text="60s" styleClass="wave-tr-btn" onAction="#onTimeRange60s">
+              <toggleGroup><fx:reference source="timeRangeGroup"/></toggleGroup>
+            </ToggleButton>
+            <Region styleClass="tb-divider" style="-fx-pref-height: 18;"/>
+            <Button fx:id="btnWavePause" text="暂停" styleClass="wave-tr-btn" onAction="#onToggleWavePause"/>
+            <Button text="清空" styleClass="wave-tr-btn" onAction="#onClearWave"/>
+            <Button text="导出CSV" styleClass="wave-tr-btn" onAction="#onExportCsv"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label fx:id="waveStat" text="9 通道 · 0 样本" styleClass="wave-stat-info"/>
+          </HBox>
+          <HBox VBox.vgrow="ALWAYS">
+            <LineChart fx:id="sensorChart" HBox.hgrow="ALWAYS" createSymbols="false" animated="false">
+              <xAxis><NumberAxis side="BOTTOM" label="时间(s)" autoRanging="true"/></xAxis>
+              <yAxis><NumberAxis side="LEFT" label="值" autoRanging="true"/></yAxis>
+            </LineChart>
+            <VBox fx:id="waveSidebar" styleClass="wave-sidebar" spacing="0">
+              <Label fx:id="chTemp" text="温度" styleClass="wave-channel,enabled" onMouseClicked="#onToggleChannel">
+                <graphic>
+                  <Region styleClass="ch-dot" style="-fx-background-color: #fb7185; -fx-opacity: 1;"/>
+                </graphic>
+              </Label>
+              <Label fx:id="chHum" text="湿度" styleClass="wave-channel,enabled" onMouseClicked="#onToggleChannel">
+                <graphic>
+                  <Region styleClass="ch-dot" style="-fx-background-color: #34d399; -fx-opacity: 1;"/>
+                </graphic>
+              </Label>
+              <Label fx:id="chPres" text="气压" styleClass="wave-channel,enabled" onMouseClicked="#onToggleChannel">
+                <graphic>
+                  <Region styleClass="ch-dot" style="-fx-background-color: #22d3ee; -fx-opacity: 1;"/>
+                </graphic>
+              </Label>
+              <Label fx:id="chRoll" text="横滚" styleClass="wave-channel,enabled" onMouseClicked="#onToggleChannel">
+                <graphic>
+                  <Region styleClass="ch-dot" style="-fx-background-color: #fbbf24; -fx-opacity: 1;"/>
+                </graphic>
+              </Label>
+              <Label fx:id="chPitch" text="俯仰" styleClass="wave-channel,enabled" onMouseClicked="#onToggleChannel">
+                <graphic>
+                  <Region styleClass="ch-dot" style="-fx-background-color: #a78bfa; -fx-opacity: 1;"/>
+                </graphic>
+              </Label>
+              <Label fx:id="chYaw" text="偏航" styleClass="wave-channel,enabled" onMouseClicked="#onToggleChannel">
+                <graphic>
+                  <Region styleClass="ch-dot" style="-fx-background-color: #f472b6; -fx-opacity: 1;"/>
+                </graphic>
+              </Label>
+              <Label fx:id="chAlt" text="高度" styleClass="wave-channel,enabled" onMouseClicked="#onToggleChannel">
+                <graphic>
+                  <Region styleClass="ch-dot" style="-fx-background-color: #60a5fa; -fx-opacity: 1;"/>
+                </graphic>
+              </Label>
+              <Label fx:id="chVolt" text="电压" styleClass="wave-channel,enabled" onMouseClicked="#onToggleChannel">
+                <graphic>
+                  <Region styleClass="ch-dot" style="-fx-background-color: #f87171; -fx-opacity: 1;"/>
+                </graphic>
+              </Label>
+              <Label fx:id="chBatt" text="电量" styleClass="wave-channel,enabled" onMouseClicked="#onToggleChannel">
+                <graphic>
+                  <Region styleClass="ch-dot" style="-fx-background-color: #4ade80; -fx-opacity: 1;"/>
+                </graphic>
+              </Label>
+            </VBox>
+          </HBox>
+        </VBox>
+        <!-- Flight log content -->
+        <VBox fx:id="flightLogContent" spacing="0" visible="false" managed="false">
+          <SplitPane VBox.vgrow="ALWAYS" dividerPositions="0.25">
+            <!-- Left: Flight list -->
+            <VBox styleClass="fl-list-panel" spacing="0">
+              <VBox styleClass="fl-list-header" spacing="6">
+                <HBox spacing="6" alignment="CENTER">
+                  <TextField fx:id="flSearchField" promptText="搜索飞行记录..." styleClass="fl-search" HBox.hgrow="ALWAYS"/>
+                </HBox>
+                <HBox spacing="6" alignment="CENTER_LEFT">
+                  <Label text="机型:" styleClass="fl-filter-label"/>
+                  <ComboBox fx:id="flModelCombo" promptText="全部" styleClass="fl-filter-combo" HBox.hgrow="ALWAYS"/>
+                </HBox>
+                <HBox spacing="6" alignment="CENTER_LEFT">
+                  <Label text="日期:" styleClass="fl-filter-label"/>
+                  <DatePicker fx:id="flDatePicker" styleClass="fl-filter-date" HBox.hgrow="ALWAYS"/>
+                </HBox>
+              </VBox>
+              <ListView fx:id="flListView" VBox.vgrow="ALWAYS" styleClass="fl-list"/>
+              <HBox styleClass="fl-list-footer" alignment="CENTER_LEFT">
+                <Label fx:id="flCountLabel" text="共 0 次飞行" styleClass="fl-count"/>
+              </HBox>
+            </VBox>
+            <!-- Right: Flight detail -->
+            <VBox styleClass="fl-detail-panel" spacing="0">
+              <VBox fx:id="flDetailEmpty" styleClass="fl-detail-empty" alignment="CENTER" VBox.vgrow="ALWAYS">
+                <Label text="选择左侧飞行记录查看详情" styleClass="fl-empty-title"/>
+                <Label text="支持轨迹回放、数据导出" styleClass="fl-empty-sub"/>
+              </VBox>
+              <VBox fx:id="flDetailContent" spacing="0" visible="false" managed="false">
+                <HBox styleClass="fl-detail-header" alignment="CENTER_LEFT">
+                  <VBox spacing="2">
+                    <Label fx:id="flDetailId" text="" styleClass="fl-detail-id"/>
+                    <Label fx:id="flDetailMeta" text="" styleClass="fl-detail-meta"/>
+                  </VBox>
+                  <Region HBox.hgrow="ALWAYS"/>
+                  <Button text="导出 CSV" styleClass="fl-export-btn" onAction="#onExportFlightCsv"/>
+                </HBox>
+                <StackPane VBox.vgrow="ALWAYS" styleClass="fl-map-container">
+                  <Canvas fx:id="flMapCanvas" styleClass="fl-map"/>
+                </StackPane>
+                <HBox styleClass="fl-stats-bar" spacing="20" alignment="CENTER">
+                  <VBox alignment="CENTER">
+                    <Label fx:id="flStatPoints" text="0" styleClass="fl-stat-num"/>
+                    <Label text="数据点" styleClass="fl-stat-label"/>
+                  </VBox>
+                  <Region styleClass="fl-stat-div"/>
+                  <VBox alignment="CENTER">
+                    <Label fx:id="flStatAlt" text="0 m" styleClass="fl-stat-num"/>
+                    <Label text="最高高度" styleClass="fl-stat-label"/>
+                  </VBox>
+                  <Region styleClass="fl-stat-div"/>
+                  <VBox alignment="CENTER">
+                    <Label fx:id="flStatSpeed" text="0 m/s" styleClass="fl-stat-num"/>
+                    <Label text="最大速度" styleClass="fl-stat-label"/>
+                  </VBox>
+                  <Region styleClass="fl-stat-div"/>
+                  <VBox alignment="CENTER">
+                    <Label fx:id="flStatVolt" text="0 V" styleClass="fl-stat-num"/>
+                    <Label text="最低电压" styleClass="fl-stat-label"/>
+                  </VBox>
+                  <Region styleClass="fl-stat-div"/>
+                  <VBox alignment="CENTER">
+                    <Label fx:id="flStatDist" text="0 km" styleClass="fl-stat-num"/>
+                    <Label text="总航程" styleClass="fl-stat-label"/>
+                  </VBox>
+                </HBox>
+              </VBox>
+            </VBox>
+          </SplitPane>
+        </VBox>
+        </StackPane>
+      </VBox>
+    </Tab>
+
+    <!-- ===== Tab 3: 系统设置 ===== -->
+    <Tab fx:id="settingsTab" closable="false">
+      <graphic><Label text="⚙" styleClass="tab-icon"/></graphic>
+      <text>系统设置</text>
+      <ScrollPane fitToWidth="true">
+        <VBox styleClass="settings-container" spacing="12" maxWidth="600">
+          <VBox styleClass="settings-section">
+            <Label text="运行模式" styleClass="settings-title"/>
+            <Label text="选择当前运行模式，不同模式下功能可用性不同" styleClass="settings-subtitle"/>
+            <VBox spacing="8">
+              <VBox styleClass="settings-field">
+                <Label text="当前模式" styleClass="settings-field-label"/>
+                <ComboBox fx:id="setRunMode" maxWidth="300"/>
+              </VBox>
+            </VBox>
+          </VBox>
+          <VBox styleClass="settings-section">
+            <Label text="E1 飞控连接" styleClass="settings-title"/>
+            <Label text="Wi-Fi / UDP 连接配置（E1 实机模式生效）" styleClass="settings-subtitle"/>
+            <VBox spacing="8">
+              <HBox spacing="8">
+                <VBox styleClass="settings-field" HBox.hgrow="ALWAYS"><Label text="E1 IP 地址" styleClass="settings-field-label"/><TextField fx:id="e1IpField" maxWidth="180"/></VBox>
+                <VBox styleClass="settings-field"><Label text="UDP 端口" styleClass="settings-field-label"/><TextField fx:id="e1PortField" maxWidth="100"/></VBox>
+              </HBox>
+              <VBox styleClass="settings-field">
+                <Label text="心跳超时 (ms)" styleClass="settings-field-label"/>
+                <TextField fx:id="hbTimeoutField" maxWidth="100"/>
+                <Label text="超时未收到心跳则判定链路断开" styleClass="settings-hint"/>
+              </VBox>
+            </VBox>
+          </VBox>
+          <VBox styleClass="settings-section">
+            <Label text="手机伴随定位" styleClass="settings-title"/>
+            <Label text="手机传感器配置（手机辅助模式生效）" styleClass="settings-subtitle"/>
+            <VBox spacing="8">
+              <HBox spacing="8">
+                <ToggleButton fx:id="phoneGpsToggle" text="GPS" selected="true"/>
+                <ToggleButton fx:id="phoneCompassToggle" text="罗盘" selected="true"/>
+                <ToggleButton fx:id="phoneBaroToggle" text="气压计" selected="false"/>
+              </HBox>
+              <Label text="手机 GPS 作为定位数据来源，精度通常 3-10m" styleClass="settings-hint"/>
+            </VBox>
+          </VBox>
+          <VBox styleClass="settings-section">
+            <Label text="串口通信" styleClass="settings-title"/>
+            <Label text="串口号、波特率与传输频率配置（E1 实机模式生效）" styleClass="settings-subtitle"/>
+            <VBox spacing="8">
+              <HBox spacing="8">
+                <VBox styleClass="settings-field" HBox.hgrow="ALWAYS"><Label text="串口号" styleClass="settings-field-label"/><ComboBox fx:id="serialPortCombo"/></VBox>
+                <VBox styleClass="settings-field"><Label text="波特率" styleClass="settings-field-label"/><ComboBox fx:id="baudRateCombo"/></VBox>
+              </HBox>
+              <VBox styleClass="settings-field">
+                <Label text="MAVLink 消息频率" styleClass="settings-field-label"/>
+                <HBox spacing="6" styleClass="mavlink-freq-row">
+                  <VBox alignment="CENTER" styleClass="freq-item">
+                    <Label text="心跳" styleClass="freq-label"/>
+                    <TextField fx:id="freqHeartbeat" text="1" maxWidth="50" alignment="CENTER"/>
+                    <Label text="Hz" styleClass="freq-unit"/>
+                  </VBox>
+                  <VBox alignment="CENTER" styleClass="freq-item">
+                    <Label text="姿态" styleClass="freq-label"/>
+                    <TextField fx:id="freqAttitude" text="50" maxWidth="50" alignment="CENTER"/>
+                    <Label text="Hz" styleClass="freq-unit"/>
+                  </VBox>
+                  <VBox alignment="CENTER" styleClass="freq-item">
+                    <Label text="位置" styleClass="freq-label"/>
+                    <TextField fx:id="freqPosition" text="10" maxWidth="50" alignment="CENTER"/>
+                    <Label text="Hz" styleClass="freq-unit"/>
+                  </VBox>
+                  <VBox alignment="CENTER" styleClass="freq-item">
+                    <Label text="电池" styleClass="freq-label"/>
+                    <TextField fx:id="freqBattery" text="2" maxWidth="50" alignment="CENTER"/>
+                    <Label text="Hz" styleClass="freq-unit"/>
+                  </VBox>
+                  <VBox alignment="CENTER" styleClass="freq-item">
+                    <Label text="GPS" styleClass="freq-label"/>
+                    <TextField fx:id="freqGps" text="5" maxWidth="50" alignment="CENTER"/>
+                    <Label text="Hz" styleClass="freq-unit"/>
+                  </VBox>
+                </HBox>
+                <Label text="各 MAVLink 消息流的发送频率，频率越高数据越实时但带宽占用越大" styleClass="settings-hint"/>
+              </VBox>
+            </VBox>
+          </VBox>
+          <VBox styleClass="settings-section">
+            <Label text="数据采样" styleClass="settings-title"/>
+            <Label text="采样间隔与数据记录设置" styleClass="settings-subtitle"/>
+            <VBox spacing="8">
+              <VBox styleClass="settings-field">
+                <Label text="数据采样间隔" styleClass="settings-field-label"/>
+                <Slider fx:id="sampleIntervalSlider" min="1" max="10" value="1" showTickMarks="true" showTickLabels="true" majorTickUnit="1"/>
+                <Label text="范围 1-10 秒，值越小刷新越快" styleClass="settings-hint"/>
+              </VBox>
+            </VBox>
+          </VBox>
+          <VBox styleClass="settings-section">
+            <Label text="地图与显示" styleClass="settings-title"/>
+            <Label text="地图缩放级别与主题设置" styleClass="settings-subtitle"/>
+            <VBox spacing="8">
+              <HBox spacing="8">
+                <VBox styleClass="settings-field"><Label text="地图缩放级别" styleClass="settings-field-label"/><ComboBox fx:id="mapZoomCombo"/></VBox>
+                <VBox styleClass="settings-field">
+                  <Label text="界面主题" styleClass="settings-field-label"/>
+                  <HBox spacing="8">
+                    <Button text="深色主题" onAction="#onSetDarkTheme" styleClass="mo-btn" style="-fx-pref-width: 80;"/>
+                    <Button text="浅色主题" onAction="#onSetLightTheme" styleClass="mo-btn" style="-fx-pref-width: 80;"/>
+                  </HBox>
+                </VBox>
+              </HBox>
+            </VBox>
+          </VBox>
+          <VBox styleClass="settings-section">
+            <Label text="空域数据管理" styleClass="settings-title"/>
+            <Label text="导入区域空域限制数据包，支持禁飞区 / 限飞区 / 临时限制区图层" styleClass="settings-subtitle"/>
+            <VBox spacing="8">
+              <VBox styleClass="settings-field">
+                <Label text="图层开关" styleClass="settings-field-label"/>
+                <HBox spacing="6" styleClass="aspace-layer-toggle">
+                  <ToggleButton text="禁飞区" styleClass="aspace-layer-chip" selected="true">
+                    <graphic><Region styleClass="lc-dot" style="-fx-background-color: #ef4444;"/></graphic>
+                  </ToggleButton>
+                  <ToggleButton text="限飞区" styleClass="aspace-layer-chip" selected="true">
+                    <graphic><Region styleClass="lc-dot" style="-fx-background-color: #f59e0b;"/></graphic>
+                  </ToggleButton>
+                  <ToggleButton text="临时限制" styleClass="aspace-layer-chip" selected="true">
+                    <graphic><Region styleClass="lc-dot" style="-fx-background-color: #a78bfa;"/></graphic>
+                  </ToggleButton>
+                  <ToggleButton text="自定义" styleClass="aspace-layer-chip" selected="true">
+                    <graphic><Region styleClass="lc-dot" style="-fx-background-color: #3b82f6;"/></graphic>
+                  </ToggleButton>
+                </HBox>
+              </VBox>
+              <VBox styleClass="settings-field">
+                <Label text="已导入数据包" styleClass="settings-field-label"/>
+                <ListView fx:id="aspacePkgList" prefHeight="100"/>
+                <HBox spacing="6">
+                  <Button text="加载示例空域（南京仙林）" onAction="#onLoadDemoAirspace" styleClass="mo-btn"/>
+                </HBox>
+              </VBox>
+              <Label text="空域分析结果仅供辅助参考，起飞前仍需通过官方实时渠道确认。依据《无人驾驶航空器飞行管理暂行条例》。" styleClass="disclaimer" wrapText="true"/>
+            </VBox>
+          </VBox>
+          <VBox styleClass="settings-section">
+            <Label text="无人机参数（扩展）" styleClass="settings-title"/>
+            <Label text="机型 · 最大航程 · 传感器类型" styleClass="settings-subtitle"/>
+            <VBox spacing="8">
+              <HBox spacing="8">
+                <VBox styleClass="settings-field" HBox.hgrow="ALWAYS"><Label text="无人机型号" styleClass="settings-field-label"/><ComboBox fx:id="droneModelCombo" maxWidth="200"/></VBox>
+                <VBox styleClass="settings-field"><Label text="最大航程 (m)" styleClass="settings-field-label"/><TextField fx:id="droneRangeField" maxWidth="100"/></VBox>
+              </HBox>
+              <VBox styleClass="settings-field">
+                <Label text="搭载传感器" styleClass="settings-field-label"/>
+                <HBox spacing="10" styleClass="sensor-chk-row">
+                  <CheckBox fx:id="chkGps" text="GPS" selected="true" styleClass="sensor-chk"/>
+                  <CheckBox fx:id="chkCompass" text="罗盘" selected="true" styleClass="sensor-chk"/>
+                  <CheckBox fx:id="chkBarometer" text="气压计" selected="true" styleClass="sensor-chk"/>
+                  <CheckBox fx:id="chkImu" text="IMU" selected="true" styleClass="sensor-chk"/>
+                  <CheckBox fx:id="chkOpticalFlow" text="光流" selected="false" styleClass="sensor-chk"/>
+                  <CheckBox fx:id="chkLidar" text="激光雷达" selected="false" styleClass="sensor-chk"/>
+                </HBox>
+                <Label text="选择无人机搭载的传感器类型，影响数据通道和算法输入" styleClass="settings-hint"/>
+              </VBox>
+              <Button text="保存设置" onAction="#onSaveSettings" styleClass="mo-btn,primary" style="-fx-pref-width: 100;"/>
+            </VBox>
+          </VBox>
+        </VBox>
+      </ScrollPane>
+    </Tab>
+
+    <!-- ===== Tab 4: 算法分析 - Enhanced ===== -->
+    <Tab fx:id="algoTab" closable="false">
+      <graphic><Label text="🧮" styleClass="tab-icon"/></graphic>
+      <text>算法分析</text>
+      <HBox spacing="16" alignment="TOP_CENTER" style="-fx-padding: 20px;">
+        <VBox styleClass="algo-card" HBox.hgrow="ALWAYS" style="-fx-max-width: 500;">
+          <HBox styleClass="algo-card-head" alignment="CENTER_LEFT">
+            <Label text="路径优化分析" styleClass="algo-title"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label text="贪婪算法 · Nearest Neighbor" styleClass="algo-sub"/>
+          </HBox>
+          <VBox styleClass="algo-card-body" spacing="10">
+            <HBox styleClass="algo-compare" spacing="12">
+              <VBox styleClass="algo-compare-item" HBox.hgrow="ALWAYS" alignment="CENTER">
+                <Label text="原始路径" styleClass="algo-compare-label"/>
+                <Label fx:id="algoOrigDist" text="— km" styleClass="algo-compare-val,original"/>
+              </VBox>
+              <VBox styleClass="algo-compare-item" HBox.hgrow="ALWAYS" alignment="CENTER">
+                <Label text="优化路径" styleClass="algo-compare-label"/>
+                <Label fx:id="algoOptDist" text="— km" styleClass="algo-compare-val,optimized"/>
+              </VBox>
+            </HBox>
+            <HBox styleClass="algo-stat-row"><Label text="航点数量"/><Region HBox.hgrow="ALWAYS"/><Label fx:id="algoWpCount" text="0" styleClass="algo-stat-val"/></HBox>
+            <HBox styleClass="algo-stat-row"><Label text="航程变化"/><Region HBox.hgrow="ALWAYS"/><Label fx:id="algoDelta" text="—" styleClass="algo-stat-val"/></HBox>
+            <HBox styleClass="algo-stat-row"><Label text="优化率"/><Region HBox.hgrow="ALWAYS"/><Label fx:id="algoRate" text="—" styleClass="algo-stat-val,improved"/></HBox>
+            <Button text="⚡ 执行路径优化" onAction="#onOptimizePath" styleClass="mo-btn,primary"/>
+          </VBox>
+        </VBox>
+        <VBox styleClass="algo-card" HBox.hgrow="ALWAYS" style="-fx-max-width: 500;">
+          <HBox styleClass="algo-card-head" alignment="CENTER_LEFT">
+            <Label text="续航预测" styleClass="algo-title"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label text="线性回归模型" styleClass="algo-sub"/>
+            <Label text="API" styleClass="src-tag,api" style="-fx-font-size: 9px; -fx-font-weight: bold; -fx-padding: 1 6; -fx-background-radius: 3; -fx-background-color: #f59e0b; -fx-text-fill: #1a1a1a; -fx-margin: 0 0 0 6;"/>
+          </HBox>
+          <VBox styleClass="algo-card-body" spacing="10">
+            <HBox styleClass="algo-input-row" alignment="CENTER_LEFT">
+              <Label text="飞行距离" styleClass="algo-input-label"/>
+              <TextField fx:id="distInput" text="5.0" maxWidth="120"/>
+              <Label text="km" style="-fx-font-size: 11px; -fx-text-fill: #8b949e;"/>
+            </HBox>
+            <HBox styleClass="algo-input-row" alignment="CENTER_LEFT">
+              <Label text="载重" styleClass="algo-input-label"/>
+              <TextField fx:id="loadInput" text="1.0" maxWidth="120"/>
+              <Label text="kg" style="-fx-font-size: 11px; -fx-text-fill: #8b949e;"/>
+            </HBox>
+            <HBox styleClass="algo-input-row" alignment="CENTER_LEFT">
+              <Label text="风速" styleClass="algo-input-label"/>
+              <TextField fx:id="windInput" text="3.0" maxWidth="100"/>
+              <Label text="m/s" style="-fx-font-size: 11px; -fx-text-fill: #8b949e;"/>
+              <Region HBox.hgrow="ALWAYS"/>
+              <Button text="获取 API 风速" onAction="#onFetchWindApi" styleClass="algo-api-btn"/>
+            </HBox>
+            <HBox styleClass="algo-compare" spacing="12">
+              <VBox styleClass="algo-compare-item" HBox.hgrow="ALWAYS" alignment="CENTER">
+                <Label text="预测续航" styleClass="algo-compare-label"/>
+                <Label fx:id="enduranceResult" text="—" styleClass="algo-compare-val,optimized"/>
+              </VBox>
+              <VBox styleClass="algo-compare-item" HBox.hgrow="ALWAYS" alignment="CENTER">
+                <Label text="预计耗电" styleClass="algo-compare-label"/>
+                <Label fx:id="costResult" text="—" styleClass="algo-compare-val,original"/>
+              </VBox>
+            </HBox>
+            <Button text="🔋 预测续航" onAction="#onPredictBattery" styleClass="mo-btn,primary"/>
+          </VBox>
+        </VBox>
+      </HBox>
+    </Tab>
+  </TabPane>
+</VBox>

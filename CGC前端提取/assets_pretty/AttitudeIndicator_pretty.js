@@ -1,0 +1,145 @@
+import {
+  Et as e,
+  Rt as t,
+  Vt as n,
+  Zt as r,
+  rn as i,
+  t as a,
+  vt as o,
+  xt as s,
+  zt as c
+} from "./_plugin-vue_export-helper-CQMKH6SZ.js";
+var l = 4.5,
+  u = a(e({
+    __name: `AttitudeIndicator`,
+    props: {
+      roll: {
+        default: 0
+      },
+      pitch: {
+        default: 0
+      },
+      heading: {
+        default: 0
+      },
+      size: {
+        default: 0
+      }
+    },
+    setup(e) {
+      let a = e,
+        u = i(),
+        d = i(),
+        f = 0;
+
+      function p() {
+        let e = u.value;
+        if (!e) return;
+        let t = e.getContext(`2d`),
+          n = e.width,
+          r = e.height,
+          i = n / 2,
+          o = r / 2,
+          s = Math.min(n, r) / 2 - 2;
+        t.clearRect(0, 0, n, r), t.save(), t.beginPath(), t.arc(i, o, s, 0, Math.PI * 2), t.clip();
+        let c = a.roll * Math.PI / 180,
+          d = a.pitch * l;
+        t.save(), t.translate(i, o), t.rotate(-c), t.translate(0, d);
+        let f = t.createLinearGradient(0, -s * 3, 0, 0);
+        f.addColorStop(0, `#0F3A6F`), f.addColorStop(1, `#1E5BAA`), t.fillStyle = f, t.fillRect(-s * 4, -s * 4, s * 8, s * 4);
+        let p = t.createLinearGradient(0, 0, 0, s * 3);
+        p.addColorStop(0, `#7A4520`), p.addColorStop(1, `#3D1F08`), t.fillStyle = p, t.fillRect(-s * 4, 0, s * 8, s * 4), t.beginPath(), t.moveTo(-s * 4, 0), t.lineTo(s * 4, 0), t.strokeStyle = `rgba(255,255,255,0.9)`, t.lineWidth = 1.5, t.stroke(), t.font = `${Math.max(10,Math.round(s*.1))}px "JetBrains Mono", monospace`, t.textAlign = `center`, t.textBaseline = `middle`;
+        for (let e = -60; e <= 60; e += 5) {
+          if (e === 0) continue;
+          let n = -e * l,
+            r = e % 10 == 0,
+            i = r ? s * .28 : s * .14;
+          t.beginPath(), t.moveTo(-i, n), t.lineTo(i, n), t.strokeStyle = r ? `rgba(255,255,255,0.8)` : `rgba(255,255,255,0.45)`, t.lineWidth = r ? 1.5 : 1, t.stroke(), r && (t.fillStyle = `rgba(255,255,255,0.75)`, t.fillText(Math.abs(e).toString(), i + s * .13, n), t.fillText(Math.abs(e).toString(), -i - s * .13, n))
+        }
+        t.restore();
+        let h = s - 10;
+        t.save(), t.translate(i, o), t.beginPath(), t.arc(0, 0, h, -150 * Math.PI / 180, -30 * Math.PI / 180), t.strokeStyle = `rgba(200,200,200,0.6)`, t.lineWidth = 1, t.stroke();
+        for (let e of [0, 10, 20, 30, 45, 60, -10, -20, -30, -45, -60]) {
+          let n = (-90 + e) * Math.PI / 180,
+            r = Math.abs(e) % 30 == 0,
+            i = h,
+            a = h - (r ? 11 : 6);
+          t.beginPath(), t.moveTo(Math.cos(n) * i, Math.sin(n) * i), t.lineTo(Math.cos(n) * a, Math.sin(n) * a), t.strokeStyle = r ? `rgba(220,220,220,0.85)` : `rgba(180,180,180,0.6)`, t.lineWidth = r ? 2 : 1, t.stroke()
+        }
+        t.save(), t.rotate(-c), t.beginPath(), t.moveTo(0, -(h + 1)), t.lineTo(-6, -(h - 12)), t.lineTo(6, -(h - 12)), t.closePath(), t.fillStyle = `white`, t.fill(), t.restore(), t.restore(), t.restore(), t.beginPath(), t.arc(i, o, s, 0, Math.PI * 2), t.strokeStyle = `#1C2128`, t.lineWidth = 4, t.stroke(), t.save(), t.translate(i, o);
+        let g = s * .42;
+        t.strokeStyle = `#F0A500`, t.lineWidth = 2.5, t.lineCap = `round`, t.lineJoin = `round`, t.beginPath(), t.moveTo(-g, 0), t.lineTo(-g * .22, 0), t.lineTo(-g * .12, s * .09), t.stroke(), t.beginPath(), t.moveTo(g, 0), t.lineTo(g * .22, 0), t.lineTo(g * .12, s * .09), t.stroke(), t.beginPath(), t.arc(0, 0, 3, 0, Math.PI * 2), t.fillStyle = `#F0A500`, t.fill(), t.restore(), m(t, n, r, i, s, a.heading);
+        {
+          let e = s - 10,
+            n = (a.roll >= 0 ? `+` : ``) + a.roll.toFixed(1) + `°`,
+            r = i,
+            c = o - e + 22;
+          t.save(), t.font = `bold 11px "JetBrains Mono", monospace`;
+          let l = t.measureText(n).width + 10;
+          t.fillStyle = `rgba(0,0,0,0.60)`, t.fillRect(r - l / 2, c - 16 / 2, l, 16), t.fillStyle = `rgba(255,255,255,0.92)`, t.textAlign = `center`, t.textBaseline = `middle`, t.fillText(n, r, c), t.restore()
+        } {
+          let e = (a.pitch >= 0 ? `+` : ``) + a.pitch.toFixed(1) + `°`,
+            n = i - s * .52,
+            r = o;
+          t.save(), t.font = `bold 11px "JetBrains Mono", monospace`;
+          let c = t.measureText(e).width + 10;
+          t.fillStyle = `rgba(0,0,0,0.60)`, t.fillRect(n - c / 2, r - 16 / 2, c, 16), t.fillStyle = `rgba(255,255,255,0.92)`, t.textAlign = `center`, t.textBaseline = `middle`, t.fillText(e, n, r), t.restore()
+        } {
+          let e = o + s - 26 - 4,
+            n = (Math.round(a.heading) % 360 + 360) % 360,
+            r = String(n).padStart(3, `0`) + `°`;
+          t.save(), t.fillStyle = `rgba(0,0,0,0.80)`, t.fillRect(i - 44 / 2, e + 12 / 2, 44, 14), t.fillStyle = `#F0A500`, t.font = `bold 11px "JetBrains Mono", monospace`, t.textAlign = `center`, t.textBaseline = `middle`, t.fillText(r, i, e + 26 / 2), t.restore()
+        }
+      }
+
+      function m(e, t, n, r, i, a) {
+        let o = i * 1.52,
+          s = r - o / 2,
+          c = n / 2 + i - 26 - 4;
+        e.fillStyle = `rgba(0,0,0,0.65)`, e.fillRect(s, c, o, 26), e.save(), e.beginPath(), e.rect(s, c, o, 26), e.clip();
+        let l = o / 50;
+        e.lineWidth = 1, e.font = `10px monospace`;
+        for (let t = -30; t <= 30; t++) {
+          let n = (Math.round(a) + t + 360) % 360,
+            i = r + t * l,
+            o = n === 0 || n === 90 || n === 180 || n === 270,
+            s = n % 10 == 0;
+          if ((s || o) && (e.beginPath(), e.moveTo(i, c + 2), e.lineTo(i, c + (o ? 12 : 7)), e.strokeStyle = `rgba(180,180,180,0.8)`, e.stroke()), s) {
+            let t = n === 0 ? `N` : n === 90 ? `E` : n === 180 ? `S` : n === 270 ? `W` : String(n);
+            e.fillStyle = o ? `#F0A500` : `rgba(200,200,200,0.85)`, e.textAlign = `center`, e.textBaseline = `bottom`, e.fillText(t, i, c + 26 - 1)
+          }
+        }
+        e.fillStyle = `#F0A500`, e.beginPath(), e.moveTo(r, c), e.lineTo(r - 5, c + 9), e.lineTo(r + 5, c + 9), e.closePath(), e.fill(), e.restore()
+      }
+      r(() => {
+        a.roll, a.pitch, a.heading, cancelAnimationFrame(f), f = requestAnimationFrame(p)
+      });
+
+      function h() {
+        let e = u.value,
+          t = d.value;
+        if (!e || !t) return;
+        let n = a.size > 0 ? a.size : Math.min(t.clientWidth, t.clientHeight);
+        n < 1 || (e.width !== n || e.height !== n) && (e.width = n, e.height = n, p())
+      }
+      let g = null;
+      return t(() => {
+        h(), g = new ResizeObserver(h), d.value && g.observe(d.value)
+      }), c(() => {
+        g == null || g.disconnect(), cancelAnimationFrame(f)
+      }), (e, t) => (n(), s(`div`, {
+        ref_key: `containerEl`,
+        ref: d,
+        class: `adi-wrap`
+      }, [o(`canvas`, {
+        ref_key: `canvasEl`,
+        ref: u,
+        class: `adi-canvas`
+      }, null, 512)], 512))
+    }
+  }), [
+    [`__scopeId`, `data-v-5407bc15`]
+  ]);
+export {
+  u as t
+};

@@ -2,3 +2,14 @@ node_modules/
 package-lock.json
 ~$*
 *.log
+
+# Maven build output
+gcs-javafx/target/
+
+# IDE files
+*.iml
+.idea/
+.vscode/
+
+# TRAE temp
+.trae-html-share-packages/

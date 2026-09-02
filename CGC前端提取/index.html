@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="">
+  <head>
+    <meta charset="UTF-8">
+    <link rel="icon" href="/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHERGLOW Ground Control</title>
+    <!-- Polyfills for browsers < Chrome 93 / Safari 15.4 -->
+    <script>
+      // Object.hasOwn — used by MapLibre GL JS v4
+      if (!Object.hasOwn) {
+        Object.defineProperty(Object, 'hasOwn', {
+          value: function (obj, prop) {
+            return Object.prototype.hasOwnProperty.call(obj, prop)
+          },
+          writable: true, configurable: true
+        })
+      }
+      // structuredClone — used by MapLibre / Vue internals
+      if (typeof structuredClone === 'undefined') {
+        window.structuredClone = function (obj) {
+          return JSON.parse(JSON.stringify(obj))
+        }
+      }
+      // Array.prototype.at
+      if (!Array.prototype.at) {
+        Array.prototype.at = function (index) {
+          index = Math.trunc(index) || 0
+          if (index < 0) index += this.length
+          if (index < 0 || index >= this.length) return undefined
+          return this[index]
+        }
+      }
+    </script>
+    <script type="module" crossorigin src="/assets/index-DJhI6atv.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/_plugin-vue_export-helper-CQMKH6SZ.js">
+    <link rel="modulepreload" crossorigin href="/assets/mavlink-C7-F-u0_.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-CW_fMItO.css">
+  </head>
+  <body>
+    <div id="app"></div>
+  </body>
+</html>

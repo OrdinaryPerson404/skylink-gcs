@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8">
+<style>*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"Microsoft YaHei";background:#f0f2f5;padding:24px}
+.h{background:linear-gradient(135deg,#1c3764,#2a5290);color:#fff;padding:22px 32px;border-radius:10px;margin-bottom:16px}
+.h h1{font-size:26px;margin-bottom:4px}.h p{font-size:14px;color:#b8c8de}
+.leg{margin-top:16px;background:#e8edf5;border-radius:8px;padding:16px 22px}
+.leg h3{font-size:16px;color:#16285a;margin-bottom:8px}
+.leg p{font-size:14px;color:#4a5570;line-height:1.7}
+</style></head><body>
+<div class="h"><h1>图3·通讯架构·数据流·验证证据链</h1><p>上→下组织架构图：物理链路→MAVLink协议→语义二分→数据源→四证人验证</p></div>
+<svg width="4050" height="436" xmlns="http://www.w3.org/2000/svg">
+<rect width="100%" height="100%" fill="#f8f9fb"/>
+<path d="M 1966 115 C 1966 128, 380 128, 380 165" stroke="#b8c4d8" stroke-width="2" fill="none"/>
+<path d="M 380 254 C 380 266, 145 266, 145 304" stroke="#b8c4d8" stroke-width="2" fill="none"/>
+<path d="M 380 254 C 380 266, 380 266, 380 304" stroke="#b8c4d8" stroke-width="2" fill="none"/>
+<path d="M 380 254 C 380 266, 615 266, 615 304" stroke="#b8c4d8" stroke-width="2" fill="none"/>
+<path d="M 1966 115 C 1966 128, 1202 128, 1202 165" stroke="#b8c4d8" stroke-width="2" fill="none"/>
+<path d="M 1202 241 C 1202 254, 850 254, 850 291" stroke="#b8c4d8" stroke-width="2" fill="none"/>
+<path d="M 1202 241 C 1202 254, 1085 254, 1085 291" stroke="#b8c4d8" stroke-width="2" fill="none"/>
+<path d="M 1202 241 C 1202 254, 1320 254, 1320 291" stroke="#b8c4d8" stroke-width="2" fill="none"/>
+<path d="M 1202 241 C 1202 254, 1555 254, 1555 291" stroke="#b8c4d8" stroke-width="2" fill="none"/>
+<path d="M 1966 115 C 1966 128, 1908 128, 1908 165" stroke="#b8c4d8" stroke-width="2" fill="none"/>
+<path d="M 1908 241 C 1908 254, 1790 254, 1790 291" stroke="#b8c4d8" stroke-width="2" fill="none"/>
+<path d="M 1908 241 C 1908 254, 2025 254, 2025 291" stroke="#b8c4d8" stroke-width="2" fill="none"/>
+<path d="M 1966 115 C 1966 128, 2612 128, 2612 165" stroke="#b8c4d8" stroke-width="2" fill="none"/>
+<path d="M 2612 241 C 2612 254, 2260 254, 2260 291" stroke="#b8c4d8" stroke-width="2" fill="none"/>
+<path d="M 2612 241 C 2612 254, 2495 254, 2495 291" stroke="#b8c4d8" stroke-width="2" fill="none"/>
+<path d="M 2612 241 C 2612 254, 2730 254, 2730 291" stroke="#b8c4d8" stroke-width="2" fill="none"/>
+<path d="M 2612 241 C 2612 254, 2965 254, 2965 291" stroke="#b8c4d8" stroke-width="2" fill="none"/>
+<path d="M 1966 115 C 1966 128, 3552 128, 3552 165" stroke="#b8c4d8" stroke-width="2" fill="none"/>
+<path d="M 3552 241 C 3552 254, 3200 254, 3200 291" stroke="#b8c4d8" stroke-width="2" fill="none"/>
+<path d="M 3552 241 C 3552 254, 3435 254, 3435 291" stroke="#b8c4d8" stroke-width="2" fill="none"/>
+<path d="M 3552 241 C 3552 254, 3670 254, 3670 291" stroke="#b8c4d8" stroke-width="2" fill="none"/>
+<path d="M 3552 241 C 3552 254, 3905 254, 3905 291" stroke="#b8c4d8" stroke-width="2" fill="none"/>
+<rect x="1861" y="40" width="210" height="75" rx="8" fill="white" stroke="#c0ccd8" stroke-width="1"/>
+<rect x="1861" y="40" width="5" height="75" rx="2" fill="#1c3764"/>
+<text x="1875" y="67" font-size="15" font-weight="bold" fill="#1c3764" font-family="Microsoft YaHei">通讯架构</text>
+<text x="1875" y="88" font-size="13" fill="#3a4560" font-family="Microsoft YaHei">物理→协议→语义→数据源→验</text>
+<text x="1875" y="104" font-size="13" fill="#3a4560" font-family="Microsoft YaHei">证</text>
+<rect x="275" y="165" width="210" height="89" rx="8" fill="white" stroke="#c0ccd8" stroke-width="1"/>
+<rect x="275" y="165" width="5" height="89" rx="2" fill="#2d6eb4"/>
+<text x="289" y="192" font-size="15" font-weight="bold" fill="#1c3764" font-family="Microsoft YaHei">物理链路层</text>
+<text x="289" y="213" font-size="13" fill="#3a4560" font-family="Microsoft YaHei">换介质不换协议</text>
+<text x="289" y="231" font-size="11" fill="#8892a8" font-family="Microsoft YaHei">【源：ardupilot.org·SITL】【源：C</text>
+<text x="289" y="244" font-size="11" fill="#8892a8" font-family="Microsoft YaHei">F-Drone·wifi.ino】</text>
+<rect x="40" y="304" width="210" height="76" rx="8" fill="white" stroke="#c0ccd8" stroke-width="1"/>
+<rect x="40" y="304" width="5" height="76" rx="2" fill="#4a5a8a"/>
+<text x="54" y="331" font-size="15" font-weight="bold" fill="#1c3764" font-family="Microsoft YaHei">SITL模拟(主线)</text>
+<text x="54" y="352" font-size="13" fill="#3a4560" font-family="Microsoft YaHei">本机UDP 127.0.0.1:14550</text>
+<text x="54" y="370" font-size="11" fill="#8892a8" font-family="Microsoft YaHei">【源：ardupilot.org·SITL文档】</text>
+<rect x="275" y="304" width="210" height="89" rx="8" fill="white" stroke="#c0ccd8" stroke-width="1"/>
+<rect x="275" y="304" width="5" height="89" rx="2" fill="#4a5a8a"/>
+<text x="289" y="331" font-size="15" font-weight="bold" fill="#1c3764" font-family="Microsoft YaHei">E1实机WiFi AP</text>
+<text x="289" y="352" font-size="13" fill="#3a4560" font-family="Microsoft YaHei">UDP 14550同端口零改动</text>
+<text x="289" y="370" font-size="11" fill="#8892a8" font-family="Microsoft YaHei">【源：CF-Drone·wifi.ino】【源：对</text>
+<text x="289" y="383" font-size="11" fill="#8892a8" font-family="Microsoft YaHei">话[35]】</text>
+<rect x="510" y="304" width="210" height="89" rx="8" fill="white" stroke="#c0ccd8" stroke-width="1"/>
+<rect x="510" y="304" width="5" height="89" rx="2" fill="#4a5a8a"/>
+<text x="524" y="331" font-size="15" font-weight="bold" fill="#1c3764" font-family="Microsoft YaHei">串口电台(野外)</text>
+<text x="524" y="352" font-size="13" fill="#3a4560" font-family="Microsoft YaHei">433/915MHz→USB→COM口</text>
+<text x="524" y="370" font-size="11" fill="#8892a8" font-family="Microsoft YaHei">【源：对话[20]无线链路】【源：任</text>
+<text x="524" y="383" font-size="11" fill="#8892a8" font-family="Microsoft YaHei">务书·R4.1】</text>
+<rect x="1098" y="165" width="210" height="76" rx="8" fill="white" stroke="#c0ccd8" stroke-width="1"/>
+<rect x="1098" y="165" width="5" height="76" rx="2" fill="#288c5a"/>
+<text x="1112" y="192" font-size="15" font-weight="bold" fill="#1c3764" font-family="Microsoft YaHei">MAVLink协议层</text>
+<text x="1112" y="213" font-size="13" fill="#3a4560" font-family="Microsoft YaHei">帧结构+报文清单</text>
+<text x="1112" y="231" font-size="11" fill="#8892a8" font-family="Microsoft YaHei">【源：mavlink.io·协议规范】</text>
+<rect x="745" y="291" width="210" height="105" rx="8" fill="white" stroke="#c0ccd8" stroke-width="1"/>
+<rect x="745" y="291" width="5" height="105" rx="2" fill="#4a5a8a"/>
+<text x="759" y="318" font-size="15" font-weight="bold" fill="#1c3764" font-family="Microsoft YaHei">帧结构</text>
+<text x="759" y="339" font-size="13" fill="#3a4560" font-family="Microsoft YaHei">0xFE|LEN|SEQ|SYSID|COMPID</text>
+<text x="759" y="355" font-size="13" fill="#3a4560" font-family="Microsoft YaHei">|MSGID|PAYLOAD|CRC</text>
+<text x="759" y="373" font-size="11" fill="#8892a8" font-family="Microsoft YaHei">【源：mavlink.io】【源：03-系统设</text>
+<text x="759" y="386" font-size="11" fill="#8892a8" font-family="Microsoft YaHei">计.md·第四节】</text>
+<rect x="980" y="291" width="210" height="92" rx="8" fill="white" stroke="#c0ccd8" stroke-width="1"/>
+<rect x="980" y="291" width="5" height="92" rx="2" fill="#4a5a8a"/>
+<text x="994" y="318" font-size="15" font-weight="bold" fill="#1c3764" font-family="Microsoft YaHei">上行报文(广播)</text>
+<text x="994" y="339" font-size="13" fill="#3a4560" font-family="Microsoft YaHei">HEARTBEAT/SYS_STATUS/PO</text>
+<text x="994" y="355" font-size="13" fill="#3a4560" font-family="Microsoft YaHei">SITION_INT/VFR_HUD</text>
+<text x="994" y="373" font-size="11" fill="#8892a8" font-family="Microsoft YaHei">【源：mavlink.io·消息定义】</text>
+<rect x="1215" y="291" width="210" height="92" rx="8" fill="white" stroke="#c0ccd8" stroke-width="1"/>
+<rect x="1215" y="291" width="5" height="92" rx="2" fill="#4a5a8a"/>
+<text x="1229" y="318" font-size="15" font-weight="bold" fill="#1c3764" font-family="Microsoft YaHei">下行报文(握手)</text>
+<text x="1229" y="339" font-size="13" fill="#3a4560" font-family="Microsoft YaHei">COMMAND_LONG/MISSION</text>
+<text x="1229" y="355" font-size="13" fill="#3a4560" font-family="Microsoft YaHei">_REQUEST/ACK</text>
+<text x="1229" y="373" font-size="11" fill="#8892a8" font-family="Microsoft YaHei">【源：mavlink.io·消息定义】</text>
+<rect x="1450" y="291" width="210" height="92" rx="8" fill="white" stroke="#c0ccd8" stroke-width="1"/>
+<rect x="1450" y="291" width="5" height="92" rx="2" fill="#4a5a8a"/>
+<text x="1464" y="318" font-size="15" font-weight="bold" fill="#1c3764" font-family="Microsoft YaHei">E1实机报文差异</text>
+<text x="1464" y="339" font-size="13" fill="#3a4560" font-family="Microsoft YaHei">ATTITUDE 10Hz/无GPS/位置</text>
+<text x="1464" y="355" font-size="13" fill="#3a4560" font-family="Microsoft YaHei">由SITL补</text>
+<text x="1464" y="373" font-size="11" fill="#8892a8" font-family="Microsoft YaHei">【源：CF-Drone·mavlink.ino】</text>
+<rect x="1802" y="165" width="210" height="76" rx="8" fill="white" stroke="#c0ccd8" stroke-width="1"/>
+<rect x="1802" y="165" width="5" height="76" rx="2" fill="#8246aa"/>
+<text x="1816" y="192" font-size="15" font-weight="bold" fill="#1c3764" font-family="Microsoft YaHei">语义二分(核心设计)</text>
+<text x="1816" y="213" font-size="13" fill="#3a4560" font-family="Microsoft YaHei">一套协议两种语义</text>
+<text x="1816" y="231" font-size="11" fill="#8892a8" font-family="Microsoft YaHei">【源：对话[24]语义二分结论】</text>
+<rect x="1685" y="291" width="210" height="89" rx="8" fill="white" stroke="#c0ccd8" stroke-width="1"/>
+<rect x="1685" y="291" width="5" height="89" rx="2" fill="#4a5a8a"/>
+<text x="1699" y="318" font-size="15" font-weight="bold" fill="#1c3764" font-family="Microsoft YaHei">遥测=广播式</text>
+<text x="1699" y="339" font-size="13" fill="#3a4560" font-family="Microsoft YaHei">飞控只管推谁连谁看</text>
+<text x="1699" y="357" font-size="11" fill="#8892a8" font-family="Microsoft YaHei">【源：对话[24]】【源：03-系统设计</text>
+<text x="1699" y="370" font-size="11" fill="#8892a8" font-family="Microsoft YaHei">.md·第四节】</text>
+<rect x="1920" y="291" width="210" height="105" rx="8" fill="white" stroke="#c0ccd8" stroke-width="1"/>
+<rect x="1920" y="291" width="5" height="105" rx="2" fill="#4a5a8a"/>
+<text x="1934" y="318" font-size="15" font-weight="bold" fill="#1c3764" font-family="Microsoft YaHei">指令=握手式</text>
+<text x="1934" y="339" font-size="13" fill="#3a4560" font-family="Microsoft YaHei">发COMMAND_LONG必须等A</text>
+<text x="1934" y="355" font-size="13" fill="#3a4560" font-family="Microsoft YaHei">CK</text>
+<text x="1934" y="373" font-size="11" fill="#8892a8" font-family="Microsoft YaHei">【源：对话[24]】【源：mavlink.io·</text>
+<text x="1934" y="386" font-size="11" fill="#8892a8" font-family="Microsoft YaHei">MISSION协议】</text>
+<rect x="2508" y="165" width="210" height="76" rx="8" fill="white" stroke="#c0ccd8" stroke-width="1"/>
+<rect x="2508" y="165" width="5" height="76" rx="2" fill="#d28228"/>
+<text x="2522" y="192" font-size="15" font-weight="bold" fill="#1c3764" font-family="Microsoft YaHei">数据源生态</text>
+<text x="2522" y="213" font-size="13" fill="#3a4560" font-family="Microsoft YaHei">四类各司其职</text>
+<text x="2522" y="231" font-size="11" fill="#8892a8" font-family="Microsoft YaHei">【源：对话[23]数据源总谱】</text>
+<rect x="2155" y="291" width="210" height="76" rx="8" fill="white" stroke="#c0ccd8" stroke-width="1"/>
+<rect x="2155" y="291" width="5" height="76" rx="2" fill="#4a5a8a"/>
+<text x="2169" y="318" font-size="15" font-weight="bold" fill="#1c3764" font-family="Microsoft YaHei">SITL模拟</text>
+<text x="2169" y="339" font-size="13" fill="#3a4560" font-family="Microsoft YaHei">¥0·必做·主线</text>
+<text x="2169" y="357" font-size="11" fill="#8892a8" font-family="Microsoft YaHei">【源：ardupilot.org·SITL】</text>
+<rect x="2390" y="291" width="210" height="89" rx="8" fill="white" stroke="#c0ccd8" stroke-width="1"/>
+<rect x="2390" y="291" width="5" height="89" rx="2" fill="#4a5a8a"/>
+<text x="2404" y="318" font-size="15" font-weight="bold" fill="#1c3764" font-family="Microsoft YaHei">E1实机</text>
+<text x="2404" y="339" font-size="13" fill="#3a4560" font-family="Microsoft YaHei">¥100-200·强烈建议</text>
+<text x="2404" y="357" font-size="11" fill="#8892a8" font-family="Microsoft YaHei">【源：github.com/songge8/CF-Dr</text>
+<text x="2404" y="370" font-size="11" fill="#8892a8" font-family="Microsoft YaHei">one】</text>
+<rect x="2625" y="291" width="210" height="76" rx="8" fill="white" stroke="#c0ccd8" stroke-width="1"/>
+<rect x="2625" y="291" width="5" height="76" rx="2" fill="#4a5a8a"/>
+<text x="2639" y="318" font-size="15" font-weight="bold" fill="#1c3764" font-family="Microsoft YaHei">ADS-B航班</text>
+<text x="2639" y="339" font-size="13" fill="#3a4560" font-family="Microsoft YaHei">¥100-200·可选彩蛋</text>
+<text x="2639" y="357" font-size="11" fill="#8892a8" font-family="Microsoft YaHei">【源：dump1090·1090MHz】</text>
+<rect x="2860" y="291" width="210" height="76" rx="8" fill="white" stroke="#c0ccd8" stroke-width="1"/>
+<rect x="2860" y="291" width="5" height="76" rx="2" fill="#4a5a8a"/>
+<text x="2874" y="318" font-size="15" font-weight="bold" fill="#1c3764" font-family="Microsoft YaHei">RemoteID</text>
+<text x="2874" y="339" font-size="13" fill="#3a4560" font-family="Microsoft YaHei">¥0·答辩话术</text>
+<text x="2874" y="357" font-size="11" fill="#8892a8" font-family="Microsoft YaHei">【源：GB 42590-2023】</text>
+<rect x="3448" y="165" width="210" height="76" rx="8" fill="white" stroke="#c0ccd8" stroke-width="1"/>
+<rect x="3448" y="165" width="5" height="76" rx="2" fill="#c03c3c"/>
+<text x="3462" y="192" font-size="15" font-weight="bold" fill="#1c3764" font-family="Microsoft YaHei">四证人验证链</text>
+<text x="3462" y="213" font-size="13" fill="#3a4560" font-family="Microsoft YaHei">不自己给自己作证</text>
+<text x="3462" y="231" font-size="11" fill="#8892a8" font-family="Microsoft YaHei">【源：对话[14]证据链四步法】</text>
+<rect x="3095" y="291" width="210" height="89" rx="8" fill="white" stroke="#c0ccd8" stroke-width="1"/>
+<rect x="3095" y="291" width="5" height="89" rx="2" fill="#4a5a8a"/>
+<text x="3109" y="318" font-size="15" font-weight="bold" fill="#1c3764" font-family="Microsoft YaHei">①SITL回执</text>
+<text x="3109" y="339" font-size="13" fill="#3a4560" font-family="Microsoft YaHei">发指令→ACK→航迹变化</text>
+<text x="3109" y="357" font-size="11" fill="#8892a8" font-family="Microsoft YaHei">【源：对话[14]】【源：ardupilot.or</text>
+<text x="3109" y="370" font-size="11" fill="#8892a8" font-family="Microsoft YaHei">g】</text>
+<rect x="3330" y="291" width="210" height="89" rx="8" fill="white" stroke="#c0ccd8" stroke-width="1"/>
+<rect x="3330" y="291" width="5" height="89" rx="2" fill="#4a5a8a"/>
+<text x="3344" y="318" font-size="15" font-weight="bold" fill="#1c3764" font-family="Microsoft YaHei">②MP同屏对账</text>
+<text x="3344" y="339" font-size="13" fill="#3a4560" font-family="Microsoft YaHei">官方独立实现同屏看</text>
+<text x="3344" y="357" font-size="11" fill="#8892a8" font-family="Microsoft YaHei">【源：对话[14]】【源：github.com</text>
+<text x="3344" y="370" font-size="11" fill="#8892a8" font-family="Microsoft YaHei">/ArduPilot/MissionPlanner】</text>
+<rect x="3565" y="291" width="210" height="76" rx="8" fill="white" stroke="#c0ccd8" stroke-width="1"/>
+<rect x="3565" y="291" width="5" height="76" rx="2" fill="#4a5a8a"/>
+<text x="3579" y="318" font-size="15" font-weight="bold" fill="#1c3764" font-family="Microsoft YaHei">③Wireshark抓包</text>
+<text x="3579" y="339" font-size="13" fill="#3a4560" font-family="Microsoft YaHei">0xFE原始字节流肉眼可辨</text>
+<text x="3579" y="357" font-size="11" fill="#8892a8" font-family="Microsoft YaHei">【源：对话[18]验收级铁证】</text>
+<rect x="3800" y="291" width="210" height="89" rx="8" fill="white" stroke="#c0ccd8" stroke-width="1"/>
+<rect x="3800" y="291" width="5" height="89" rx="2" fill="#4a5a8a"/>
+<text x="3814" y="318" font-size="15" font-weight="bold" fill="#1c3764" font-family="Microsoft YaHei">④CGC同屏比对</text>
+<text x="3814" y="339" font-size="13" fill="#3a4560" font-family="Microsoft YaHei">官方网页GCS第二证人</text>
+<text x="3814" y="357" font-size="11" fill="#8892a8" font-family="Microsoft YaHei">【源：gc.cherglowtech.com】【源</text>
+<text x="3814" y="370" font-size="11" fill="#8892a8" font-family="Microsoft YaHei">：对话[35]】</text>
+</svg>
+<div class="leg"><h3>图例·来源标注体系</h3>
+<p>【源：文档名·章节】任务书·R1.1 / 02-需求分析.md·UC4 / 03-系统设计.md·第四节</p>
+<p>【源：网址】github.com/songge8/CF-Drone / mavlink.io / ardupilot.org / gc.cherglowtech.com</p>
+<p>【源：系统模块】CF-Drone固件·mavlink.ino / CGC前端·mavlink_pretty.js</p>
+<p>【源：法规标准】GB 42590-2023 / ASTM F3411 ｜【源：对话分析·轮次】对话[24]语义二分结论</p>
+<p>R# = 任务书第33题需求编号：R1数据管理/R2实时监控/R3任务规划/R4系统设置/R5 AI算法/R6 UI/R7 OO技术</p>
+</div></body></html>
