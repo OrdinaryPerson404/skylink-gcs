@@ -1237,6 +1237,9 @@ public class MainController {
             updateConnStatus();
             // 检测链路超时：5 秒无数据 → 标记离线
             if (comm != null && !comm.isLinkActive() && comm.getLastReceivedMs() > 0) {
+                // 链路静默 >5s：清理 Drone 模型可用性状态，状态网格/E1 详情及时回显 "—"，
+                // 避免陈旧值残留超过 1s（markDisconnected 幂等，链路恢复后遥测自然重新置位）
+                drone.markDisconnected();
                 // 最后一帧超过 5s 前收到，需要刷新状态横幅
                 updateDroneStatus();
                 updateE1StatusDetail();
@@ -1394,7 +1397,8 @@ public class MainController {
         if (e1PortVal != null) e1PortVal.setText(String.valueOf(settings.e1Port));
         // 通信延迟/油门/控制来源/心跳：飞控不上报时诚实标注 "—"
         if (e1LatencyVal != null) e1LatencyVal.setText(connected ? "—" : "—");
-        if (e1ThrottleVal != null) e1ThrottleVal.setText(connected ? "—" : "0%");
+        // CF-Drone 不通过 MAVLink 上报油门，一律诚实标识不可用
+        if (e1ThrottleVal != null) e1ThrottleVal.setText("—");
         if (e1CtrlSrcVal != null) e1CtrlSrcVal.setText(connected ? "—" : "—");
         if (e1HeartbeatVal != null) {
             if (connected) {
@@ -1511,8 +1515,8 @@ public class MainController {
         connDot.getStyleClass().removeAll("on", "off", "warn");
         boolean connected = comm != null && comm.isConnected();
         boolean linkActive = comm != null && comm.isLinkActive();
-        // 低电量告警（≤20% 弹出一次）
-        if (drone.isBatteryAvailable() && drone.getBatteryPct() <= 20) {
+        // 低电量告警（仅当电量百分比真实测得时才触发，≤20% 弹出一次）
+        if (drone.isBatteryPctAvailable() && drone.getBatteryPct() <= 20) {
             long now = System.currentTimeMillis();
             if (now - lastLowBatMs > 30000) {
                 lastLowBatMs = now;
@@ -2474,6 +2478,7 @@ public class MainController {
         boolean vfrOk = drone.isVfrHudAvailable();
         boolean attOk = drone.isAttitudeAvailable();
         boolean battOk = drone.isBatteryAvailable();
+        boolean pctOk = drone.isBatteryPctAvailable();
         boolean hbOk = drone.isHeartbeatAvailable();
         boolean rcOk = drone.isRcAvailable();
         boolean landOk = drone.isLandedStateAvailable();
@@ -2490,7 +2495,7 @@ public class MainController {
             attOk ? drone.getRoll() : "—", "",
             attOk ? drone.getPitch() : "—", "",
             attOk ? drone.getYaw() : "—", "",
-            battOk ? drone.getBatteryPct() : "—", "battery",
+            battOk && pctOk ? drone.getBatteryPct() : "—", "battery",
             battOk ? drone.getVoltage() : "—", "",
             rcOk ? drone.getRssi() : "—", "ok",
             gpsOk ? drone.getSatellites() : "—", "ok",
@@ -2574,10 +2579,14 @@ public class MainController {
         // P1/P2 新增：电池详情（电流/温度/电芯/剩余时间） + 姿态仪表可用性标签
         // ================================================================
         boolean bsOk = drone.isBatteryStatusAvailable();
-        setBatteryDetail(lblBatCurrent, bsOk,
+        // 电流/温度仅在真实上报时展示：电压-only 电池（有合理电芯但无剩余/电流/温度，
+        // 如 CF-Drone cells=[0,0,32767,3744,...]）时显示 "—"，避免误导的 0.00A/0.0°C
+        boolean curTempOk = bsOk && (drone.getBatteryCurrent() != 0
+                || drone.getBatteryTemp() != 0 || drone.isBatteryPctAvailable());
+        setBatteryDetail(lblBatCurrent, curTempOk,
             String.format(Locale.ROOT, "%.2f A", drone.getBatteryCurrent()),
             drone.getBatteryCurrent() >= 6.0 ? "err" : (drone.getBatteryCurrent() >= 3.0 ? "warn" : "ok"));
-        setBatteryDetail(lblBatTemp, bsOk,
+        setBatteryDetail(lblBatTemp, curTempOk,
             String.format(Locale.ROOT, "%.1f °C", drone.getBatteryTemp()),
             drone.getBatteryTemp() >= 55.0 ? "err" : (drone.getBatteryTemp() >= 45.0 ? "warn" : "ok"));
         if (lblCells != null) {
@@ -2586,7 +2595,8 @@ public class MainController {
             int minMv = Integer.MAX_VALUE;
             int maxMv = Integer.MIN_VALUE;
             for (int x : cv) {
-                if (x > 0) {
+                // 仅统计物理合理的电芯(2000~5000mV)，排除 0x7FFF 等"未知"标记与 0
+                if (x >= 2000 && x <= 5000) {
                     count++;
                     if (x < minMv) minMv = x;
                     if (x > maxMv) maxMv = x;

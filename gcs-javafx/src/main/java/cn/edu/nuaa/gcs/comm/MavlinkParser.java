@@ -114,6 +114,7 @@ public class MavlinkParser {
         public double capacityConsumed;    // mAh
         public int batteryRemaining2;       // %（-1=未测量）
         public boolean hasBatteryStatus;
+        public boolean batteryValid;       // BATTERY_STATUS(147) 数据是否有效（非哨兵值）
 
         // 状态文本（来自 STATUSTEXT(253)）
         public int statusSeverity;          // MAV_SEVERITY
@@ -278,8 +279,16 @@ public class MavlinkParser {
                     int pctRaw = payload[12] & 0xFF;
                     t.batteryPct = (pctRaw == 0xFF) ? -1 : pctRaw;  // %（-1=未知）
                 }
-                if (payload.length >= 13)
-                    t.hasBattery = true;
+                // 电池字段有效性判定：仅当电压或电量字段真实有效时才置 hasBattery=true。
+                // CF-Drone 回传全 0（voltage=0、batteryPct=0%）时为哨兵/无电池状态，不置位；
+                // 但 voltage/batteryPct 仍按上述逻辑写入值（上层据 hasBattery 决定是否展示）。
+                if (payload.length >= 13) {
+                    int vRaw = (int) readUint16(payload, 8);
+                    int pctRaw = payload[12] & 0xFF;
+                    boolean volOk = (vRaw != 0xFFFF && vRaw > 0);   // 电压有效（未知或 0 均无效）
+                    boolean pctOk = (pctRaw != 0xFF && pctRaw > 0); // 电量有效（未知或 0 均无效）
+                    t.hasBattery = volOk || pctOk;
+                }
                 break;
             case 22: // PARAM_VALUE
                 if (payload.length >= 25) {
@@ -429,7 +438,9 @@ public class MavlinkParser {
                     t.batteryId = payload[0] & 0xFF;
                     if (payload.length >= 4) {
                         int tempRaw = readInt16(payload, 2);
-                        t.batteryTemp = (tempRaw == Short.MIN_VALUE || tempRaw < -100) ? 0 : tempRaw / 100.0;  // centi-°C → °C（INT16_MIN=未知）
+                        // 未知温度哨兵→0：INT16_MIN(spec) / -1(CF-Drone 实机约定，2026-09-04 联调实测) / <-100
+                        // 避免 -1/100=-0.0°C 的伪测量值显示
+                        t.batteryTemp = (tempRaw == Short.MIN_VALUE || tempRaw == -1 || tempRaw < -100) ? 0 : tempRaw / 100.0;  // centi-°C → °C
                     }
                     for (int i = 0; i < 10; i++) {
                         if (payload.length >= 6 + i * 2) {
@@ -450,6 +461,18 @@ public class MavlinkParser {
                     // CF-Drone 无电池传感器时回传全 0xFF：id=255/temp=INT16_MIN/consumed=UINT32_MAX/remaining=-1
                     // 此时 hasBatteryStatus 仍置 true（消息确实收到），上层可通过 remaining<0 判断数据无效
                     t.hasBatteryStatus = true;
+                    // 有效性判定：仅依据「剩余电量在 [0,100]」或「存在物理合理的电芯电压(2000~5000 mV, LiPo 单芯范围)」。
+                    // 注意：consumed(已耗容量) 不得作为判据——CF-Drone 无电池传感器时回传
+                    // consumed=0x7FFFFFFF(2147483647) 等非零标记，会误触发有效判定；
+                    // 电芯亦须落在合理区间，0xFFFF 残留/溢出非零值（如电芯充填 0xFFFE=65534mV）
+                    // 不得误判为真实电芯（2026-09-04 实机 UDP 14550 联调发现）。
+                    boolean remOk = t.batteryRemaining2 >= 0 && t.batteryRemaining2 <= 100;
+                    boolean cellOk = false;
+                    for (int i = 0; i < 10 && !cellOk; i++) {
+                        int mv = t.cellVoltages[i];
+                        if (mv >= 2000 && mv <= 5000) cellOk = true;
+                    }
+                    t.batteryValid = remOk || cellOk;
                 }
                 break;
             case 253: // STATUSTEXT（severity u8 + text char[50]，v2 截断后文本可能不足 50）

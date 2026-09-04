@@ -35,6 +35,9 @@ public class Drone {
     private final DoubleProperty batteryPct = new SimpleDoubleProperty(100);
     private final DoubleProperty voltage = new SimpleDoubleProperty(12.6);
     private final DoubleProperty signalPct = new SimpleDoubleProperty(0);
+    /** 电量百分比是否真实测得（SYS_STATUS 电量或 BATTERY_STATUS remaining 有效时 true）。
+     *  电压可读但无电量计（如 CF-Drone 仅回传电芯电压无 remaining）时 false，UI 电量显示 "—" 而非默认 100%。 */
+    private final BooleanProperty batteryPctAvailable = new SimpleBooleanProperty(false);
 
     // 姿态（弧度）+ 角速度（rad/s）
     private final DoubleProperty roll = new SimpleDoubleProperty(0);
@@ -174,6 +177,7 @@ public class Drone {
         if (t.hasBattery) {
             voltage.set(t.voltage);
             batteryPct.set(t.batteryPct);
+            batteryCurrent.set(t.batteryCurrent);
             batteryAvailable.set(true);
         }
 
@@ -211,15 +215,25 @@ public class Drone {
             shellText.set(next);
         }
 
-        if (t.hasBatteryStatus) {
+        if (t.hasBatteryStatus && t.batteryValid) {
             batteryCurrent.set(t.batteryCurrent);
             batteryTemp.set(t.batteryTemp);
             capacityConsumed.set(t.capacityConsumed);
-            System.arraycopy(t.cellVoltages, 0, cellVoltages, 0,
-                Math.min(cellVoltages.length, t.cellVoltages.length));
-            // 仅在 remaining 为有效正百分比(0-100)时覆盖，-1(未知)/其它负值忽略，避免显示 "-1%"
-            if (t.batteryRemaining2 >= 0 && t.batteryRemaining2 <= 100) batteryPct.set(t.batteryRemaining2);
+            System.arraycopy(t.cellVoltages, 0, cellVoltages, 0, Math.min(cellVoltages.length, t.cellVoltages.length));
+            // 仅在 remaining 为有效正百分比(0-100)时覆盖电量并置"电量可用"
+            boolean remOk = t.batteryRemaining2 >= 0 && t.batteryRemaining2 <= 100;
+            if (remOk) batteryPct.set(t.batteryRemaining2);
+            batteryPctAvailable.set(remOk);
             batteryStatusAvailable.set(true);
+            // 回填主网格：有效 BATTERY_STATUS 也驱动主网格电池（CF-Drone 无 SYS_STATUS 时）
+            batteryAvailable.set(true);
+            // 电压取"物理合理电芯"(2000~5000mV)之和：CF-Drone 会在其余槽位回传 0x7FFF(32767) 等
+            // "未知"标记值，不得计入（2026-09-04 实机联调发现 cells=[0,0,32767,3744,...]）
+            double cellSum = 0; int nCell = 0;
+            for (int c : cellVoltages) {
+                if (c >= 2000 && c <= 5000) { cellSum += c / 1000.0; nCell++; }
+            }
+            if (nCell > 0) voltage.set(cellSum);   // 合理电芯和作为总电压（精度更高）
         }
 
         if (t.hasStatusText && t.statusText != null) {
@@ -252,6 +266,7 @@ public class Drone {
                     alt.set(t.alt);
                     speed.set(t.gpsSpeed);
                     heading.set(t.gpsCog);
+                    positionAvailable.set(true);
                 }
             }
         }
@@ -276,6 +291,7 @@ public class Drone {
     public void markDisconnected() {
         positionAvailable.set(false);
         batteryAvailable.set(false);
+        batteryPctAvailable.set(false);
         heartbeatAvailable.set(false);
         attitudeAvailable.set(false);
         imuAvailable.set(false);
@@ -441,6 +457,15 @@ public class Drone {
 
     public boolean isBatteryAvailable() { return batteryAvailable.get(); }
     public BooleanProperty batteryAvailableProperty() { return batteryAvailable; }
+
+    /** 电量百分比是否真实测得（否则 UI 电量显示 "—"，不显示默认 100%）。 */
+    public boolean isBatteryPctAvailable() { return batteryPctAvailable.get(); }
+    public BooleanProperty batteryPctAvailableProperty() { return batteryPctAvailable; }
+
+    /** 无人机电池数据是否真实有效（SYS_STATUS 或 BATTERY_STATUS 任一来源）。 */
+    public boolean isBatteryDataValid() {
+        return batteryStatusAvailable.get() || batteryAvailable.get();
+    }
 
     public boolean isHeartbeatAvailable() { return heartbeatAvailable.get(); }
     public BooleanProperty heartbeatAvailableProperty() { return heartbeatAvailable; }

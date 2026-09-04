@@ -143,9 +143,14 @@ public class BatteryChargingMonitor {
     private final boolean isWindows;
 
     public BatteryChargingMonitor(Drone drone, CommunicationService comm) {
+        this(drone, comm, System.getProperty("os.name", "").toLowerCase().contains("win"));
+    }
+
+    /** 测试专用（包可见）：显式指定平台，避免依赖运行机 OS。 */
+    BatteryChargingMonitor(Drone drone, CommunicationService comm, boolean isWindows) {
         this.drone = drone;
         this.comm = comm;
-        this.isWindows = System.getProperty("os.name", "").toLowerCase().contains("win");
+        this.isWindows = isWindows;
         this.scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread t = new Thread(r, "BatteryChargingMonitor");
             t.setDaemon(true);
@@ -214,8 +219,12 @@ public class BatteryChargingMonitor {
         boolean mavConnected = comm != null && comm.isLinkActive();
         String mavPort = comm != null ? comm.getPortName() : null;
         boolean mavBatSupported = drone != null && drone.isBatteryStatusAvailable();
-        if (drone != null && drone.isBatteryAvailable()) {
-            double cap = drone.getBatteryPct();
+        // 仅"真实有效"的电池遥测（SYS_STATUS 或 BATTERY_STATUS 任一来源）才产生数据卡片；
+        // CF-Drone 无电池传感器回传哨兵值（batteryValid=false）时 isBatteryDataValid()==false，
+        // 落入 else 分支显示"固件未上报电池遥测"说明卡，而非展示无意义的 0 值数据。
+        if (drone != null && drone.isBatteryDataValid()) {
+            // 电量百分仅当真实测得（remaining/SYS_STATUS 电量）时展示，否则 "--"（避免默认 100% 误导）
+            double cap = drone.isBatteryPctAvailable() ? drone.getBatteryPct() : -1;
             double v = drone.getVoltage();
             double cur = drone.getBatteryCurrent();
             double temp = drone.getBatteryTemp();
@@ -225,7 +234,8 @@ public class BatteryChargingMonitor {
             double cellSum = 0;
             if (cells != null) {
                 for (int c : cells) {
-                    if (c > 0 && c < 0xFFFF) { validCells++; cellSum += c / 1000.0; }
+                    // 仅统计物理合理电芯(2000~5000mV)，排除 0x7FFF 等"未知"标记（实机联调发现）
+                    if (c >= 2000 && c <= 5000) { validCells++; cellSum += c / 1000.0; }
                 }
             }
             double mavV = (cellSum > 0) ? cellSum : v;
@@ -236,7 +246,8 @@ public class BatteryChargingMonitor {
                     temp > -100 ? temp : null, null,
                     charging, true, 0, true, null);
             batteries.add(mavBat);
-            anomalies.addAll(validator.observe(mavBat.id, cap, mavV, cur, temp, charging, 12.6, -1));
+            double maxVoltage = validCells > 0 ? validCells * 4.2 : 0;   // 电芯数未知(0)时跳过电压类阈值校验
+            anomalies.addAll(validator.observe(mavBat.id, cap, mavV, cur, temp, charging, maxVoltage, -1));
         } else if (mavConnected) {
             String note = mavBatSupported
                     ? null

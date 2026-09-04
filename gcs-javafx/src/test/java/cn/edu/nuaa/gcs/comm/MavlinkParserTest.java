@@ -853,6 +853,27 @@ class MavlinkParserTest {
     }
 
     @Test
+    @DisplayName("BATTERY_STATUS 哨兵(consumed=0x7FFFFFFF)判定无效 - 实机2026-09-04 UDP联调复现")
+    void testBatteryStatusSentinelConsumedHighBitInvalid() {
+        // CF-Drone 无电池传感器实测形态：remaining=-1、电芯全 0、consumed=0x7FFFFFFF(2147483647)
+        // 该值非 0xFFFFFFFF，但同样表示"未接电池"，不得触发"已耗容量>0"而误判有效
+        byte[] payload = new byte[31];
+        payload[0] = (byte) 0xFF;               // battery_function=255
+        writeInt16(payload, 2, Short.MIN_VALUE);// temperature=INT16_MIN(未知)
+        writeInt16(payload, 24, -1);            // current_battery=-1 cA(未知)
+        writeInt32(payload, 26, 0x7FFFFFFF);    // consumed=0x7FFFFFFF(CF-Drone"未接电池"标记)
+        payload[30] = (byte) 0xFF;              // remaining=-1(未测量)
+        // 电芯保持 0
+
+        byte[] frame = buildFrame(1, 1, 147, payload);
+        MavlinkParser.Telemetry t = MavlinkParser.parse(frame, 0, frame.length);
+
+        assertTrue(t.hasBatteryStatus, "消息确实收到");
+        assertEquals(0x7FFFFFFF, (long) t.capacityConsumed, "consumed 保持原始大值（非有效容量）");
+        assertFalse(t.batteryValid, "remaining=-1 且电芯全 0 时必须判无效，不允许 consumed 非零误判");
+    }
+
+    @Test
     @DisplayName("BATTERY_STATUS v2 帧解析（标准布局 + 截断容错）")
     void testV2BatteryStatus() {
         byte[] payload = new byte[31];
@@ -889,6 +910,66 @@ class MavlinkParserTest {
         assertEquals(28.5, t.batteryTemp, 0.01);
         assertEquals(4100, t.cellVoltages[0]);
         assertEquals(0.0, t.batteryCurrent, 0.001, "缺电流字段时应保持默认 0");
+    }
+
+    @Test
+    @DisplayName("BATTERY_STATUS 哨兵值（CF-Drone 无电池传感器）判定为无效")
+    void testBatteryStatusSentinelInvalid() {
+        // CF-Drone 无电池传感器时回传哨兵值：battery_function=0xFF、temperature=INT16_MIN、
+        // current=-1、consumed=UINT32_MAX、energy_remaining=-1、电芯全 0
+        byte[] payload = new byte[31];
+        payload[0] = (byte) 0xFF;              // battery_function = 未知
+        payload[1] = (byte) 0xFF;              // type = 未知
+        writeInt16(payload, 2, Short.MIN_VALUE); // temperature = INT16_MIN（未知）
+        writeInt16(payload, 24, -1);           // current_battery = -1（未知）
+        writeInt32(payload, 26, -1);           // consumed_capacity = 0xFFFFFFFF（溢出/UINT32_MAX）
+        payload[30] = (byte) 0xFF;             // energy_remaining = -1（未测量）
+        // 电芯保持 0（全零，代表无有效测量）
+
+        byte[] frame = buildFrame(1, 1, 147, payload);
+        MavlinkParser.Telemetry t = MavlinkParser.parse(frame, 0, frame.length);
+
+        assertTrue(t.valid);
+        assertTrue(t.hasBatteryStatus, "消息确实收到，hasBatteryStatus 应仍为 true");
+        assertFalse(t.batteryValid, "哨兵值数据不应判定为有效");
+    }
+
+    @Test
+    @DisplayName("SYS_STATUS 电池字段全 0（CF-Drone 实测）不应置 hasBattery")
+    void testSysStatusZeroBatteryNotHasBattery() {
+        // CF-Drone 实测 SYS_STATUS 回传电压/电流/电量全 0（voltage=0、batteryPct=0%）
+        byte[] payload = new byte[31];
+        // 全 0 即模拟电压=0、电流=0、电量=0 的哨兵场景
+
+        byte[] frame = buildFrame(1, 1, 1, payload);
+        MavlinkParser.Telemetry t = MavlinkParser.parse(frame, 0, frame.length);
+
+        assertTrue(t.valid);
+        assertFalse(t.hasBattery, "全 0 电池字段不应置 hasBattery");
+        assertEquals(0.0, t.voltage, 0.001, "电压按现有逻辑写入 0.0");
+        assertEquals(0.0, t.batteryPct, 0.001, "电量按现有逻辑写入 0");
+    }
+
+    @Test
+    @DisplayName("SYS_STATUS 有效电池字段置 hasBattery - 仅电量有效分支")
+    void testSysStatusValidBatteryHasBattery() {
+        // 变体1：电压有效 11250mV → hasBattery=true
+        byte[] payload = new byte[31];
+        writeUint16(payload, 8, 11250);   // voltage_battery = 11.25V
+        byte[] frame1 = buildFrame(1, 1, 1, payload);
+        MavlinkParser.Telemetry t1 = MavlinkParser.parse(frame1, 0, frame1.length);
+        assertTrue(t1.hasBattery, "电压有效时 hasBattery 应为 true");
+        assertEquals(0.0, t1.batteryPct, 0.001, "未设电量字段，batteryPct 按现有逻辑写入 0");
+
+        // 变体2：voltage=0 但 batteryPct=75（仅电量有效）→ hasBattery=true
+        byte[] payload2 = new byte[31];
+        // voltage 保持 0（无效）
+        payload2[12] = 75;                 // battery_remaining = 75%
+        byte[] frame2 = buildFrame(1, 1, 1, payload2);
+        MavlinkParser.Telemetry t2 = MavlinkParser.parse(frame2, 0, frame2.length);
+        assertTrue(t2.hasBattery, "仅电量有效时也应置 hasBattery=true");
+        assertEquals(75, t2.batteryPct, 0.001, "电量应为 75%");
+        assertEquals(0.0, t2.voltage, 0.001, "电压为 0（本次不视作有效，但电量有效仍置位）");
     }
 
     // ============================================================
