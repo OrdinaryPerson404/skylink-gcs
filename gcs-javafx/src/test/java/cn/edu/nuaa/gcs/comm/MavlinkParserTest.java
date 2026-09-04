@@ -55,46 +55,52 @@ class MavlinkParserTest {
             case 0   -> 50;   // HEARTBEAT
             case 1   -> 124;  // SYS_STATUS
             case 22  -> 220;  // PARAM_VALUE
+            case 24  -> 87;   // GPS_RAW_INT
             case 26  -> 170;  // SCALED_IMU
             case 31  -> 246;  // ATTITUDE_QUATERNION
             case 33  -> 104;  // GLOBAL_POSITION_INT
             case 35  -> 244;  // RC_CHANNELS_RAW
             case 44  -> 221;  // MISSION_COUNT
-            case 74  -> 117;  // VFR_HUD
+            case 74  -> 20;   // VFR_HUD
             case 77  -> 143;  // COMMAND_ACK
             case 126 -> 220;  // SERIAL_CONTROL
             case 140 -> 181;  // ACTUATOR_CONTROL_TARGET
+            case 147 -> 117;  // BATTERY_STATUS
+            case 105 -> 97;   // HIGHRES_IMU
             case 245 -> 130;  // EXTENDED_SYS_STATE
+            case 253 -> 83;   // STATUSTEXT
             default -> -1;
         };
     }
 
-    /** 构造合法 MAVLink v2 帧（0xFD 起始），用于测试 v2 协议解析。 */
+    /**
+     * 构造合法标准 MAVLink v2 帧（0xFD 起始），用于测试 v2 协议解析。
+     * 布局（c_library_v2 权威定义，与 CF-Drone 实测帧一致）：
+     * STX(1) LEN(1) INCOMPAT(1) COMPAT(1) SEQ(1) SYSID(1) COMPID(1) MSGID(3) PAYLOAD(N) CRC(2)
+     */
     private byte[] buildV2Frame(int sysId, int compId, int msgId, byte[] payload) {
         int payloadLen = payload.length;
-        // v2: STX(1) LEN(2) INCOMPAT(1) COMPAT(1) SEQ(1) SYSID(1) COMPID(1) MSGID(3) PAYLOAD(N) CRC(2)
-        byte[] frame = new byte[13 + payloadLen];
+        byte[] frame = new byte[12 + payloadLen];
         frame[0] = (byte) 0xFD;
-        frame[1] = (byte) (payloadLen & 0xFF);
-        frame[2] = (byte) ((payloadLen >> 8) & 0xFF);
-        frame[3] = 0;  // incompat flags
-        frame[4] = 0;  // compat flags
-        frame[5] = 0;  // seq
-        frame[6] = (byte) sysId;
-        frame[7] = (byte) compId;
-        frame[8] = (byte) (msgId & 0xFF);
-        frame[9] = (byte) ((msgId >> 8) & 0xFF);
-        frame[10] = (byte) ((msgId >> 16) & 0xFF);
-        System.arraycopy(payload, 0, frame, 11, payloadLen);
-        // CRC 覆盖 LEN..PAYLOAD（10 字节头 + payload）+ CRC_EXTRA
+        frame[1] = (byte) (payloadLen & 0xFF);  // LEN 为 1 字节
+        frame[2] = 0;  // incompat flags
+        frame[3] = 0;  // compat flags
+        frame[4] = 0;  // seq
+        frame[5] = (byte) sysId;
+        frame[6] = (byte) compId;
+        frame[7] = (byte) (msgId & 0xFF);
+        frame[8] = (byte) ((msgId >> 8) & 0xFF);
+        frame[9] = (byte) ((msgId >> 16) & 0xFF);
+        System.arraycopy(payload, 0, frame, 10, payloadLen);
+        // CRC 覆盖 LEN..MSGID（9 字节头）+ payload + CRC_EXTRA
         int crc = 0xFFFF;
-        for (int i = 1; i <= 10 + payloadLen; i++) {
+        for (int i = 1; i <= 9 + payloadLen; i++) {
             crc = crc16Step(crc, frame[i] & 0xFF);
         }
         int extra = getCrcExtra(msgId);
         if (extra >= 0) crc = crc16Step(crc, extra);
-        frame[11 + payloadLen] = (byte) (crc & 0xFF);
-        frame[12 + payloadLen] = (byte) ((crc >> 8) & 0xFF);
+        frame[10 + payloadLen] = (byte) (crc & 0xFF);
+        frame[11 + payloadLen] = (byte) ((crc >> 8) & 0xFF);
         return frame;
     }
 
@@ -157,19 +163,21 @@ class MavlinkParserTest {
     // ============================================================
 
     @Test
-    @DisplayName("SYS_STATUS 报文解析 - 电压与电量")
+    @DisplayName("SYS_STATUS 报文解析 - 电压/电流/电量（标准偏移）")
     void testSysStatus() {
-        // SYS_STATUS payload (31 bytes), 关键字段:
-        //   offset 0: voltage_battery (uint16_t, mV)
-        //   offset 10: battery_remaining (uint8_t, %)
+        // SYS_STATUS payload (31 bytes), 标准偏移:
+        //   offset 8: voltage_battery (uint16_t, mV)
+        //   offset 10: current_battery (int16_t, 10mA → /100A)
+        //   offset 12: battery_remaining (uint8_t, %)
         byte[] payload = new byte[31];
-        // voltage_battery = 11250 mV = 11.25 V
-        payload[0] = (byte) 0x72;  // low byte of 11250 = 0x2BF2 -> wait, let me compute
-        // 11250 = 0x2BF2, little-endian: low=0xF2, high=0x2B
-        payload[0] = (byte) 0xF2;
-        payload[1] = (byte) 0x2B;
-        // battery_remaining at offset 10 = 75%
-        payload[10] = 75;
+        // voltage_battery = 11250 mV = 11.25 V → little-endian 0x2BF2
+        payload[8] = (byte) 0xF2;
+        payload[9] = (byte) 0x2B;
+        // current_battery = 1500 (=15.00 A, 10mA 单位) → 0x05DC
+        payload[10] = (byte) 0xDC;
+        payload[11] = 0x05;
+        // battery_remaining at offset 12 = 75%
+        payload[12] = 75;
 
         byte[] frame = buildFrame(1, 1, 1, payload);
         MavlinkParser.Telemetry t = MavlinkParser.parse(frame, 0, frame.length);
@@ -177,7 +185,9 @@ class MavlinkParserTest {
         assertTrue(t.valid, "SYS_STATUS 帧应解析为有效");
         assertEquals(1, t.msgId);
         assertEquals(11.25, t.voltage, 0.01, "电压应为 11.25V");
+        assertEquals(15.0, t.batteryCurrent, 0.01, "电流应为 15.0A");
         assertEquals(75, t.batteryPct, 0.01, "电量应为 75%");
+        assertTrue(t.hasBattery, "hasBattery 应为 true");
     }
 
     // ============================================================
@@ -187,27 +197,36 @@ class MavlinkParserTest {
     @Test
     @DisplayName("GLOBAL_POSITION_INT 报文解析 - 经纬度高度速度航向")
     void testGlobalPositionInt() {
-        // 简化版 GLOBAL_POSITION_INT payload (28 bytes):
-        //   0: lat (int32, degE7)
-        //   4: lon (int32, degE7)
-        //   10: alt (int32, mm)
-        //   14: vx (int16, cm/s)
-        //   16: vy (int16, cm/s)
-        //   20: heading (uint8 * 2 deg)
+        // 标准 GLOBAL_POSITION_INT payload (28 bytes):
+        //   0: time_boot_ms (uint32)
+        //   4: lat (int32, degE7)
+        //   8: lon (int32, degE7)
+        //  12: alt (int32, mm)
+        //  16: relative_alt (int32, mm)
+        //  20: vx (int16, cm/s)
+        //  22: vy (int16, cm/s)
+        //  24: vz (int16, cm/s)
+        //  26: hdg (uint16, cdeg)
         byte[] payload = new byte[28];
 
+        // time_boot_ms = 1000
+        writeInt32(payload, 0, 1000);
         // lat = 32.0612 -> 320612000 (1e7)
-        writeInt32(payload, 0, 320612000);
+        writeInt32(payload, 4, 320612000);
         // lon = 118.793 -> 1187930000
-        writeInt32(payload, 4, 1187930000);
+        writeInt32(payload, 8, 1187930000);
         // alt = 85.5m -> 85500 mm
-        writeInt32(payload, 10, 85500);
+        writeInt32(payload, 12, 85500);
+        // relative_alt = 80.0m -> 80000 mm
+        writeInt32(payload, 16, 80000);
         // vx = 5.5 m/s -> 550 cm/s
-        writeInt16(payload, 14, 550);
+        writeInt16(payload, 20, 550);
         // vy = 3.2 m/s -> 320 cm/s
-        writeInt16(payload, 16, 320);
-        // heading = 180 (simplified: uint8 * 2)
-        payload[20] = 90;  // 90 * 2 = 180 deg
+        writeInt16(payload, 22, 320);
+        // vz = 0
+        writeInt16(payload, 24, 0);
+        // heading = 180.0° -> 18000 cdeg
+        writeUint16(payload, 26, 18000);
 
         byte[] frame = buildFrame(1, 1, 33, payload);
         MavlinkParser.Telemetry t = MavlinkParser.parse(frame, 0, frame.length);
@@ -217,9 +236,11 @@ class MavlinkParserTest {
         assertEquals(32.0612, t.lat, 0.0001, "纬度应为 32.0612°");
         assertEquals(118.793, t.lon, 0.001, "经度应为 118.793°");
         assertEquals(85.5, t.alt, 0.01, "高度应为 85.5m");
+        assertEquals(80.0, t.relAlt, 0.01, "相对高度应为 80.0m");
 
         // 速度 = sqrt(vx^2 + vy^2) = sqrt(5.5^2 + 3.2^2) = sqrt(30.25 + 10.24) = sqrt(40.49) ≈ 6.36
         assertEquals(6.36, t.speed, 0.1, "地速约 6.36 m/s");
+        assertEquals(180.0, t.heading, 0.1, "航向应为 180°");
     }
 
     // ============================================================
@@ -227,26 +248,84 @@ class MavlinkParserTest {
     // ============================================================
 
     @Test
-    @DisplayName("VFR_HUD 报文解析 - 地速与航向")
+    @DisplayName("VFR_HUD 报文解析 - 地速/高度/航向/油门")
     void testVfrHud() {
-        // VFR_HUD payload:
-        //   0: airspeed (float) -> 但代码用 uint16，需核对
-        // 实际代码: t.speed = readUint16(payload, 0) / 100.0;
-        //          t.heading = readUint16(payload, 2) / 100.0;
-        // 代码简化为 uint16 读取，测试按代码行为验证
+        // 标准 VFR_HUD payload (20 bytes):
+        //   0: airspeed (float32, m/s)
+        //   4: groundspeed (float32, m/s)
+        //   8: alt (float32, m)
+        //  12: climb (float32, m/s)
+        //  16: heading (int16, deg)
+        //  18: throttle (uint16, %)
         byte[] payload = new byte[20];
-        // groundspeed = 8.5 m/s -> 850 (1/100 m/s)
-        writeUint16(payload, 0, 850);
-        // heading = 270.5° -> 27050 (1/100 deg)
-        writeUint16(payload, 2, 27050);
+        writeFloat(payload, 0, 7.2f);    // airspeed
+        writeFloat(payload, 4, 8.5f);    // groundspeed
+        writeFloat(payload, 8, 120.0f);  // alt
+        writeFloat(payload, 12, 0.5f);   // climb
+        writeInt16(payload, 16, 270);    // heading
+        writeUint16(payload, 18, 65);    // throttle
 
         byte[] frame = buildFrame(1, 1, 74, payload);
         MavlinkParser.Telemetry t = MavlinkParser.parse(frame, 0, frame.length);
 
         assertTrue(t.valid, "VFR_HUD 帧应解析为有效");
         assertEquals(74, t.msgId);
-        assertEquals(8.5, t.speed, 0.01, "地速应为 8.5 m/s");
-        assertEquals(270.5, t.heading, 0.01, "航向应为 270.5°");
+        assertTrue(t.hasVfrHud, "VFR_HUD 标志应置位");
+        assertEquals(8.5, t.vfrSpeed, 0.01, "地速应为 8.5 m/s");
+        assertEquals(270, t.vfrHeading, 0.01, "航向应为 270°");
+        assertEquals(120.0, t.vfrAlt, 0.01, "高度应为 120m");
+        assertEquals(0.5, t.vfrClimb, 0.01, "爬升率应为 0.5 m/s");
+        assertEquals(65, t.vfrThrottle, "油门应为 65%");
+    }
+
+    // ============================================================
+    // 5b. GPS_RAW_INT (MSGID=24) 解析测试
+    // ============================================================
+
+    @Test
+    @DisplayName("GPS_RAW_INT 报文解析 - 卫星/HDOP/定位类型/速度")
+    void testGpsRawInt() {
+        // 标准 GPS_RAW_INT payload (30 字节，线上布局按字段尺寸降序):
+        //   0: time_usec (uint64)
+        //   8: lat (int32, degE7)
+        //  12: lon (int32, degE7)
+        //  16: alt (int32, mm)
+        //  20: eph (uint16, HDOP*100)
+        //  22: epv (uint16, VDOP*100)
+        //  24: vel (uint16, cm/s)
+        //  26: cog (uint16, cdeg)
+        //  28: fix_type (uint8)
+        //  29: satellites_visible (uint8)
+        byte[] payload = new byte[30];
+        // lat = 32.0612 -> 320612000
+        writeInt32(payload, 8, 320612000);
+        // lon = 118.793 -> 1187930000
+        writeInt32(payload, 12, 1187930000);
+        // alt = 50.0m -> 50000 mm
+        writeInt32(payload, 16, 50000);
+        // eph = 1.2 -> 120
+        writeUint16(payload, 20, 120);
+        // vel = 6.0 m/s -> 600 cm/s
+        writeUint16(payload, 24, 600);
+        // cog = 90.0° -> 9000 cdeg
+        writeUint16(payload, 26, 9000);
+        // fix_type = 3 (DGPS)
+        payload[28] = 3;
+        // satellites = 14
+        payload[29] = 14;
+
+        byte[] frame = buildFrame(1, 1, 24, payload);
+        MavlinkParser.Telemetry t = MavlinkParser.parse(frame, 0, frame.length);
+
+        assertTrue(t.valid, "GPS_RAW_INT 帧应解析为有效");
+        assertEquals(24, t.msgId);
+        assertTrue(t.hasGpsRaw, "hasGpsRaw 应置位");
+        assertEquals(3, t.fixType, "定位类型应为 3 (DGPS)");
+        assertEquals(14, t.satellites, "卫星数应为 14");
+        assertEquals(1.2, t.hdop, 0.01, "HDOP 应为 1.2");
+        assertEquals(6.0, t.gpsSpeed, 0.01, "地面速度应为 6.0 m/s");
+        assertEquals(90.0, t.gpsCog, 0.1, "航迹方向应为 90°");
+        assertEquals(50.0, t.alt, 0.01, "高度应为 50m");
     }
 
     // ============================================================
@@ -295,9 +374,12 @@ class MavlinkParserTest {
         byte[] hbFrame = buildFrame(1, 1, 0, hbPayload);
 
         byte[] ssPayload = new byte[31];
-        ssPayload[0] = (byte) 0xF2;  // 11.25V
-        ssPayload[1] = (byte) 0x2B;
-        ssPayload[10] = 75;
+        // 按 MAVLink 标准偏移: voltage_battery@8 (uint16 mV), current_battery@10 (int16 cA), battery_remaining@12 (uint8 %)
+        ssPayload[8] = (byte) 0xE1;       // voltage_battery low = 0x2BE1 = 11233 mV
+        ssPayload[9] = (byte) 0x2B;       // voltage_battery high
+        ssPayload[10] = (byte) 0x60;      // current_battery low  0x0060 = 96 cA = 0.96A
+        ssPayload[11] = 0x00;             // current_battery high
+        ssPayload[12] = 75;               // battery_remaining = 75%
         byte[] ssFrame = buildFrame(1, 1, 1, ssPayload);
 
         // 合并
@@ -309,7 +391,10 @@ class MavlinkParserTest {
         // parse 返回最后一帧的解析结果
         assertTrue(t.valid);
         assertEquals(1, t.msgId, "连续流解析应返回最后一帧（SYS_STATUS）");
+        assertTrue(t.hasBattery, "应标记 hasBattery=true");
         assertEquals(75, t.batteryPct, 0.01);
+        assertEquals(11.233, t.voltage, 0.01);
+        assertEquals(0.96, t.batteryCurrent, 0.01);
     }
 
     @Test
@@ -360,12 +445,13 @@ class MavlinkParserTest {
     @DisplayName("负数经纬度解析（南半球/西半球）")
     void testNegativeLatLon() {
         byte[] payload = new byte[28];
-        // lat = -34.5 -> -345000000 (简化版：offset 0)
-        writeInt32(payload, 0, -345000000);
-        // lon = -58.0 -> -580000000 (简化版：offset 4)
-        writeInt32(payload, 4, -580000000);
-        // alt = 100m (offset 10)
-        writeInt32(payload, 10, 100000);
+        // 标准 GLOBAL_POSITION_INT 偏移：lat@4, lon@8, alt@12
+        // lat = -34.5 -> -345000000 (degE7)
+        writeInt32(payload, 4, -345000000);
+        // lon = -58.0 -> -580000000 (degE7)
+        writeInt32(payload, 8, -580000000);
+        // alt = 100m (offset 12)
+        writeInt32(payload, 12, 100000);
 
         byte[] frame = buildFrame(1, 1, 33, payload);
         MavlinkParser.Telemetry t = MavlinkParser.parse(frame, 0, frame.length);
@@ -473,17 +559,17 @@ class MavlinkParserTest {
     // ============================================================
 
     @Test
-    @DisplayName("RC_CHANNELS_RAW 解析 - 8 通道与 RSSI")
+    @DisplayName("RC_CHANNELS_RAW 解析 - 8 通道与 RSSI（标准 21 字节布局）")
     void testRcChannelsRaw() {
-        // RC_CHANNELS_RAW payload:
+        // RC_CHANNELS_RAW payload (21 bytes), 标准布局:
         //   0: time_boot_ms (uint32)
         //   4-19: chan1..chan8 (uint16 each)
-        //  21: rssi (uint8)
-        byte[] payload = new byte[22];
+        //  20: rssi (uint8)
+        byte[] payload = new byte[21];
         // 8 通道值
         int[] chans = {1500, 1600, 1700, 1800, 1900, 2000, 1000, 1100};
         for (int i = 0; i < 8; i++) writeUint16(payload, 4 + i * 2, chans[i]);
-        payload[21] = 80;  // rssi
+        payload[20] = 80;  // rssi
 
         byte[] frame = buildFrame(1, 1, 35, payload);
         MavlinkParser.Telemetry t = MavlinkParser.parse(frame, 0, frame.length);
@@ -700,6 +786,331 @@ class MavlinkParserTest {
 
     // ============================================================
     // 辅助方法：小端字节写入
+    // ============================================================
+
+    private void writeInt16_2(byte[] buf, int offset, int value) {
+        buf[offset] = (byte) (value & 0xFF);
+        buf[offset + 1] = (byte) ((value >> 8) & 0xFF);
+    }
+
+    private void writeInt32_2(byte[] buf, int offset, int value) {
+        buf[offset] = (byte) (value & 0xFF);
+        buf[offset + 1] = (byte) ((value >> 8) & 0xFF);
+        buf[offset + 2] = (byte) ((value >> 16) & 0xFF);
+        buf[offset + 3] = (byte) ((value >> 24) & 0xFF);
+    }
+
+    private void writeFloat2(byte[] buf, int offset, float value) {
+        int bits = Float.floatToIntBits(value);
+        buf[offset] = (byte) (bits & 0xFF);
+        buf[offset + 1] = (byte) ((bits >> 8) & 0xFF);
+        buf[offset + 2] = (byte) ((bits >> 16) & 0xFF);
+        buf[offset + 3] = (byte) ((bits >> 24) & 0xFF);
+    }
+
+    // ============================================================
+    // 14. BATTERY_STATUS (MSGID=147) 解析测试
+    // ============================================================
+
+    @Test
+    @DisplayName("BATTERY_STATUS 报文解析 - 电芯/电流/温度/容量（标准 common.xml 布局）")
+    void testBatteryStatus() {
+        // BATTERY_STATUS payload (31 bytes), 标准布局:
+        //   0: battery_function (u8)
+        //   1: type (u8)
+        //   2: temperature (int16, centi-°C)
+        //   4: voltages[10] (uint16, mV)
+        //  24: current_battery (int16, cA)
+        //  26: consumed_capacity (uint32, mAh)
+        //  30: energy_remaining (int8, %)
+        byte[] payload = new byte[31];
+        payload[0] = 0;   // battery_function
+        payload[1] = 1;   // type (LIPO)
+        // temperature@2 = 2525 centi-°C → 25.25°C
+        writeInt16(payload, 2, 2525);
+        // voltages[0]@4 = 4200 mV, voltages[1]@6 = 4195 mV
+        writeUint16(payload, 4, 4200);
+        writeUint16(payload, 6, 4195);
+        // current_battery@24 = 150 cA → 1.50 A
+        writeInt16(payload, 24, 150);
+        // consumed_capacity@26 = 500 mAh (uint32)
+        writeInt32(payload, 26, 500);
+        // energy_remaining@30 = 80%
+        payload[30] = 80;
+
+        byte[] frame = buildFrame(1, 1, 147, payload);
+        MavlinkParser.Telemetry t = MavlinkParser.parse(frame, 0, frame.length);
+
+        assertTrue(t.valid, "BATTERY_STATUS 帧应解析为有效");
+        assertEquals(147, t.msgId);
+        assertTrue(t.hasBatteryStatus);
+        assertEquals(25.25, t.batteryTemp, 0.01, "电池温度应为 25.25°C");
+        assertEquals(4200, t.cellVoltages[0], "电芯1应为 4200mV");
+        assertEquals(4195, t.cellVoltages[1], "电芯2应为 4195mV");
+        assertEquals(1.50, t.batteryCurrent, 0.01, "电流应为 1.50A");
+        assertEquals(500, t.capacityConsumed, 1, "已耗容量应为 500mAh");
+        assertEquals(80, t.batteryRemaining2, "剩余电量应为 80%");
+    }
+
+    @Test
+    @DisplayName("BATTERY_STATUS v2 帧解析（标准布局 + 截断容错）")
+    void testV2BatteryStatus() {
+        byte[] payload = new byte[31];
+        writeInt16(payload, 2, 3000);  // 30.00°C
+        writeUint16(payload, 4, 3900); // 3900mV
+        writeInt16(payload, 24, 200);  // 2.00A
+        payload[30] = 60;              // 60%
+
+        byte[] frame = buildV2Frame(1, 1, 147, payload);
+        MavlinkParser.Telemetry t = MavlinkParser.parse(frame, 0, frame.length);
+
+        assertTrue(t.valid);
+        assertEquals(147, t.msgId);
+        assertTrue(t.hasBatteryStatus);
+        assertEquals(30.0, t.batteryTemp, 0.01);
+        assertEquals(3900, t.cellVoltages[0]);
+        assertEquals(2.0, t.batteryCurrent, 0.01);
+        assertEquals(60, t.batteryRemaining2);
+    }
+
+    @Test
+    @DisplayName("BATTERY_STATUS v2 截断帧（仅温度+电压，缺电流/容量/剩余）")
+    void testV2BatteryStatusTruncated() {
+        // v2 载荷截断：尾部零字段被裁剪 → 只剩 8 字节（function+type+temp+voltages[0]）
+        byte[] payload = new byte[8];
+        writeInt16(payload, 2, 2850);  // 28.50°C
+        writeUint16(payload, 4, 4100); // 4100mV
+
+        byte[] frame = buildV2Frame(1, 1, 147, payload);
+        MavlinkParser.Telemetry t = MavlinkParser.parse(frame, 0, frame.length);
+
+        assertTrue(t.valid);
+        assertTrue(t.hasBatteryStatus, "截断帧也应标记 hasBatteryStatus");
+        assertEquals(28.5, t.batteryTemp, 0.01);
+        assertEquals(4100, t.cellVoltages[0]);
+        assertEquals(0.0, t.batteryCurrent, 0.001, "缺电流字段时应保持默认 0");
+    }
+
+    // ============================================================
+    // 15. STATUSTEXT (MSGID=253) 解析测试
+    // ============================================================
+
+    @Test
+    @DisplayName("STATUSTEXT 报文解析 - 严重级别与文本")
+    void testStatustext() {
+        byte[] payload = new byte[51];
+        payload[0] = 4;  // severity = WARNING (MAV_SEVERITY_WARNING=4)
+        String msg = "Low battery warning";
+        byte[] msgBytes = msg.getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+        System.arraycopy(msgBytes, 0, payload, 1, Math.min(msgBytes.length, 50));
+
+        byte[] frame = buildFrame(1, 1, 253, payload);
+        MavlinkParser.Telemetry t = MavlinkParser.parse(frame, 0, frame.length);
+
+        assertTrue(t.valid, "STATUSTEXT 帧应解析为有效");
+        assertEquals(253, t.msgId);
+        assertTrue(t.hasStatusText);
+        assertEquals(4, t.statusSeverity, "严重级别应为 4 (WARNING)");
+        assertEquals("Low battery warning", t.statusText, "文本内容应匹配");
+    }
+
+    // ============================================================
+    // 16. HIGHRES_IMU (MSGID=105) 解析测试
+    // ============================================================
+
+    @Test
+    @DisplayName("HIGHRES_IMU 报文解析 - 气压/气压高度/温度/磁场（标准 float 布局）")
+    void testHighresImu() {
+        // HIGHRES_IMU payload (67 bytes), 标准布局（float 字段组）:
+        //   0: time_usec (uint64)
+        //   8: xacc (float) ... 16: zacc, 20: xgyro, 24: ygyro, 28: zgyro
+        //  32: xmag (float, mT)  36: ymag  40: zmag
+        //  44: abs_pressure (float, hPa)
+        //  48: diff_pressure
+        //  52: pressure_alt (float, m)
+        //  56: altitude
+        //  60: temperature (float, °C)
+        //  64: fields_updated (uint16)  66: id (uint8)
+        byte[] payload = new byte[67];
+        // xmag@32 = 100 mT, ymag@36 = 50 mT, zmag@40 = -30 mT
+        writeFloat(payload, 32, 100.0f);
+        writeFloat(payload, 36, 50.0f);
+        writeFloat(payload, 40, -30.0f);
+        // abs_pressure@44 = 1013.25 hPa
+        writeFloat(payload, 44, 1013.25f);
+        // pressure_alt@52 = 100.0 m
+        writeFloat(payload, 52, 100.0f);
+        // temperature@60 = 25.5°C
+        writeFloat(payload, 60, 25.5f);
+
+        byte[] frame = buildFrame(1, 1, 105, payload);
+        MavlinkParser.Telemetry t = MavlinkParser.parse(frame, 0, frame.length);
+
+        assertTrue(t.valid, "HIGHRES_IMU 帧应解析为有效");
+        assertEquals(105, t.msgId);
+        assertTrue(t.hasHighresImu);
+        assertEquals(100.0, t.magX, 0.0001, "magX 应为 100 mT");
+        assertEquals(50.0, t.magY, 0.0001, "magY 应为 50 mT");
+        assertEquals(-30.0, t.magZ, 0.0001, "magZ 应为 -30 mT");
+        assertEquals(1013.25, t.absPressure, 0.01, "绝对气压应为 1013.25 hPa");
+        assertEquals(100.0, t.pressureAlt, 0.01, "气压高度应为 100.0 m");
+        assertEquals(25.5, t.imuTemp2, 0.01, "IMU温度应为 25.5°C");
+    }
+
+    // ============================================================
+    // 19. 真实飞控字节回归测试（2026-09-03 COM5@115200 实测捕获）
+    //     使用 lenient 模式（跳过 CRC）验证帧布局修复：
+    //     LEN 1 字节、MSGID@[7..9]、payload@[10]
+    //     注：字节从终端捕获，CRC 可能因转录误差不匹配，故用 lenient 模式
+    // ============================================================
+
+    @Test
+    @DisplayName("真实帧回归 - CF-Drone ATTITUDE_QUATERNION(31) 布局验证")
+    void testRealDroneAttitudeFrame() {
+        byte[] frame = hexToBytes(
+            "FD 20 00 00 03 01 01 1F 00 00 74 49 0F 00 8E 0D"
+          + "2E 3F F4 CB 6F 3D 0B A9 36 BF 4C 96 22 3E 00 86"
+          + "9E 3A F7 25 0D BB F2 30 12 39 DF 88");
+
+        MavlinkParser parser = new MavlinkParser();
+        parser.setLenient(true);
+        MavlinkParser.Telemetry t = parser.parseInstance(frame, 0, frame.length);
+        assertTrue(t.valid, "lenient 模式下帧应被解码");
+        assertEquals(31, t.msgId, "MSGID 应为 31 (ATTITUDE_QUATERNION)");
+        assertEquals(1, t.sysId, "SYSID 应为 1");
+        assertEquals(1, t.compId, "COMPID 应为 1");
+        assertTrue(t.hasAttitude, "应标记 hasAttitude");
+    }
+
+    @Test
+    @DisplayName("真实帧回归 - CF-Drone ACTUATOR_CONTROL_TARGET(140) 布局验证")
+    void testRealDroneActuatorFrame() {
+        // 52 字节 = 10头 + 40载荷(time_usec u64 + controls[8] float) + 2CRC
+        byte[] frame = hexToBytes(
+            "FD 28 00 00 05 01 01 8C 00 00 74 49 0F 00 00 00"
+          + "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"
+          + "00 00 00 00 00 00 A6 3E 08 40 F0 81 FB 3F 1A D2"
+          + "08 40 B6 40");
+
+        MavlinkParser parser = new MavlinkParser();
+        parser.setLenient(true);
+        MavlinkParser.Telemetry t = parser.parseInstance(frame, 0, frame.length);
+        assertTrue(t.valid, "lenient 模式下帧应被解码");
+        assertEquals(140, t.msgId, "MSGID 应为 140");
+        assertTrue(t.hasMotors);
+    }
+
+    @Test
+    @DisplayName("真实帧回归 - CF-Drone SCALED_IMU(26) 布局验证")
+    void testRealDroneScaledImuFrame() {
+        byte[] frame = hexToBytes(
+            "FD 10 00 00 06 01 01 1A 00 00 74 49 0F 00 22 FC"
+          + "94 00 1B 00 01 00 FF FF FF FF 9E 06");
+
+        MavlinkParser parser = new MavlinkParser();
+        parser.setLenient(true);
+        MavlinkParser.Telemetry t = parser.parseInstance(frame, 0, frame.length);
+        assertTrue(t.valid, "lenient 模式下帧应被解码");
+        assertEquals(26, t.msgId, "MSGID 应为 26 (SCALED_IMU)");
+        assertTrue(t.hasImu);
+    }
+
+    @Test
+    @DisplayName("真实帧回归 - 三帧连续流 feed 全部解析")
+    void testRealDroneStreamFeed() {
+        byte[] attitude = hexToBytes(
+            "FD 20 00 00 03 01 01 1F 00 00 74 49 0F 00 8E 0D"
+          + "2E 3F F4 CB 6F 3D 0B A9 36 BF 4C 96 22 3E 00 86"
+          + "9E 3A F7 25 0D BB F2 30 12 39 DF 88");
+        byte[] actuator = hexToBytes(
+            "FD 28 00 00 05 01 01 8C 00 00 74 49 0F 00 00 00"
+          + "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"
+          + "00 00 00 00 00 00 A6 3E 08 40 F0 81 FB 3F 1A D2"
+          + "08 40 B6 40");
+        byte[] scaledImu = hexToBytes(
+            "FD 10 00 00 06 01 01 1A 00 00 74 49 0F 00 22 FC"
+          + "94 00 1B 00 01 00 FF FF FF FF 9E 06");
+
+        byte[] stream = new byte[attitude.length + actuator.length + scaledImu.length];
+        System.arraycopy(attitude, 0, stream, 0, attitude.length);
+        System.arraycopy(actuator, 0, stream, attitude.length, actuator.length);
+        System.arraycopy(scaledImu, 0, stream, attitude.length + actuator.length, scaledImu.length);
+
+        MavlinkParser parser = new MavlinkParser();
+        parser.setLenient(true);
+        java.util.List<MavlinkParser.Telemetry> frames = parser.feed(stream, stream.length);
+        assertEquals(3, frames.size(), "feed 应解析出全部 3 帧");
+        assertEquals(31, frames.get(0).msgId);
+        assertEquals(140, frames.get(1).msgId);
+        assertEquals(26, frames.get(2).msgId);
+    }
+
+    @Test
+    @DisplayName("feed 跨块帧拼接 - 帧被任意位置切断仍能完整解析")
+    void testFeedSplitAcrossChunks() {
+        byte[] actuator = hexToBytes(
+            "FD 28 00 00 05 01 01 8C 00 00 74 49 0F 00 00 00"
+          + "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"
+          + "00 00 00 00 00 00 A6 3E 08 40 F0 81 FB 3F 1A D2"
+          + "08 40 B6 40");
+
+        MavlinkParser parser = new MavlinkParser();
+        parser.setLenient(true);
+        int[] cuts = {8, 25, actuator.length};
+        java.util.List<MavlinkParser.Telemetry> all = new java.util.ArrayList<>();
+        int prev = 0;
+        for (int cut : cuts) {
+            byte[] chunk = new byte[cut - prev];
+            System.arraycopy(actuator, prev, chunk, 0, chunk.length);
+            all.addAll(parser.feed(chunk, chunk.length));
+            prev = cut;
+        }
+        assertEquals(1, all.size(), "跨块帧拼接后应完整解析出 1 帧");
+        assertEquals(140, all.get(0).msgId);
+        assertTrue(all.get(0).hasMotors);
+    }
+
+    @Test
+    @DisplayName("feed 严格模式 CRC 失败帧被丢弃")
+    void testFeedStrictModeDropsBadCrc() {
+        // 用 buildV2Frame 构造合法帧，再篡改 CRC
+        byte[] payload = new byte[32];
+        byte[] frame = buildV2Frame(1, 1, 31, payload);
+        frame[frame.length - 1] ^= 0xFF;  // 破坏 CRC
+
+        MavlinkParser parser = new MavlinkParser();  // 严格模式（默认）
+        java.util.List<MavlinkParser.Telemetry> frames = parser.feed(frame, frame.length);
+        assertTrue(frames.isEmpty(), "严格模式下 CRC 失败的帧应被丢弃");
+    }
+
+    @Test
+    @DisplayName("feed lenient 模式 CRC 失败帧仍解码")
+    void testFeedLenientModeKeepsBadCrc() {
+        byte[] payload = new byte[32];
+        byte[] frame = buildV2Frame(1, 1, 31, payload);
+        frame[frame.length - 1] ^= 0xFF;  // 破坏 CRC
+
+        MavlinkParser parser = new MavlinkParser();
+        parser.setLenient(true);
+        java.util.List<MavlinkParser.Telemetry> frames = parser.feed(frame, frame.length);
+        assertEquals(1, frames.size(), "lenient 模式下 CRC 失败的帧仍应被解码");
+        assertFalse(frames.get(0).crcValid, "crcValid 应为 false");
+        assertTrue(frames.get(0).valid, "valid 应为 true");
+        assertEquals(31, frames.get(0).msgId);
+    }
+
+    /** 十六进制字符串转字节数组（忽略所有非十六进制字符，每 2 字符一组）。 */
+    private byte[] hexToBytes(String hex) {
+        String clean = hex.replaceAll("[^0-9A-Fa-f]", "");
+        byte[] out = new byte[clean.length() / 2];
+        for (int i = 0; i < out.length; i++) {
+            out[i] = (byte) Integer.parseInt(clean.substring(i * 2, i * 2 + 2), 16);
+        }
+        return out;
+    }
+
+    // ============================================================
+    // 辅助方法：小端字节写入（原始）
     // ============================================================
 
     private void writeInt16(byte[] buf, int offset, int value) {

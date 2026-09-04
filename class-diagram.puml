@@ -1,0 +1,493 @@
+@startuml 无人机地面站系统类图
+
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam nodesep 60
+skinparam ranksep 80
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #555555
+  ArrowColor #555555
+}
+skinparam note {
+  BackgroundColor #FFFACD
+  BorderColor #DAA520
+}
+
+' ============ MVC 三层包结构 ============
+package "View 层 (界面/交互)" #E8F5E9 {
+  class Main <<启动入口>> {
+    + start(Stage): void
+    - initMainView(Stage): void
+  }
+  class MainController <<FXML控制器>> {
+    - drone: Drone
+    - mission: Mission
+    - comm: CommunicationService
+    - batteryPredictor: BatteryPredictor
+    - airspace: AirspaceService
+    - paramService: ParamService
+    - mapCanvas: MapCanvas
+    - sensor: SensorChart
+    - settings: AppSettings
+    + init(Stage, AppSettings): void
+    + onImportMission(): void
+    + onExportMission(): void
+    + onAddWaypoint(): void
+    + onOptimizePath(): void
+    + onCheckConflict(): void
+    + onPredictBattery(): void
+    + onConnectE1(): void
+    + onArmDisarm(boolean): void
+    + onThemeToggle(): void
+  }
+  class MapCanvas <<地图渲染>> {
+    - zoom: int
+    - centerLon: double
+    - centerLat: double
+    - tileCache: HashMap<String, Image>
+    - waypoints: List<Waypoint>
+    - trail: List<double[]>
+    - clickHandler: BiConsumer<Double, Double>
+    + draw(): void
+    + setWaypoints(List<Waypoint>): void
+    + setDronePosition(double, double): void
+  }
+  class SensorChart <<传感器图表>> {
+    - chart: LineChart<Number, Number>
+    - series: Map<String, XYChart.Series>
+    - sampleCount: int
+    + push(Map<String, Double>): void
+    + clear(): void
+    + getNode(): LineChart
+  }
+  class AMapWebView <<高德地图WebView>> {
+    + loadMap(): void
+    + addWaypoint(double, double): void
+    + setDronePosition(double, double): void
+  }
+  class ThemeManager <<主题管理>> {
+    - {static} currentTheme: String
+    + {static} applyTheme(Scene): void
+    + {static} toggle(Scene): void
+    + {static} isDark(): boolean
+  }
+  class AlertService <<弹窗服务>> {
+    + {static} info(Stage, String, String): void
+    + {static} warn(Stage, String, String): void
+    + {static} error(Stage, String, String): void
+    + {static} createConfirm(Stage, String, String): Alert
+  }
+}
+
+package "Controller/Service 层 (业务逻辑)" #E3F2FD {
+  class CommunicationService <<通信服务>> {
+    - link: Link
+    - running: volatile boolean
+    - listenThread: Thread
+    - heartbeatTimer: Timer
+    - queue: ConcurrentLinkedQueue<Telemetry>
+    - callback: Consumer<Telemetry>
+    - reconnectAttempts: int
+    + setLink(Link): void
+    + setCallback(Consumer<Telemetry>): void
+    + start(): void
+    + stop(): void
+    + isConnected(): boolean
+    + send(byte[]): void
+    + requestParamList(): void
+    + armDisarm(boolean): void
+    + setMode(int): void
+  }
+  interface Link <<链路抽象>> {
+    + open(): void
+    + read(): byte[]
+    + send(byte[]): void
+    + close(): void
+    + isOpen(): boolean
+  }
+  class UdpLink {
+    - socket: DatagramSocket
+    - localPort: int
+    - remoteHost: String
+    - remotePort: int
+  }
+  class SerialLink {
+    - serialPort: SerialPort
+    - portName: String
+    - baudRate: int
+    - rxBuffer: BlockingQueue<Byte>
+    + {static} listPorts(): String[]
+  }
+  class TcpLink {
+  }
+  class MavlinkParser <<MAVLink解析>> {
+    + {static} parse(byte[], int, int): Telemetry
+    - {static} decodeMessage(int, byte[], Telemetry): void
+    - {static} verifyCrc(byte[], int, int, int, int): boolean
+    - {static} crc16Step(int, int): int
+    - {static} getCrcExtra(int): int
+    - {static} quaternionToEuler(double, double, double, double, Telemetry): void
+  }
+  class MavlinkEncoder <<MAVLink编码>> {
+    - {static} SEQ: AtomicInteger
+    + {static} heartbeat(int, int): byte[]
+    + {static} commandLong(...): byte[]
+    + {static} armDisarm(...): byte[]
+    + {static} setMode(...): byte[]
+    + {static} paramRequestList(...): byte[]
+    + {static} paramSet(...): byte[]
+    + {static} buildFrame(int, int, int, byte[]): byte[]
+  }
+  class ParamService <<参数服务>> {
+    - params: Map<Integer, ParamItem>
+    - totalCount: int
+    + onParamValue(Telemetry): void
+    + isComplete(): boolean
+    + getParams(): List<ParamItem>
+    + getParamsByPrefix(String): List<ParamItem>
+    + clear(): void
+  }
+  class PathOptimizer <<路径优化>> {
+    + {static} optimize(List<Waypoint>, Waypoint): List<Waypoint>
+    + {static} totalDistance(List<Waypoint>): double
+    + {static} optimize2opt(List<Waypoint>): List<Waypoint>
+    - {static} reverseSegment(List<Waypoint>, int, int): void
+  }
+  class ConflictChecker <<冲突检测>> {
+    - {static} MIN_SEPARATION_M: double
+    + {static} checkSeparation(List<Waypoint>): List<String>
+    + {static} checkRange(List<Waypoint>, double, Waypoint): List<String>
+    + {static} checkAll(List<Waypoint>, double, Waypoint): List<String>
+  }
+  class BatteryPredictor <<电池预测>> {
+    - totalCapacityMah: double
+    - samples: Deque<Sample>
+    - theta: double[]
+    + observe(double, double, double, double, int, double): boolean
+    + predictDynamic(): double
+    + predict(double, double, double): double[]
+    + sampleCount(): int
+    + reset(): void
+    - trainDefault(): void
+    - {static} normalEquation(double[][], double[]): double[]
+    - {static} invert(double[][]): double[][]
+  }
+  class AirspaceService <<空域服务>> {
+    - packages: List<AirspacePackage>
+    - layerVisible: boolean[]
+    + addPackage(AirspacePackage): void
+    + getActiveZones(): List<Zone>
+    + validateMission(List<Waypoint>): ValidationResult
+    + isDataExpired(): boolean
+    - isPointInCoverage(double, double): boolean
+    - {static} pointInPolygon(double[], List<double[]>): boolean
+    - {static} segmentCrossesPolygon(double[], double[], List<double[]>): boolean
+  }
+  class GeoUtil <<地理工具>> {
+    - {static} R: double
+    + {static} haversine(double, double, double, double): double
+    + {static} lonLatToPixel(double, double, int): double[]
+    + {static} pixelToLonLat(double, double, int): double[]
+    + {static} pixelToTile(double, double): int[]
+  }
+  class MissionXmlCodec <<XML编解码>> {
+    + {static} save(Mission, File): void
+    + {static} load(File): Mission
+  }
+  class CsvLogStore <<CSV存储>> {
+    + {static} backup(List<LogRecord>, File): void
+    + {static} restore(File): List<LogRecord>
+    + {static} filter(List<LogRecord>, Predicate, String): List<LogRecord>
+  }
+  class NetworkMonitor <<网络监控>> {
+    + isReachable(String, int): boolean
+    + getLatencyMs(): long
+  }
+}
+
+package "Model 层 (实体/数据)" #FFF3E0 {
+  class Drone <<无人机实体>> {
+    - model: StringProperty
+    - maxRange: DoubleProperty
+    - lat: DoubleProperty
+    - lon: DoubleProperty
+    - alt: DoubleProperty
+    - speed: DoubleProperty
+    - heading: DoubleProperty
+    - batteryPct: DoubleProperty
+    - voltage: DoubleProperty
+    - signalPct: DoubleProperty
+    - roll/pitch/yaw: DoubleProperty
+    - armed: BooleanProperty
+    - status: StringProperty
+    - positionAvailable: BooleanProperty
+    - batteryAvailable: BooleanProperty
+    + updateFromTelemetry(Telemetry): void
+    + markDisconnected(): void
+    + updateTelemetry(double, double, ...): void
+    + getCustomModeName(): String
+  }
+  class Waypoint <<航点>> {
+    - lat: double
+    - lon: double
+    - alt: double
+    - hold: double
+    - action: ActionMode
+    - priority: int
+    + distanceTo(Waypoint): double
+    + validate(): void
+    + setLat(double): void
+    + setLon(double): void
+    + setAlt(double): void
+    + setPriority(int): void
+  }
+  class Mission <<飞行任务>> {
+    - droneModel: String
+    - maxRange: double
+    - sensorTypes: List<String>
+    - waypoints: LinkedList<Waypoint>
+    - uploaded: boolean
+    + addWaypoint(Waypoint): void
+    + removeWaypoint(int): void
+    + clearWaypoints(): void
+    + totalDistance(): double
+    + getWaypoints(): List<Waypoint>
+  }
+  class FlightLog <<飞行日志>> {
+    - id: String
+    - droneModel: String
+    - startTime: long
+    - endTime: long
+    - totalDistance: double
+    - maxAltitude: double
+    - maxSpeed: double
+    - minVoltage: double
+    - trajectory: List<double[]>
+    + getFormattedDuration(): String
+    + getFormattedStartTime(): String
+  }
+  class LogRecord <<日志记录>> {
+    - id: int
+    - timestamp: long
+    - lat: double
+    - lon: double
+    - alt: double
+    - speed: double
+    - voltage: double
+    - droneModel: String
+    - duration: int
+    - distance: double
+    + getFormattedTime(): String
+  }
+  enum ActionMode <<动作模式>> {
+    CRUISE = "巡航"
+    LOITER = "悬停"
+    TAKEPHOTO = "拍照"
+    + getLabel(): String
+  }
+  class AppSettings <<应用设置>> {
+    + runMode: String
+    + serialPort: String
+    + baudRate: int
+    + txRate: int
+    + sampleInterval: int
+    + mapZoom: int
+    + theme: String
+    + e1Ip: String
+    + e1Port: int
+    + droneModel: String
+    + droneMaxRange: double
+    + load(): void
+    + save(): void
+  }
+}
+
+' ============ 内部类/嵌套类 ============
+package "内部类/嵌套类" #F3E5F5 {
+  class "MavlinkParser.Telemetry" as Telemetry <<遥测数据>> {
+    + valid: boolean
+    + lat, lon, alt, speed, heading: double
+    + voltage, batteryPct: double
+    + customMode, systemStatus: int
+    + armed: boolean
+    + roll, pitch, yaw: double
+    + hasPosition, hasBattery, hasHeartbeat: boolean
+    + paramName, paramValue, paramType
+    + ackCommand, ackResult: int
+  }
+  class "ParamService.ParamItem" as ParamItem <<参数项>> {
+    + name: String
+    + value: double
+    + index: int
+    + type: int
+    + dirty: boolean
+  }
+  class "AirspaceService.Zone" as Zone <<空域区域>> {
+    + name: String
+    + type: ZoneType
+    + maxAlt: Double
+    + coords: List<double[]>
+    + timeStart: long
+    + timeEnd: long
+  }
+  class "AirspaceService.AirspacePackage" as AirspacePackage <<空域数据包>> {
+    + id: String
+    + name: String
+    + coverage: String
+    + version: String
+    + zones: List<Zone>
+  }
+  class "AirspaceService.ValidationResult" as ValidationResult <<校验结果>> {
+    + result: CheckResult
+    + message: String
+    + violatingSegments: List<int[]>
+  }
+  enum "AirspaceService.ZoneType" as ZoneType {
+    NOFLY
+    RESTRICTION
+    TEMPORARY
+    CUSTOM
+  }
+  enum "AirspaceService.CheckResult" as CheckResult {
+    PASS
+    WARN
+    BLOCK
+    UNKNOWN
+    IDLE
+  }
+  class "BatteryPredictor.Sample" as Sample <<电池采样>> {
+    + t: double
+    + current: double
+    + voltage: double
+    + consumedMah: double
+    + remainingPct: int
+    + tempC: double
+  }
+  enum "MapCanvas.MapStyle" as MapStyle <<地图样式>> {
+    STANDARD
+    SATELLITE
+    TERRAIN
+  }
+}
+
+' ============ 关系定义 ============
+
+' --- 泛化/实现 ---
+Link <|.. UdpLink
+Link <|.. SerialLink
+Link <|.. TcpLink
+
+' --- 组合关系 (整体-部分, 生命周期一致) ---
+MainController *-- Drone : owns
+MainController *-- Mission : owns
+MainController *-- CommunicationService : owns
+MainController *-- BatteryPredictor : owns
+MainController *-- AirspaceService : owns
+MainController *-- ParamService : owns
+
+Mission *-- Waypoint : LinkedList<Waypoint>
+
+AirspaceService *-- AirspacePackage
+AirspaceService *-- Zone
+AirspaceService *-- ValidationResult
+AirspacePackage o-- Zone : zones
+
+BatteryPredictor *-- Sample : samples
+
+ParamService *-- ParamItem : params
+
+MavlinkParser *-- Telemetry : produces
+
+' --- 聚合关系 (整体-部分, 生命周期独立) ---
+CommunicationService o-- Link : setLink注入
+
+MapCanvas o-- Waypoint : waypoints
+MapCanvas o-- Zone : airspaceZones
+
+' --- 关联关系 ---
+Waypoint --> ActionMode : action
+Waypoint ..> GeoUtil : distanceTo调用
+
+' --- 依赖关系 ---
+MainController ..> AppSettings : 读写配置
+MainController ..> MissionXmlCodec : 导入导出
+MainController ..> CsvLogStore : 日志备份恢复
+MainController ..> Telemetry : 遥测回调
+MainController ..> AlertService : 弹窗
+MainController ..> ThemeManager : 主题
+MainController ..> NetworkMonitor : 网络诊断
+MainController --> MapCanvas : uses
+MainController --> SensorChart : uses
+MainController --> AMapWebView : uses
+
+CommunicationService ..> MavlinkParser : 调用parse
+CommunicationService ..> MavlinkEncoder : 调用编码
+CommunicationService ..> Telemetry : 队列传输
+
+Drone ..> Telemetry : updateFromTelemetry
+
+PathOptimizer ..> Waypoint : optimize
+ConflictChecker ..> Waypoint : check
+ConflictChecker ..> PathOptimizer : totalDistance
+AirspaceService ..> Waypoint : validateMission
+
+MissionXmlCodec ..> Mission : save/load
+MissionXmlCodec ..> Waypoint : validate
+
+CsvLogStore ..> LogRecord : backup/restore
+
+MapCanvas ..> GeoUtil : 坐标转换
+MapCanvas ..> Waypoint : 绘制航点
+
+Main ..> MainController : 创建
+Main ..> AppSettings : 加载
+Main ..> ThemeManager : 初始化主题
+
+SensorChart ..> Telemetry : 数据源
+
+' ============ SOLID 原则标注 ============
+note right of Link
+  <b>OCP (开闭原则)</b>
+  Link 接口隔离链路实现，
+  新增链路类型不需修改
+  CommunicationService
+end note
+
+note right of CommunicationService
+  <b>SRP (单一职责)</b>
+  仅负责收发与解析，
+  不碰文件、不碰 UI
+end note
+
+note right of Drone
+  <b>封装原则</b>
+  状态仅经 updateFromTelemetry
+  变更，UI 只读绑定
+end note
+
+note right of PathOptimizer
+  <b>SRP + DIP</b>
+  纯静态算法类，
+  依赖 Waypoint 抽象
+end note
+
+note right of Waypoint
+  <b>封装 + 校验</b>
+  坐标越界在 setter
+  双入口拦截 (R7.3)
+end note
+
+note left of MainController
+  <b>改进建议</b>
+  当前为 God Class，
+  建议拆分为:
+  - MissionController
+  - TelemetryController
+  - SettingsController
+  遵循 SRP
+end note
+
+@enduml

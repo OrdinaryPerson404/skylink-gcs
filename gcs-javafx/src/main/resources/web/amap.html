@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>GCS AMap</title>
+<style>
+  html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0d1117; }
+  #map { width: 100%; height: 100%; background: #0d1117; }
+  /* JavaFX WebView 无 WebGL，高德深色矢量样式不生效，对瓦片元素做暗色滤镜。
+     注意：只能 filter 瓦片级 img（256px 小纹理）；filter 整个 .amap-maps 会让
+     WebView 创建超大离屏纹理，触发 Prism RTTexture 渲染失败，瓦片整层不绘制。
+     覆盖物（Polygon/Marker 等在 .amap-overlays 容器）保持原色。 */
+  body.dark .amap-layer img {
+    -webkit-filter: invert(1) hue-rotate(180deg) saturate(0.55) brightness(0.96);
+    filter: invert(1) hue-rotate(180deg) saturate(0.55) brightness(0.96);
+  }
+  body.sat .amap-layer img { -webkit-filter: none; filter: none; }
+  .amap-logo, .amap-copyright { display: none !important; }
+  .amap-ctrl-list-layer { display: none !important; }
+  /* 无人机标记 */
+  .drone-marker { width: 40px; height: 40px; cursor: pointer; position: relative; }
+  .drone-marker .drone-arrow {
+    position: absolute; left: 50%; top: 50%; width: 26px; height: 26px;
+    margin: -13px 0 0 -13px;
+    transition: transform 0.3s ease;
+  }
+  .drone-marker .drone-alt-tag {
+    position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
+    background: rgba(22,27,34,0.92); color: #58a6ff; font-size: 9px;
+    font-family: "JetBrains Mono", Consolas, monospace; padding: 1px 5px; border-radius: 3px;
+    border: 1px solid #30363d; white-space: nowrap;
+  }
+  /* 航点标记 */
+  .wp-marker {
+    width: 22px; height: 22px; border-radius: 50%; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: bold; font-family: "JetBrains Mono", Consolas, monospace;
+    border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  }
+  .wp-marker.home { background: #22c55e; }
+  .wp-marker.normal { background: #3b82f6; }
+  /* 起终点标记（飞行日志） */
+  .ep-marker {
+    width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  }
+  .ep-marker.start { background: #22c55e; }
+  .ep-marker.end { background: #ef4444; }
+  .ep-label {
+    background: rgba(22,27,34,0.92); color: #e6edf3; font-size: 10px;
+    padding: 1px 6px; border-radius: 3px; border: 1px solid #30363d; white-space: nowrap;
+  }
+  #errBox {
+    display: none; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    color: #ef4444; font-size: 13px; text-align: center; line-height: 1.8;
+    background: rgba(13,17,23,0.9); padding: 16px 24px; border: 1px solid #ef4444; border-radius: 6px;
+    z-index: 999;
+  }
+  #loading {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    color: #6e7681; font-size: 12px; z-index: 998;
+  }
+  .spin {
+    display: inline-block; width: 14px; height: 14px; border: 2px solid #30363d;
+    border-top-color: #58a6ff; border-radius: 50%; animation: rot 0.9s linear infinite;
+    vertical-align: -2px; margin-right: 8px;
+  }
+  @keyframes rot { to { transform: rotate(360deg); } }
+</style>
+<script src="https://webapi.amap.com/maps?v=2.0&key=e8327a3b1618e6d0c100ee550c824af3&plugin=AMap.Scale,AMap.TileLayer.Satellite,AMap.Marker,AMap.Polyline,AMap.Polygon"></script>
+</head>
+<body>
+<div id="map"></div>
+<div id="loading"><span class="spin"></span>地图加载中...</div>
+<div id="errBox">高德地图加载失败<br>请检查网络连接后重启程序</div>
+<script>
+var map = null;
+// 应用默认深色主题（Java 侧 setDark 到达前也保持暗色背景与瓦片滤镜）
+document.body.classList.add('dark');
+// Java 侧在页面 SUCCEEDED 时即开始调用 Gcs.*，此时 window.onload 可能尚未执行、
+// map 还未创建。未就绪的调用进入队列，地图初始化完成后按序回放。
+var pendingCalls = [];
+function guard(fn) {
+  return function () {
+    if (!map) {
+      var args = arguments, self = this;
+      pendingCalls.push(function () { fn.apply(self, args); });
+      return;
+    }
+    return fn.apply(this, arguments);
+  };
+}
+function flushPending() {
+  var q = pendingCalls;
+  pendingCalls = [];
+  q.forEach(function (f) { try { f(); } catch (e) {} });
+}
+var droneMarker = null;
+var homeMarker = null;
+var wpMarkers = [];
+var planLine = null;
+var trailLine = null;
+var trailPath = [];
+var zonePolygons = [];
+var flightLine = null;
+var flightMarkers = [];
+var interactMode = true;
+var followMode = true;
+var trailVisible = true;
+var airspaceVisible = true;
+var isSatellite = false;
+var satLayer = null;
+var DRONE_HOME = [118.793, 32.0612];
+
+// 瓦片暗色滤镜：软件渲染管线（-Dprism.order=sw）下，body class 动态切换后
+// CSS filter 规则不会对已存在的瓦片 img 重新合成（亮→暗滤镜不恢复）。
+// 改为直接给瓦片 img 设置内联 filter，并用 MutationObserver 覆盖动态加载的瓦片。
+var TILE_FILTER = 'invert(1) hue-rotate(180deg) saturate(0.55) brightness(0.96)';
+function tileFilterActive() {
+  return document.body.classList.contains('dark') &&
+         !document.body.classList.contains('sat');
+}
+function setImgFilter(img) {
+  var f = tileFilterActive() ? TILE_FILTER : '';
+  img.style.webkitFilter = f;
+  img.style.filter = f;
+}
+function applyTileFilter() {
+  var imgs = document.querySelectorAll('.amap-layer img');
+  for (var i = 0; i < imgs.length; i++) setImgFilter(imgs[i]);
+}
+var tileObserver = new MutationObserver(function (mutations) {
+  for (var m = 0; m < mutations.length; m++) {
+    var nodes = mutations[m].addedNodes;
+    for (var n = 0; n < nodes.length; n++) {
+      var node = nodes[n];
+      if (node.nodeType !== 1) continue;
+      if (node.tagName === 'IMG') {
+        setImgFilter(node);
+      } else if (node.querySelectorAll) {
+        var imgs = node.querySelectorAll('img');
+        for (var i = 0; i < imgs.length; i++) setImgFilter(imgs[i]);
+      }
+    }
+  }
+});
+tileObserver.observe(document.body, { childList: true, subtree: true });
+
+function bridgeReady() {
+  return typeof window.gcsBridge !== 'undefined' && window.gcsBridge !== null;
+}
+
+// 页面/脚本异常上报（WebView 控制台不可见，错误桥接到 Java 日志）
+window.onerror = function (msg, src, line, col) {
+  try {
+    if (bridgeReady()) window.gcsBridge.onMapError(String(msg) + " @" + (line || 0));
+  } catch (e) {}
+};
+window.addEventListener('unhandledrejection', function (e) {
+  try {
+    if (bridgeReady()) window.gcsBridge.onMapError("promise: " + String(e.reason));
+  } catch (err) {}
+});
+
+function notifyFail() {
+  if (bridgeReady()) {
+    try { window.gcsBridge.onMapFailed(); } catch (e) {}
+  }
+}
+
+function initMap() {
+  if (typeof AMap === 'undefined') {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('errBox').style.display = 'block';
+    notifyFail();
+    return;
+  }
+  try {
+    map = new AMap.Map('map', {
+      zoom: 16,
+      center: DRONE_HOME,
+      viewMode: '2D',
+      mapStyle: 'amap://styles/dark',
+      resizeEnable: true
+    });
+    map.addControl(new AMap.Scale({ position: 'LB' }));
+
+    // 计划航线（蓝色虚线）
+    planLine = new AMap.Polyline({
+      path: [], strokeColor: '#3b82f6', strokeWeight: 2, strokeOpacity: 0.7,
+      strokeStyle: 'dashed', strokeDasharray: [6, 5], zIndex: 20
+    });
+    planLine.setMap(map);
+
+    // 飞行轨迹（蓝色实线）
+    trailLine = new AMap.Polyline({
+      path: [], strokeColor: '#3b82f6', strokeWeight: 2.5, strokeOpacity: 0.85, zIndex: 21
+    });
+    trailLine.setMap(map);
+
+    // 飞行日志轨迹（绿色）
+    flightLine = new AMap.Polyline({
+      path: [], strokeColor: '#22c55e', strokeWeight: 3, strokeOpacity: 0.9,
+      showDir: true, zIndex: 22
+    });
+
+    // 点击地图空白处 → 通知 Java 添加航点
+    map.on('click', function (e) {
+      if (!interactMode) return;
+      if (bridgeReady()) {
+        window.gcsBridge.onMapClick(e.lnglat.getLat(), e.lnglat.getLng());
+      }
+    });
+    // 右键空白 → 地图上下文菜单
+    map.on('rightclick', function (e) {
+      if (!interactMode) return;
+      if (bridgeReady()) {
+        window.gcsBridge.onMapRightClick(e.lnglat.getLat(), e.lnglat.getLng());
+      }
+    });
+    // 鼠标移动 → 状态栏经纬度
+    map.on('mousemove', function (e) {
+      if (bridgeReady()) {
+        window.gcsBridge.onMouseMove(e.lnglat.getLat(), e.lnglat.getLng());
+      }
+    });
+
+    document.getElementById('loading').style.display = 'none';
+    // 地图就绪：回放 Java 侧在页面加载完成前推送的状态/数据
+    flushPending();
+
+    // 软件渲染管线（-Dprism.order=sw）下，窗口最小化/还原或容器尺寸剧变后
+    // 瓦片层不会自动重新合成（表现为地图区域只剩底色）。监听 resize 与
+    // visibilitychange，在尺寸恢复后微调缩放，强制瓦片层重新加载/合成。
+    var repaintTimer = null;
+    function scheduleRepaint() {
+      if (!map) return;
+      clearTimeout(repaintTimer);
+      repaintTimer = setTimeout(function () {
+        try {
+          var z = map.getZoom();
+          map.setZoom(z + 0.01);
+          setTimeout(function () { try { map.setZoom(z); } catch (e) {} }, 180);
+        } catch (e) {}
+      }, 250);
+    }
+    window.addEventListener('resize', scheduleRepaint);
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) scheduleRepaint();
+    });
+  } catch (ex) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('errBox').style.display = 'block';
+    notifyFail();
+  }
+}
+
+function wpContent(idx) {
+  var home = idx === 0;
+  return '<div class="wp-marker ' + (home ? 'home' : 'normal') + '">' +
+         (home ? 'H' : idx) + '</div>';
+}
+
+function droneContent(alt, heading) {
+  return '<div class="drone-marker">' +
+    '<div class="drone-alt-tag">' + alt.toFixed(1) + 'm</div>' +
+    '<svg class="drone-arrow" viewBox="0 0 24 24" style="transform: rotate(' + heading + 'deg)">' +
+    '<path d="M12 2 L16 16 L12 13 L8 16 Z" fill="#ef4444" stroke="#fff" stroke-width="1.2"/></svg>' +
+    '</div>';
+}
+
+var Gcs = {
+  setInteract: function (v) { interactMode = v; },
+  setFollow: function (v) { followMode = v; },
+  setTrajectoryVisible: function (v) {
+    trailVisible = v;
+    if (trailLine) trailLine.show(v && trailPath.length > 1);
+  },
+  setAirspaceVisible: function (v) {
+    airspaceVisible = v;
+    zonePolygons.forEach(function (p) { v ? p.show() : p.hide(); });
+  },
+  setDark: function (dark) {
+    if (!map) return;
+    document.body.style.background = dark ? '#0d1117' : '#f3f3f3';
+    document.body.className = document.body.className.replace(/\b(dark|light)\b/g, '').trim();
+    document.body.classList.add(dark ? 'dark' : 'light');
+    try { map.setMapStyle(dark ? 'amap://styles/dark' : 'amap://styles/normal'); } catch (e) {}
+    // 直接给瓦片 img 设置内联滤镜（class 切换不会让 CSS filter 在软件管线下重新合成）
+    applyTileFilter();
+    // 微调缩放促使瓦片层重绘，重绘后再次应用（MutationObserver 也会覆盖新瓦片）
+    var z = map.getZoom();
+    map.setZoom(z + 0.01);
+    setTimeout(function () {
+      try { map.setZoom(z); } catch (e) {}
+      applyTileFilter();
+    }, 150);
+  },
+  setSatellite: function (sat) {
+    if (!map) return;
+    isSatellite = sat;
+    document.body.classList.toggle('sat', sat);
+    if (sat) {
+      if (!satLayer) satLayer = new AMap.TileLayer.Satellite({ opacity: 0.9 });
+      satLayer.setMap(map);
+      map.setMapStyle('amap://styles/normal');
+    } else {
+      if (satLayer) satLayer.setMap(null);
+      map.setMapStyle(document.body.classList.contains('dark') ? 'amap://styles/dark' : 'amap://styles/normal');
+    }
+    // 卫星层切换会重新加载瓦片，延迟对新瓦片补设滤镜（observer 之外的兜底）
+    setTimeout(applyTileFilter, 300);
+    setTimeout(applyTileFilter, 1200);
+  },
+  setWaypoints: function (json) {
+    if (!map) return;
+    var wps = JSON.parse(json);
+    // 清除旧标记
+    wpMarkers.forEach(function (m) { map.remove(m); });
+    wpMarkers = [];
+    if (homeMarker) { map.remove(homeMarker); homeMarker = null; }
+    var path = [];
+    wps.forEach(function (wp, idx) {
+      path.push([wp.lng, wp.lat]);
+      var marker = new AMap.Marker({
+        position: [wp.lng, wp.lat],
+        content: wpContent(idx),
+        offset: new AMap.Pixel(-11, -11),
+        anchor: 'center',
+        zIndex: 30,
+        cursor: interactMode ? 'pointer' : 'default',
+        extData: { idx: idx }
+      });
+      if (interactMode) {
+        // 航点可拖拽
+        marker.setDraggable(true);
+        marker.on('dragend', function (ev) {
+          if (bridgeReady()) {
+            window.gcsBridge.onWaypointDrag(idx, ev.lnglat.getLat(), ev.lnglat.getLng());
+          }
+        });
+        marker.on('rightclick', function (ev) {
+          if (bridgeReady()) window.gcsBridge.onWaypointRightClick(idx);
+        });
+        marker.on('dblclick', function (ev) {
+          if (bridgeReady()) window.gcsBridge.onWaypointDblClick(idx);
+        });
+      }
+      marker.setMap(map);
+      wpMarkers.push(marker);
+    });
+    planLine.setPath(path);
+  },
+  setDrone: function (lat, lng, heading, alt) {
+    if (!map) return;
+    var pos = [lng, lat];
+    trailPath.push(pos);
+    if (trailPath.length > 600) trailPath.shift();
+    if (trailVisible && trailLine) trailLine.setPath(trailPath);
+    if (!droneMarker) {
+      droneMarker = new AMap.Marker({
+        position: pos, content: droneContent(alt, heading),
+        anchor: 'center', offset: new AMap.Pixel(0, 0), zIndex: 40
+      });
+      droneMarker.setMap(map);
+    } else {
+      droneMarker.setContent(droneContent(alt, heading));
+      droneMarker.setPosition(pos);
+    }
+    if (followMode) map.setCenter(pos);
+  },
+  setAirspace: function (json) {
+    if (!map) return;
+    var zones = JSON.parse(json);
+    zonePolygons.forEach(function (p) { map.remove(p); });
+    zonePolygons = [];
+    var palette = {
+      NOFLY:        { fill: 'rgba(239,68,68,0.20)',  stroke: '#ef4444', w: 2 },
+      RESTRICTION:  { fill: 'rgba(245,158,11,0.10)', stroke: '#f59e0b', w: 1.5 },
+      TEMPORARY:    { fill: 'rgba(167,139,250,0.12)', stroke: '#a78bfa', w: 1.5 },
+      CUSTOM:       { fill: 'rgba(59,130,246,0.08)',  stroke: '#3b82f6', w: 1.5 }
+    };
+    zones.forEach(function (z) {
+      var c = palette[z.type] || palette.CUSTOM;
+      var poly = new AMap.Polygon({
+        path: z.path,
+        strokeColor: c.stroke, strokeWeight: c.w, strokeOpacity: 0.8,
+        fillColor: c.fill, fillOpacity: 1,
+        zIndex: 10, bubble: true
+      });
+      poly.setMap(map);
+      if (!airspaceVisible) poly.hide();
+      zonePolygons.push(poly);
+    });
+  },
+  fitWaypoints: function () {
+    if (!map) return;
+    if (wpMarkers.length > 0) map.setFitView(wpMarkers, false, [60, 60, 60, 60]);
+    else map.setZoomAndCenter(16, DRONE_HOME);
+  },
+  zoomIn: function () { if (map) map.zoomIn(); },
+  zoomOut: function () { if (map) map.zoomOut(); },
+  /* 飞行日志轨迹回放（只读模式） */
+  showFlightTrajectory: function (json) {
+    if (!map) return;
+    var path = JSON.parse(json);
+    // 隐藏任务图层
+    if (droneMarker) droneMarker.hide();
+    wpMarkers.forEach(function (m) { m.hide(); });
+    if (planLine) planLine.hide();
+    if (trailLine) trailLine.hide();
+    zonePolygons.forEach(function (p) { p.hide(); });
+    // 清除旧轨迹
+    flightMarkers.forEach(function (m) { map.remove(m); });
+    flightMarkers = [];
+    if (!path || path.length < 2) return;
+    flightLine.setPath(path);
+    flightLine.setMap(map);
+    var st = path[0], en = path[path.length - 1];
+    var stm = new AMap.Marker({
+      position: st, content: '<div class="ep-marker start"></div>',
+      anchor: 'center', zIndex: 35
+    });
+    var enm = new AMap.Marker({
+      position: en, content: '<div class="ep-marker end"></div>',
+      anchor: 'center', zIndex: 35
+    });
+    var stl = new AMap.Marker({
+      position: st, content: '<div class="ep-label">起点</div>',
+      offset: new AMap.Pixel(10, -10), zIndex: 36
+    });
+    var enl = new AMap.Marker({
+      position: en, content: '<div class="ep-label">终点</div>',
+      offset: new AMap.Pixel(10, -10), zIndex: 36
+    });
+    [stm, enm, stl, enl].forEach(function (m) { m.setMap(map); flightMarkers.push(m); });
+    map.setFitView([flightLine], false, [40, 40, 40, 40]);
+  },
+  resetFlightView: function () {
+    if (!map) return;
+    flightMarkers.forEach(function (m) { map.remove(m); });
+    flightMarkers = [];
+    if (flightLine) { flightLine.setMap(null); }
+    if (droneMarker) droneMarker.show();
+    wpMarkers.forEach(function (m) { m.show(); });
+    if (planLine) planLine.show();
+    if (trailVisible && trailLine) trailLine.show();
+    zonePolygons.forEach(function (p) { if (airspaceVisible) p.show(); });
+  }
+};
+
+// 包装全部 Gcs 方法：地图未就绪时自动入队，就绪后回放
+Object.keys(Gcs).forEach(function (k) {
+  var orig = Gcs[k];
+  Gcs[k] = guard(orig);
+});
+
+window.addEventListener('load', initMap);
+</script>
+</body>
+</html>

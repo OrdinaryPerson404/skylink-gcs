@@ -95,6 +95,9 @@ public class SerialLink implements Link {
         return open && serialPort != null && serialPort.isOpen();
     }
 
+    @Override
+    public String toString() { return portName + "@" + baudRate; }
+
     public static String[] listPorts() {
         SerialPort[] ports = SerialPort.getCommPorts();
         String[] names = new String[ports.length];

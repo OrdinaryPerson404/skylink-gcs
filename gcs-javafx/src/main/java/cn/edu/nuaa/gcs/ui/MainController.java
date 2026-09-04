@@ -25,6 +25,7 @@ import javafx.animation.FadeTransition;
 import javafx.animation.Timeline;
 import javafx.animation.KeyFrame;
 import java.io.File;
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -60,6 +61,34 @@ public class MainController {
     @FXML private Button btnEnterCtrl, btnExitCtrl;
     private boolean controlTestActive = false;
 
+    // Attitude + battery detail + telemetry record + WiFi banner (P6/P5/P3)
+    @FXML private VBox attitudeBox;
+    @FXML private StackPane attitudeHost;
+    @FXML private Label attitudeUnavailableLabel;
+    @FXML private ToggleButton btnRecordTelemetry;
+    @FXML private Label recordingStatusLabel;
+    @FXML private Label networkBannerLabel;
+    private AttitudeIndicator attitudeIndicator;
+    private cn.edu.nuaa.gcs.util.NetworkMonitor networkMonitor;
+    private cn.edu.nuaa.gcs.data.TelemetryRecorder telemetryRecorder;
+    private final java.util.concurrent.atomic.AtomicBoolean recordingOn = new java.util.concurrent.atomic.AtomicBoolean(false);
+    /** 电池详情 Label（initDroneStatusGrid 中构建）。 */
+    private Label lblBatCurrent, lblBatTemp, lblCells, lblBatTimeLeft;
+
+    // ================================================================
+    // UI 节流机制（避免高频遥测帧淹没 JavaFX EDT）
+    // ================================================================
+    /** 最新待处理遥测帧（listen 线程写，EDT 读，volatile 保证可见性）。 */
+    private volatile MavlinkParser.Telemetry pendingTelemetry;
+    /** UI 是否有积压数据需要刷新。 */
+    private volatile boolean uiDirty = false;
+    /** UI 刷新 Timeline，10fps（100ms），合并多帧遥测为一次 UI 更新。 */
+    private Timeline uiRefreshTimeline;
+    /** 上次地图 Canvas 重绘时间戳（ns），用于 Canvas 节流。 */
+    private volatile long lastMapDrawNs = 0;
+    /** Canvas 地图重绘最小间隔（ns），100ms = 10fps。 */
+    private static final long MAP_THROTTLE_NS = 100_000_000L;
+
     // Mission workspace - map
     @FXML private AnchorPane mapContainer;
     @FXML private ToggleButton btnFollow, btnTrajectory;
@@ -89,6 +118,7 @@ public class MainController {
     @FXML private Label flDetailId, flDetailMeta;
     @FXML private Label flStatPoints, flStatAlt, flStatSpeed, flStatVolt, flStatDist;
     @FXML private Canvas flMapCanvas;
+    @FXML private StackPane flMapContainer;
     @FXML private TextField flSearchField;
     @FXML private ComboBox<String> flModelCombo;
 
@@ -109,7 +139,18 @@ public class MainController {
     @FXML private Label algoOrigDist, algoOptDist, algoWpCount, algoDelta, algoRate;
     @FXML private TextField distInput, loadInput, windInput;
     @FXML private Label enduranceResult, costResult;
-    @FXML private FlowPane algoFlow;
+    @FXML private HBox algoFlow;
+    @FXML private Label windInfoLabel;
+
+    // Battery charging workspace (Tab 5)
+    @FXML private Tab chargingTab;
+    @FXML private Region bbbDot;
+    @FXML private Label bbbText, bbbMeta;
+    @FXML private Label chgSumCharging, chgSumChargingSub, chgSumFull, chgSumFullSub,
+            chgSumPower, chgSumPowerSub, chgSumAvgCap, chgSumAvgSub, chgSumEta, chgSumEtaSub;
+    @FXML private VBox chgValidationBox, chgValBody;
+    @FXML private Label chgValStatus, chgValChecked, chgValAnomalies, chgValErrors, chgValWarnings, chgValSources;
+    @FXML private VBox chgGridHost;
 
     // Log table (kept for compatibility)
     @FXML private TableView<LogRecord> logTableView;
@@ -125,8 +166,14 @@ public class MainController {
     private final BatteryPredictor batteryPredictor = new BatteryPredictor();
     private final CommunicationService comm = new CommunicationService();
     private final ParamService paramService = new ParamService();
+    private final BatteryChargingMonitor chargingMonitor = new BatteryChargingMonitor(drone, comm);
     private boolean paramListRequested = false;
+    private String lastStatusText = "";
+    private long lastStatusTextMs = 0;
+    private long lastLowBatMs = 0;
     private MapCanvas mapCanvas;
+    private AMapWebView amapView;
+    private AMapWebView flAmapView;
     private SensorChart sensor;
     private boolean missionDirty = false;
 
@@ -148,10 +195,13 @@ public class MainController {
         initFlightLog();
         initSettings();
         initDroneStatusGrid();
+        initAttitudeAndNetMon();
         initWaypoints();
         applyModeGating();
         startClock();
         updateWpCount();
+        // 启动电池充电实时监控（WMI 系统电池 + MAVLink 无人机电池）
+        chargingMonitor.start();
         // Load demo airspace on startup
         onLoadDemoAirspace();
         // Initialize algorithm tab with mission data
@@ -252,6 +302,7 @@ public class MainController {
                 case DIGIT2, NUMPAD2 -> { onGoDataTab(); e.consume(); }
                 case DIGIT3, NUMPAD3 -> { onGoSettingsTab(); e.consume(); }
                 case DIGIT4, NUMPAD4 -> { onGoAlgoTab(); e.consume(); }
+                case DIGIT5, NUMPAD5 -> { onGoChargingTab(); e.consume(); }
                 default -> {}
             }
         });
@@ -338,6 +389,66 @@ public class MainController {
         // Map context menu
         mapCanvas.setContextMenuHandler((lat, lon) -> showMapContextMenu(lat, lon));
         mapCanvas.setWaypointContextMenuHandler(this::showWaypointContextMenu);
+
+        // 高德在线地图（WebView）叠在离线瓦片地图之上；
+        // 高德加载失败时自动隐藏 WebView，底层离线地图无缝接管
+        initAMapView();
+
+        // 飞行日志详情地图：高德轨迹回放（离线 Canvas 作降级）
+        initFlightLogMap();
+    }
+
+    private void initAMapView() {
+        amapView = new AMapWebView(true);
+        amapView.setDark(ThemeManager.isDark());
+        AnchorPane.setTopAnchor(amapView, 0.0);
+        AnchorPane.setBottomAnchor(amapView, 0.0);
+        AnchorPane.setLeftAnchor(amapView, 0.0);
+        AnchorPane.setRightAnchor(amapView, 0.0);
+        // 置于离线 Canvas(0) 之上、悬浮控件之下
+        mapContainer.getChildren().add(1, amapView);
+        amapView.setClickHandler((lat, lon) -> addWaypoint(lat, lon));
+        amapView.setWaypointMoveHandler((idx, latLon) -> {
+            if (idx >= 0 && idx < mission.size()) {
+                Waypoint wp = mission.getWaypoint(idx);
+                wp.setLat(latLon[0]);
+                wp.setLon(latLon[1]);
+                missionDirty = true;
+                refreshWaypointList();
+                updateMissionStats();
+                updateUploadStatus();
+            }
+        });
+        amapView.setMapRightClickHandler(this::showMapContextMenu);
+        amapView.setWaypointRightClickHandler(this::showWaypointContextMenu);
+        amapView.setWaypointDblClickHandler(this::onEditWaypoint);
+        amapView.setMouseMoveHandler((lat, lon) -> {
+            if (sbMouse != null) sbMouse.setText(String.format("%.3f, %.3f", lat, lon));
+        });
+        amapView.setFailHandler(() ->
+            showToast("高德地图加载失败，已切换为离线瓦片地图", "warn"));
+        amapView.setReadyListener(() -> {
+            amapView.setWaypoints(mission.getWaypoints());
+            amapView.setAirspaceZones(airspace.getActiveZones());
+            amapView.setFollow(btnFollow == null || btnFollow.isSelected());
+            amapView.setTrajectoryVisible(btnTrajectory == null || btnTrajectory.isSelected());
+            amapView.setAirspaceVisible(btnAirspace == null || btnAirspace.isSelected());
+        });
+    }
+
+    private void initFlightLogMap() {
+        if (flMapContainer == null) return;
+        // 离线 Canvas 需要显式绑定尺寸（Canvas 不参与布局自适应）
+        flMapCanvas.widthProperty().bind(flMapContainer.widthProperty());
+        flMapCanvas.heightProperty().bind(flMapContainer.heightProperty());
+
+        flAmapView = new AMapWebView(false);
+        flAmapView.setDark(ThemeManager.isDark());
+        flMapContainer.getChildren().add(flAmapView);
+        flAmapView.setFailHandler(() -> {
+            if (selectedFlight != null) drawFlightTrajectoryNow(selectedFlight);
+        });
+        flAmapView.setReadyListener(() -> flAmapView.setDark(ThemeManager.isDark()));
     }
 
     private void initSensorChart() {
@@ -582,6 +693,10 @@ public class MainController {
         if (flStatVolt != null) flStatVolt.setText(String.format("%.1f V", fl.getMinVoltage()));
         if (flStatDist != null) flStatDist.setText(fl.getDistanceKm());
 
+        // 高德在线轨迹回放（WebView 可见时优先）
+        if (flAmapView != null && fl.getTrajectory() != null && !fl.getTrajectory().isEmpty()) {
+            flAmapView.showFlightTrajectory(fl.getTrajectory());
+        }
         // Redraw after layout is computed (canvas may have been hidden)
         Platform.runLater(() -> {
             Platform.runLater(() -> drawFlightTrajectoryNow(fl));
@@ -694,6 +809,15 @@ public class MainController {
     private void onShowFlightLog() {
         if (waveformContent != null) { waveformContent.setVisible(false); waveformContent.setManaged(false); }
         if (flightLogContent != null) { flightLogContent.setVisible(true); flightLogContent.setManaged(true); }
+        // 视图首次显示时地图容器尺寸才从 0 变为实际值，延迟一帧重绘/重载轨迹
+        Platform.runLater(() -> {
+            if (selectedFlight != null) {
+                if (flAmapView != null && selectedFlight.getTrajectory() != null) {
+                    flAmapView.showFlightTrajectory(selectedFlight.getTrajectory());
+                }
+                Platform.runLater(() -> drawFlightTrajectoryNow(selectedFlight));
+            }
+        });
     }
 
     @FXML
@@ -713,6 +837,10 @@ public class MainController {
         }
         if (e1IpField != null) e1IpField.setText(settings.e1Ip);
         if (e1PortField != null) e1PortField.setText(String.valueOf(settings.e1Port));
+        if (hbTimeoutField != null) hbTimeoutField.setText(String.valueOf(settings.heartbeatTimeout));
+        if (phoneGpsToggle != null) phoneGpsToggle.setSelected(settings.phoneGps);
+        if (phoneCompassToggle != null) phoneCompassToggle.setSelected(settings.phoneCompass);
+        if (phoneBaroToggle != null) phoneBaroToggle.setSelected(settings.phoneBaro);
         if (serialPortCombo != null) {
             var portList = new java.util.ArrayList<String>(java.util.Arrays.asList(SerialLink.listPorts()));
             portList.add("UDP 127.0.0.1:14550");
@@ -798,6 +926,367 @@ public class MainController {
             cell.getChildren().addAll(lbl, valBox);
             droneStatusGrid.add(cell, col, row);
         }
+
+        // 追加电池详细信息 + 剩余时间（P1/P2 新增，BATTERY_STATUS + 动态预测）
+        // 额外 2 行 2 列 = 4 个 cell，紧跟原有 16 字段
+        int startRow = (fields.length + 1) / 2;
+        lblBatCurrent = addBatteryCell("放电电流", 0, startRow, "e1");
+        lblBatTemp    = addBatteryCell("电池温度", 1, startRow, "e1");
+        lblCells      = addBatteryCell("电芯电压", 0, startRow + 1, "e1");
+        lblBatTimeLeft= addBatteryCell("剩余时间", 1, startRow + 1, "e1");
+    }
+
+    private Label addBatteryCell(String label, int col, int row, String srcTagKey) {
+        VBox cell = new VBox(2);
+        cell.getStyleClass().add("us-cell");
+        Label lbl = new Label(label);
+        lbl.getStyleClass().add("us-label");
+        HBox valBox = new HBox(3);
+        valBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+        Label val = new Label("—");
+        val.getStyleClass().addAll("us-val", "off");
+        Label src = new Label(getSourceTagText(srcTagKey));
+        src.getStyleClass().addAll("src-tag", srcTagKey);
+        valBox.getChildren().addAll(val, src);
+        cell.getChildren().addAll(lbl, valBox);
+        droneStatusGrid.add(cell, col, row);
+        return val;
+    }
+
+    // ================================================================
+    // P3/P5/P6 UI + 服务 初始化 / 释放
+    // ================================================================
+
+    private void initAttitudeAndNetMon() {
+        if (attitudeHost != null && attitudeIndicator == null) {
+            attitudeIndicator = new AttitudeIndicator();
+            attitudeHost.getChildren().add(attitudeIndicator);
+            javafx.scene.layout.StackPane.setAlignment(attitudeIndicator, javafx.geometry.Pos.CENTER);
+            attitudeIndicator.prefWidthProperty().bind(attitudeHost.widthProperty().subtract(16));
+            attitudeIndicator.prefHeightProperty().bind(attitudeHost.heightProperty().subtract(16));
+            attitudeIndicator.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        }
+        if (networkMonitor == null) {
+            networkMonitor = new cn.edu.nuaa.gcs.util.NetworkMonitor(state -> {
+                javafx.application.Platform.runLater(() -> applyNetworkState(state));
+            });
+            try { networkMonitor.start(); } catch (Exception ignored) {}
+        }
+        // UI 节流 Timeline：100ms = 10fps，合并多帧遥测为一次 UI 刷新
+        if (uiRefreshTimeline == null) {
+            uiRefreshTimeline = new Timeline(new KeyFrame(Duration.millis(100), e -> flushUiUpdates()));
+            uiRefreshTimeline.setCycleCount(Timeline.INDEFINITE);
+            uiRefreshTimeline.play();
+        }
+    }
+
+    private void applyNetworkState(cn.edu.nuaa.gcs.util.NetworkMonitor.State state) {
+        if (networkBannerLabel == null) return;
+        switch (state) {
+            case DRONE_WIFI:
+                networkBannerLabel.setVisible(true);
+                networkBannerLabel.setManaged(true);
+                networkBannerLabel.setText("[WiFi] 已连接无人机 WiFi 网段 192.168.4.x，互联网不可用，地图需离线瓦片。");
+                networkBannerLabel.getStyleClass().remove("on");
+                networkBannerLabel.getStyleClass().add("off");
+                break;
+            case OFFLINE:
+                networkBannerLabel.setVisible(true);
+                networkBannerLabel.setManaged(true);
+                networkBannerLabel.setText("[网络] 当前无可用 IPv4 接口，请检查连接。");
+                networkBannerLabel.getStyleClass().remove("on");
+                networkBannerLabel.getStyleClass().add("off");
+                break;
+            case ONLINE:
+                networkBannerLabel.setVisible(false);
+                networkBannerLabel.setManaged(false);
+                break;
+            default:
+                networkBannerLabel.setVisible(false);
+                networkBannerLabel.setManaged(false);
+        }
+    }
+
+    /**
+     * 通过 TCP 连接无人机 WiFi（默认 192.168.4.1，设置页 e1IpField/e1PortField 可覆盖）。
+     * 纯链路层操作：不修改飞控，只打开连接并让 CommunicationService 开始监听。
+     */
+    @FXML
+    private void onConnectTcp() {
+        String ip = (e1IpField != null && !e1IpField.getText().isBlank())
+                ? e1IpField.getText().trim() : cn.edu.nuaa.gcs.comm.TcpLink.DEFAULT_HOST;
+        int port = 5760;
+        try {
+            if (e1PortField != null && !e1PortField.getText().isBlank())
+                port = Integer.parseInt(e1PortField.getText().trim());
+        } catch (NumberFormatException ignored) { /* 回退默认 */ }
+
+        final String fIp = ip;
+        final int fPort = port;
+        new Thread(() -> {
+            try {
+                TcpLink link = new TcpLink(fIp, fPort);
+                comm.setLink(link);
+                comm.setCallback(this::onTelemetrySafe);
+                comm.start();
+                Platform.runLater(() -> {
+                    if (e1ConnBanner != null) {
+                        e1ConnBanner.setText("TCP 连接中…");
+                        e1ConnBanner.getStyleClass().remove("off");
+                        e1ConnBanner.getStyleClass().add("on");
+                    }
+                    if (e1IpVal != null) e1IpVal.setText(fIp + ":" + fPort);
+                    paramListRequested = false;
+                });
+            } catch (Exception ex) {
+                String msg = ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage();
+                Platform.runLater(() -> showToast("TCP 连接失败: " + msg, "error"));
+            }
+        }, "GCS-TcpConn").start();
+    }
+
+    /**
+     * 读取电池数据（只读，安全）：主动请求 BATTERY_STATUS(147) 消息，
+     * 同时触发 requestParamList 让飞控回传所有参数（含 BATT_CAPACITY 等）。
+     * 不发送任何 PARAM_SET。
+     */
+    @FXML
+    private void onRequestBattery() {
+        if (!comm.isConnected()) {
+            showToast("请先连接 E1 飞控（串口或 WiFi）。", "warn");
+            return;
+        }
+        batteryPredictor.reset(); // 重置旧滑动窗口（保证当前飞控数据不被旧历史污染）
+        // 优先：主动请求 BATTERY_STATUS(147) 消息
+        comm.requestBatteryStatus();
+        // 兼容：部分固件通过 SYS_STATUS(1) 上报电池，请求一次
+        comm.requestMessage(1);
+        // 兼容：请求 HIGHRES_IMU(105)（含气压高度、温度等）
+        comm.requestMessage(105);
+        // 请求飞控参数列表（含 BATT_CAPACITY / BATT_N_CELLS / VBAT_* 等）
+        comm.requestParamList();
+        // 请求 AUTOPILOT_VERSION 便于诊断固件能力
+        comm.requestAutopilotVersion();
+        showToast("已请求 BATTERY_STATUS / SYS_STATUS / HIGHRES_IMU / 参数列表（只读），等待飞控回传 [E1]。", "info");
+    }
+
+    /** 启动/停止遥测录制（CSV）。 */
+    @FXML
+    private void onToggleRecord() {
+        if (btnRecordTelemetry.isSelected()) {
+            try {
+                String stamp = java.time.LocalDateTime.now()
+                        .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+                java.nio.file.Path dir = java.nio.file.Paths.get("telemetry");
+                java.nio.file.Files.createDirectories(dir);
+                telemetryRecorder = new cn.edu.nuaa.gcs.data.TelemetryRecorder(dir.resolve("gcs_" + stamp + ".csv"));
+                recordingOn.set(true);
+                if (btnRecordTelemetry != null) btnRecordTelemetry.setText("停止录制");
+                if (recordingStatusLabel != null) {
+                    recordingStatusLabel.setText("录制中: " + telemetryRecorder.getFile().getFileName());
+                    recordingStatusLabel.getStyleClass().remove("off");
+                    recordingStatusLabel.getStyleClass().add("on");
+                }
+            } catch (Exception e) {
+                recordingOn.set(false);
+                if (btnRecordTelemetry != null) {
+                    btnRecordTelemetry.setSelected(false);
+                    btnRecordTelemetry.setText("开始录制");
+                }
+                showToast("开启录制失败: " + e.getMessage(), "error");
+            }
+        } else {
+            stopRecording();
+        }
+    }
+
+    private void stopRecording() {
+        recordingOn.set(false);
+        cn.edu.nuaa.gcs.data.TelemetryRecorder rec = telemetryRecorder;
+        telemetryRecorder = null;
+        int rows = 0;
+        if (rec != null) {
+            rows = rec.getWrittenRows();
+            try { rec.close(); } catch (Exception ignored) {}
+        }
+        if (btnRecordTelemetry != null) btnRecordTelemetry.setText("开始录制");
+        if (recordingStatusLabel != null) {
+            recordingStatusLabel.getStyleClass().remove("on");
+            recordingStatusLabel.getStyleClass().add("off");
+            recordingStatusLabel.setText(rows > 0 ? "已保存 " + rows + " 行: " + rec.getFile().getFileName() : "录制未开始");
+        }
+    }
+
+    /** 安全的 onTelemetry 包装（跨线程 → Platform.runLater），供回调入口调用。 */
+    private void onTelemetrySafe(MavlinkParser.Telemetry t) {
+        Platform.runLater(() -> onTelemetry(t));
+    }
+
+    /** 释放新增 P3/P5/P6 相关资源（供窗口关闭时调用）。 */
+    private void stopExtraServices() {
+        stopRecording();
+        if (networkMonitor != null) { networkMonitor.stop(); networkMonitor = null; }
+        if (batteryPredictor != null) batteryPredictor.reset();
+        if (chargingMonitor != null) chargingMonitor.stop();
+        if (uiRefreshTimeline != null) { uiRefreshTimeline.stop(); uiRefreshTimeline = null; }
+    }
+
+    // ================================================================
+    // 遥测统一入口（Serial/TCP 共用）
+    // ================================================================
+
+    /**
+     * 遥测到达入口（由 listen 线程通过 Platform.runLater 调用）。
+     *
+     * 拆分为两阶段：
+     * 1. 本方法（每帧执行）：轻量数据采集 — drone 模型更新、电池预测观测、CSV 录制、参数累积。
+     *    这些操作要么是 JavaFX Property set（EDT 安全），要么是内部线程安全。
+     * 2. {@link #flushUiUpdates()}（Timeline 10fps 节流）：重 UI — 状态网格、E1/手机详情、
+     *    地图重绘、姿态仪表。多帧合并为一次刷新，避免 EDT 过载。
+     */
+    private void onTelemetry(MavlinkParser.Telemetry t) {
+        if (t == null || !t.valid) return;
+        // 单点翻译：更新 Drone 模型的 JavaFX 可观察属性
+        drone.updateFromTelemetry(t);
+        // 累积飞控参数（只读，安全）
+        if (t.hasParam) {
+            paramService.onParamValue(t);
+            // 电池容量参数 → 更新动态预测器
+            if (t.paramName != null) {
+                String pn = t.paramName.toUpperCase();
+                if ((pn.startsWith("BATT_CAPACITY") || pn.equals("BATT_CAPACITY_MAH")
+                        || pn.startsWith("BATT_") && pn.contains("CAPACITY"))
+                        && t.paramValue > 0) {
+                    batteryPredictor.setTotalCapacityMah(t.paramValue);
+                    System.out.println("[BAT] 从参数 " + t.paramName + "=" + t.paramValue
+                            + " 更新电池容量 → BatteryPredictor");
+                }
+            }
+        }
+        // 连接建立收到首个心跳后，自动请求飞控参数列表一次
+        if (!paramListRequested && t.hasHeartbeat) {
+            paramListRequested = true;
+            comm.requestParamList();
+            System.out.println("[E1] 收到首个心跳，已请求飞控参数列表（CF-Drone 84 项）");
+        }
+        // P2：电池动态预测观测（仅 BATTERY_STATUS 帧）
+        if (t.hasBatteryStatus) {
+            System.out.println("[E1] 收到 BATTERY_STATUS(147): current=" + t.batteryCurrent
+                    + "A temp=" + t.batteryTemp + "°C consumed=" + t.capacityConsumed
+                    + "mAh remaining=" + t.batteryRemaining2 + "% cells="
+                    + t.cellVoltages[0] + "+" + t.cellVoltages[1] + "mV");
+            double epoch = System.currentTimeMillis() / 1000.0;
+            int remainingPct = (t.batteryRemaining2 >= 0 && t.batteryRemaining2 <= 100)
+                    ? t.batteryRemaining2 : (t.hasBattery ? (int) Math.round(t.batteryPct) : -1);
+            double v = (t.hasBattery && t.voltage > 0) ? t.voltage : 0.0;
+            batteryPredictor.observe(epoch, t.batteryCurrent, v,
+                    t.capacityConsumed, remainingPct, t.batteryTemp);
+        }
+        // COMMAND_ACK 诊断日志（判断飞控是否支持请求的消息）
+        if (t.hasAck) {
+            String[] resultNames = {"ACCEPTED", "TEMPORARILY_REJECTED", "DENIED",
+                    "UNSUPPORTED", "FAILED", "IN_PROGRESS"};
+            String resultName = (t.ackResult >= 0 && t.ackResult < resultNames.length)
+                    ? resultNames[t.ackResult] : ("UNKNOWN(" + t.ackResult + ")");
+            System.out.println("[E1] COMMAND_ACK: command=" + t.ackCommand
+                    + " result=" + t.ackResult + "(" + resultName + ")");
+        }
+        // STATUSTEXT 告警 → toast 显示（500ms 去重，连续相同文本合并）
+        if (t.hasStatusText && t.statusText != null && !t.statusText.isBlank()) {
+            String txt = t.statusText.trim();
+            long now = System.currentTimeMillis();
+            boolean dup = txt.equals(lastStatusText) && (now - lastStatusTextMs) < 2000;
+            if (!dup) {
+                lastStatusText = txt;
+                lastStatusTextMs = now;
+                // severity: 0=EMERGENCY 1=ALERT 2=CRITICAL 3=ERROR 4=WARNING 5=NOTICE 6=INFO 7=DEBUG
+                String type = (t.statusSeverity <= 3) ? "error" : (t.statusSeverity <= 4) ? "warn" : "info";
+                String prefix = switch (t.statusSeverity) {
+                    case 0 -> "[紧急] ";
+                    case 1 -> "[告警] ";
+                    case 2 -> "[严重] ";
+                    case 3 -> "[错误] ";
+                    case 4 -> "[警告] ";
+                    default -> "";
+                };
+                showToast(prefix + txt, type);
+            }
+        }
+        // P5：遥测 CSV 录制（开启时才写）
+        if (recordingOn.get() && telemetryRecorder != null) {
+            try { telemetryRecorder.record(t); }
+            catch (IOException e) {
+                System.err.println("[REC] 写入失败: " + e.getMessage());
+                Platform.runLater(this::stopRecording);
+                Platform.runLater(() -> showToast("遥测录制已停止（写入失败）", "warn"));
+            }
+        }
+        // 标记 UI 有积压，等 Timeline 刷新
+        pendingTelemetry = t;
+        uiDirty = true;
+    }
+
+    /**
+     * UI 节流刷新（由 Timeline 100ms 周期调用，在 EDT 上执行）。
+     * 合并多帧遥测为一次 UI 更新，消除 EDT 过载。
+     */
+    private void flushUiUpdates() {
+        // 即使无遥测，也定期刷新连接状态（检测断线 → 横幅自动切换为"离线"）
+        if (!uiDirty) {
+            // 无积压数据时，仅刷新连接横幅与状态点（开销极小）
+            updateConnStatus();
+            // 检测链路超时：5 秒无数据 → 标记离线
+            if (comm != null && !comm.isLinkActive() && comm.getLastReceivedMs() > 0) {
+                // 最后一帧超过 5s 前收到，需要刷新状态横幅
+                updateDroneStatus();
+                updateE1StatusDetail();
+            }
+            // 刷新 WebView 积压
+            if (amapView != null) amapView.flushDroneUpdate();
+            // 电池充电工作区（WMI 系统电池独立于飞控遥测，仍需刷新）
+            updateChargingWorkspace();
+            return;
+        }
+        uiDirty = false;
+        MavlinkParser.Telemetry t = pendingTelemetry;
+        if (t == null) return;
+
+        // 重 UI 更新（节流后每 100ms 执行一次，而非每帧）
+        updateDroneStatus();
+        updateE1StatusDetail();
+        updatePhoneStatusDetail();
+        updateConnStatus();
+
+        // P6：姿态仪表（Canvas 重绘节流到 10fps）
+        if (attitudeIndicator != null && t.hasAttitude) {
+            attitudeIndicator.setInputRadians(t.roll, t.pitch, t.yaw);
+        }
+
+        // 地图：批量更新（1 次 draw 替代 3 次），Canvas 节流 100ms
+        if (t.hasPosition && mapCanvas != null) {
+            long now = System.nanoTime();
+            if (now - lastMapDrawNs >= MAP_THROTTLE_NS) {
+                lastMapDrawNs = now;
+                mapCanvas.setDroneState(t.lat, t.lon, t.alt, t.heading);
+            }
+            // WebView JS 节流（内部 200ms = 5fps）
+            if (amapView != null) {
+                amapView.setDronePosition(t.lat, t.lon, t.heading, t.alt);
+                amapView.flushDroneUpdate();
+            }
+        }
+
+        // 状态栏
+        if (sbLat != null) sbLat.setText(t.hasPosition ? String.format("%.5f", t.lat) : "—");
+        if (sbLon != null) sbLon.setText(t.hasPosition ? String.format("%.5f", t.lon) : "—");
+        if (seTemp != null) {
+            seTemp.setText(drone.isImuAvailable() ? String.format("%.1f°C", drone.getImuTemp()) : "—");
+        }
+        if (sbLastUpdate != null) sbLastUpdate.setText(
+            new Date().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalTime().toString());
+
+        // 电池充电工作区刷新（节流到 10fps，仅在 Tab 可见时更新 UI）
+        updateChargingWorkspace();
     }
 
     private String getSourceTagText(String src) {
@@ -847,16 +1336,35 @@ public class MainController {
             phoneStatusBox.setManaged(isPhone || isE1);
         }
         if (e1ConnBanner != null) {
-            e1ConnBanner.setText(isE1 ? "● E1 飞控在线" : "● 已连接");
+            // 修复：根据实际连接状态而非模式开关显示在线/离线
+            boolean e1Connected = comm != null && comm.isConnected();
+            boolean linkActive = comm != null && comm.isLinkActive();
+            String e1Text;
+            String e1Style;
+            if (!isE1) {
+                e1Text = "● 未启用 E1 模式";
+                e1Style = "offline";
+            } else if (e1Connected && linkActive) {
+                e1Text = "● E1 飞控在线";
+                e1Style = "online";
+            } else if (e1Connected) {
+                e1Text = "● E1 链路已连接，等待数据…";
+                e1Style = "standby";
+            } else {
+                e1Text = "● E1 飞控离线";
+                e1Style = "offline";
+            }
+            e1ConnBanner.setText(e1Text);
             e1ConnBanner.getStyleClass().clear();
             e1ConnBanner.getStyleClass().add("dev-conn-banner");
-            e1ConnBanner.getStyleClass().add(isE1 ? "online" : "offline");
+            e1ConnBanner.getStyleClass().add(e1Style);
         }
         if (phoneConnBanner != null) {
-            phoneConnBanner.setText(isPhone ? "● 手机伴随已连接" : "● 未连接");
+            boolean phoneConnected = comm != null && comm.isConnected();
+            phoneConnBanner.setText(isPhone && phoneConnected ? "● 手机伴随已连接" : "● 未连接");
             phoneConnBanner.getStyleClass().clear();
             phoneConnBanner.getStyleClass().add("dev-conn-banner");
-            phoneConnBanner.getStyleClass().add(isPhone ? "online" : "offline");
+            phoneConnBanner.getStyleClass().add(isPhone && phoneConnected ? "online" : "offline");
         }
         if (safeBanner != null) {
             safeBanner.setVisible(isE1);
@@ -884,12 +1392,38 @@ public class MainController {
         boolean connected = comm != null && comm.isConnected();
         if (e1IpVal != null) e1IpVal.setText(settings.e1Ip != null ? settings.e1Ip : "—");
         if (e1PortVal != null) e1PortVal.setText(String.valueOf(settings.e1Port));
-        // 通信延迟/油门/控制来源/心跳/链路质量：飞控不上报时诚实标注 "—"
+        // 通信延迟/油门/控制来源/心跳：飞控不上报时诚实标注 "—"
         if (e1LatencyVal != null) e1LatencyVal.setText(connected ? "—" : "—");
         if (e1ThrottleVal != null) e1ThrottleVal.setText(connected ? "—" : "0%");
         if (e1CtrlSrcVal != null) e1CtrlSrcVal.setText(connected ? "—" : "—");
-        if (e1HeartbeatVal != null) e1HeartbeatVal.setText(connected ? "—" : "—");
-        if (e1LinkQualityVal != null) e1LinkQualityVal.setText(connected ? "—" : "—");
+        if (e1HeartbeatVal != null) {
+            if (connected) {
+                long total = comm.getTotalReceived();
+                e1HeartbeatVal.setText(total > 0 ? total + " 帧" : "—");
+            } else {
+                e1HeartbeatVal.setText("—");
+            }
+        }
+        if (e1LinkQualityVal != null) {
+            if (!connected || comm == null) {
+                e1LinkQualityVal.setText("—");
+                e1LinkQualityVal.getStyleClass().removeAll("ok", "warn", "err", "off");
+                e1LinkQualityVal.getStyleClass().add("off");
+            } else {
+                double q = comm.getLinkQualityPct();
+                if (!Double.isFinite(q) || q < 0) {
+                    e1LinkQualityVal.setText("计算中");
+                    e1LinkQualityVal.getStyleClass().removeAll("ok", "warn", "err", "off");
+                    e1LinkQualityVal.getStyleClass().add("off");
+                } else {
+                    e1LinkQualityVal.setText(String.format(Locale.ROOT, "%.0f%%", q));
+                    e1LinkQualityVal.getStyleClass().removeAll("ok", "warn", "err", "off");
+                    if (q >= 70) e1LinkQualityVal.getStyleClass().add("ok");
+                    else if (q >= 30) e1LinkQualityVal.getStyleClass().add("warn");
+                    else e1LinkQualityVal.getStyleClass().add("err");
+                }
+            }
+        }
         // 解锁状态
         if (e1ArmedVal != null) {
             boolean armed = drone.isHeartbeatAvailable() && drone.isArmed();
@@ -975,16 +1509,48 @@ public class MainController {
     private void updateConnStatus() {
         if (connDot == null || connDetail == null) return;
         connDot.getStyleClass().removeAll("on", "off", "warn");
+        boolean connected = comm != null && comm.isConnected();
+        boolean linkActive = comm != null && comm.isLinkActive();
+        // 低电量告警（≤20% 弹出一次）
+        if (drone.isBatteryAvailable() && drone.getBatteryPct() <= 20) {
+            long now = System.currentTimeMillis();
+            if (now - lastLowBatMs > 30000) {
+                lastLowBatMs = now;
+                showToast("[警告] 电池电量低 (" + Math.round(drone.getBatteryPct()) + "%)", "warn");
+            }
+        }
         switch (settings.runMode) {
             case "e1_real" -> {
-                connDot.getStyleClass().add(comm.isConnected() ? "on" : "warn");
-                connDetail.setText(comm.isConnected()
-                    ? "已连接 · " + settings.serialPort + " " + settings.baudRate
-                    : "连接中... · " + settings.serialPort);
+                if (linkActive) {
+                    connDot.getStyleClass().add("on");
+                    String link = settings.e1Ip != null && !settings.e1Ip.isEmpty()
+                        ? ("TCP " + settings.e1Ip + ":" + settings.e1Port)
+                        : (settings.serialPort + " " + settings.baudRate);
+                    connDetail.setText("已连接 · " + link);
+                } else if (connected) {
+                    // 串口已开但 5s 无遥测 → 链路异常
+                    connDot.getStyleClass().add("warn");
+                    connDetail.setText("链路超时 · 等待遥测…");
+                } else {
+                    connDot.getStyleClass().add("off");
+                    connDetail.setText("未连接 · 请选择串口或 WiFi");
+                }
             }
             case "phone_assist" -> {
-                connDot.getStyleClass().add("warn");
-                connDetail.setText("已连接 · 手机辅助");
+                if (linkActive) {
+                    connDot.getStyleClass().add("on");
+                    connDetail.setText("已连接 · 手机辅助");
+                } else if (connected) {
+                    connDot.getStyleClass().add("warn");
+                    connDetail.setText("链路超时 · 手机辅助");
+                } else {
+                    connDot.getStyleClass().add("off");
+                    connDetail.setText("未连接 · 手机辅助");
+                }
+            }
+            default -> {
+                connDot.getStyleClass().add("off");
+                connDetail.setText("未选择模式");
             }
         }
     }
@@ -1042,12 +1608,14 @@ public class MainController {
     @FXML
     private void onFitWaypoints() {
         if (mapCanvas != null) mapCanvas.fitWaypoints();
+        if (amapView != null) amapView.fitWaypoints();
     }
 
     @FXML
     private void onToggleFollow() {
-        if (mapCanvas != null && btnFollow != null) {
-            mapCanvas.setFollowEnabled(btnFollow.isSelected());
+        if (btnFollow != null) {
+            if (mapCanvas != null) mapCanvas.setFollowEnabled(btnFollow.isSelected());
+            if (amapView != null) amapView.setFollow(btnFollow.isSelected());
             if (btnFollow.isSelected()) {
                 showToast("已开启跟随模式", "info");
             }
@@ -1056,8 +1624,9 @@ public class MainController {
 
     @FXML
     private void onToggleTrajectory() {
-        if (mapCanvas != null && btnTrajectory != null) {
-            mapCanvas.setTrajectoryVisible(btnTrajectory.isSelected());
+        if (btnTrajectory != null) {
+            if (mapCanvas != null) mapCanvas.setTrajectoryVisible(btnTrajectory.isSelected());
+            if (amapView != null) amapView.setTrajectoryVisible(btnTrajectory.isSelected());
         }
     }
 
@@ -1071,6 +1640,8 @@ public class MainController {
                 case TERRAIN -> MapCanvas.MapStyle.STANDARD;
             };
             mapCanvas.setMapStyle(next);
+            // 高德地图：标准 ↔ 卫星（高德 JS 样式无地形，卫星与离线端保持同步）
+            if (amapView != null) amapView.setSatellite(next == MapCanvas.MapStyle.SATELLITE);
             String name = switch (next) {
                 case STANDARD -> "标准地图";
                 case SATELLITE -> "卫星地图";
@@ -1082,19 +1653,22 @@ public class MainController {
 
     @FXML
     private void onToggleAirspaceLayer() {
-        if (mapCanvas != null && btnAirspace != null) {
-            mapCanvas.setAirspaceVisible(btnAirspace.isSelected());
+        if (btnAirspace != null) {
+            if (mapCanvas != null) mapCanvas.setAirspaceVisible(btnAirspace.isSelected());
+            if (amapView != null) amapView.setAirspaceVisible(btnAirspace.isSelected());
         }
     }
 
     @FXML
     private void onZoomIn() {
         if (mapCanvas != null) mapCanvas.zoomIn();
+        if (amapView != null) amapView.zoomIn();
     }
 
     @FXML
     private void onZoomOut() {
         if (mapCanvas != null) mapCanvas.zoomOut();
+        if (amapView != null) amapView.zoomOut();
     }
 
     @FXML
@@ -1108,11 +1682,19 @@ public class MainController {
     @FXML
     private void onSetDarkTheme() {
         ThemeManager.setTheme(stage.getScene(), "dark");
+        syncMapTheme();
     }
 
     @FXML
     private void onSetLightTheme() {
         ThemeManager.setTheme(stage.getScene(), "light");
+        syncMapTheme();
+    }
+
+    private void syncMapTheme() {
+        boolean dark = ThemeManager.isDark();
+        if (amapView != null) amapView.setDark(dark);
+        if (flAmapView != null) flAmapView.setDark(dark);
     }
 
     @FXML
@@ -1131,6 +1713,7 @@ public class MainController {
             updateUploadStatus();
             updateWpCount();
             mapCanvas.fitWaypoints();
+            if (amapView != null) amapView.fitWaypoints();
         } catch (IllegalArgumentException e) {
             showToast("坐标越界: " + e.getMessage(), "error");
         }
@@ -1390,6 +1973,10 @@ public class MainController {
                 Platform.runLater(() -> {
                     mapCanvas.setDronePosition(wp.getLat(), wp.getLon());
                     mapCanvas.fitWaypoints();
+                    if (amapView != null) {
+                        amapView.setDronePosition(wp.getLat(), wp.getLon(), 0, wp.getAlt());
+                        amapView.fitWaypoints();
+                    }
                 });
                 idx++;
             }
@@ -1464,6 +2051,8 @@ public class MainController {
     private void updateAlgoStatsUI(double origDist, double optDist) {
         if (algoOrigDist != null) algoOrigDist.setText(String.format("%.2f km", origDist / 1000));
         if (algoOptDist != null) algoOptDist.setText(String.format("%.2f km", optDist / 1000));
+        // 飞行距离由当前任务总航程自动回填（只读，与 HTML 原型一致）
+        if (distInput != null) distInput.setText(String.format("%.2f", optDist / 1000));
         double rate = origDist > 0 ? (1 - optDist / origDist) * 100 : 0;
         if (algoWpCount != null) algoWpCount.setText(String.valueOf(mission.size()));
         if (algoDelta != null) algoDelta.setText(String.format("%.2f km", (origDist - optDist) / 1000));
@@ -1510,12 +2099,25 @@ public class MainController {
                 Platform.runLater(() -> {
                     try {
                         int idx = body.indexOf("\"wind_speed_10m\":");
+                        int idxDir = body.indexOf("\"wind_direction_10m\":");
                         if (idx >= 0) {
                             String sub = body.substring(idx + 17);
                             String valStr = sub.split("[,}\\s]")[0].trim();
                             double windSpeed = Double.parseDouble(valStr);
+                            String dirText = "";
+                            if (idxDir >= 0) {
+                                String subDir = body.substring(idxDir + 23);
+                                String dirStr = subDir.split("[,}\\s]")[0].trim();
+                                try {
+                                    double dir = Double.parseDouble(dirStr);
+                                    dirText = " · 风向 " + windDirName(dir) + " " + Math.round(dir) + "°";
+                                } catch (NumberFormatException ignored) {}
+                            }
                             if (windInput != null) {
                                 windInput.setText(String.format("%.1f", windSpeed));
+                            }
+                            if (windInfoLabel != null) {
+                                windInfoLabel.setText("Open-Meteo 实时数据 · " + String.format("%.1f", windSpeed) + " m/s" + dirText + " [API]");
                             }
                             showToast(String.format("风速获取成功 %.1f m/s [API]", windSpeed), "success");
                         } else {
@@ -1537,12 +2139,23 @@ public class MainController {
         if (windInput != null) {
             windInput.setText(String.format("%.1f", windSpeed));
         }
+        if (windInfoLabel != null) {
+            windInfoLabel.setText("实时气象获取失败，使用默认估算风速 " + String.format("%.1f", windSpeed) + " m/s（" + reason + "）");
+        }
         showToast(String.format("风速估算 %.1f m/s（%s）", windSpeed, reason), "warn");
+    }
+
+    /** 气象风向角（度，北风=0，顺时针）转中文方位 */
+    private String windDirName(double deg) {
+        String[] names = {"北", "东北", "东", "东南", "南", "西南", "西", "西北"};
+        int i = (int) Math.round(deg / 45.0) % 8;
+        return names[i] + "风";
     }
 
     @FXML
     private void onToggleTheme() {
         ThemeManager.toggle(stage.getScene());
+        syncMapTheme();
     }
 
     @FXML
@@ -1553,6 +2166,13 @@ public class MainController {
             try { settings.e1Port = Integer.parseInt(e1PortField.getText()); }
             catch (NumberFormatException ignored) {}
         }
+        if (hbTimeoutField != null) {
+            try { settings.heartbeatTimeout = Integer.parseInt(hbTimeoutField.getText().trim()); }
+            catch (NumberFormatException ignored) {}
+        }
+        if (phoneGpsToggle != null) settings.phoneGps = phoneGpsToggle.isSelected();
+        if (phoneCompassToggle != null) settings.phoneCompass = phoneCompassToggle.isSelected();
+        if (phoneBaroToggle != null) settings.phoneBaro = phoneBaroToggle.isSelected();
         if (droneRangeField != null) {
             try { settings.droneMaxRange = Double.parseDouble(droneRangeField.getText()); }
             catch (NumberFormatException ignored) {}
@@ -1629,6 +2249,7 @@ public class MainController {
             new double[][]{{118.785,32.065},{118.800,32.065},{118.800,32.050},{118.785,32.050}}));
         airspace.addPackage(pkg);
         mapCanvas.setAirspaceZones(airspace.getActiveZones());
+        if (amapView != null) amapView.setAirspaceZones(airspace.getActiveZones());
         refreshAirspacePkgList();
         showToast("已加载南京仙林示例空域数据包（4 区域）", "success");
     }
@@ -1752,6 +2373,7 @@ public class MainController {
 
     private void updateMap() {
         mapCanvas.setWaypoints(mission.getWaypoints());
+        if (amapView != null) amapView.setWaypoints(mission.getWaypoints());
     }
 
     private void updateMissionStats() {
@@ -1818,39 +2440,7 @@ public class MainController {
         } else {
             comm.setLink(new SerialLink(port, settings.baudRate));
         }
-        comm.setCallback(t -> Platform.runLater(() -> {
-            if (!t.valid) return;
-            System.out.println("[E1] 收到遥测: msgId=" + t.msgId + " hasAtt=" + t.hasAttitude + " hasIMU=" + t.hasImu
-                + " hasParam=" + t.hasParam + " hasAck=" + t.hasAck);
-            // 单点翻译：根据 has* 标志选择性更新 Drone 字段及可用性标识，
-            // 避免飞控不上报的数据被默认值 0 误导 UI
-            drone.updateFromTelemetry(t);
-            // 累积飞控参数（只读，安全；写入受硬约束限制不下发）
-            if (t.hasParam) paramService.onParamValue(t);
-            // 连接建立收到首个心跳后，自动请求飞控参数列表一次（只读，安全）
-            if (!paramListRequested && t.hasHeartbeat) {
-                paramListRequested = true;
-                comm.requestParamList();
-                System.out.println("[E1] 收到首个心跳，已请求飞控参数列表（CF-Drone 84 项）");
-            }
-            updateDroneStatus();
-            updateE1StatusDetail();
-            updatePhoneStatusDetail();
-            // 仅在飞控上报位置时更新地图与状态栏经纬度，避免无 GPS 时显示 0
-            if (t.hasPosition && mapCanvas != null) {
-                mapCanvas.setDronePosition(t.lat, t.lon);
-                mapCanvas.setDroneAlt(t.alt);
-                mapCanvas.setDroneHeading(t.heading);
-            }
-            if (sbLat != null) sbLat.setText(t.hasPosition ? String.format("%.5f", t.lat) : "—");
-            if (sbLon != null) sbLon.setText(t.hasPosition ? String.format("%.5f", t.lon) : "—");
-            // 温度：仅 IMU 上报时显示真实值，否则诚实标注 "—"
-            if (seTemp != null) {
-                seTemp.setText(drone.isImuAvailable() ? String.format("%.1f°C", drone.getImuTemp()) : "—");
-            }
-            if (sbLastUpdate != null) sbLastUpdate.setText(
-                new Date().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalTime().toString());
-        }));
+        comm.setCallback(t -> Platform.runLater(() -> onTelemetry(t)));
         comm.start();
         updateConnStatus();
 
@@ -1880,27 +2470,31 @@ public class MainController {
         if (droneStatusGrid == null) return;
         // 诚实标注：飞控/固件不上报的数据用 "—" 表示，避免默认值 0 误导用户
         boolean posOk = drone.isPositionAvailable();
+        boolean gpsOk = drone.isGpsAvailable();
+        boolean vfrOk = drone.isVfrHudAvailable();
         boolean attOk = drone.isAttitudeAvailable();
         boolean battOk = drone.isBatteryAvailable();
         boolean hbOk = drone.isHeartbeatAvailable();
         boolean rcOk = drone.isRcAvailable();
         boolean landOk = drone.isLandedStateAvailable();
+        // 速度/高度/航向：GLOBAL_POSITION_INT 优先，回退 VFR_HUD
+        boolean spdOk = posOk || vfrOk;
         Object[] values = {
             hbOk ? drone.getCustomModeName() : "—", "info",
             landOk ? drone.getLandedStateName() : "—", landOk && drone.getLandedState() == 1 ? "off" : "info",
             posOk ? drone.getLat() : "—", "",
             posOk ? drone.getLon() : "—", "",
-            posOk ? drone.getAlt() : "—", "",
-            posOk ? drone.getSpeed() : "—", "",
-            posOk ? drone.getHeading() : "—", "",
+            (posOk || vfrOk) ? drone.getAlt() : "—", "",
+            spdOk ? drone.getSpeed() : "—", "",
+            spdOk ? drone.getHeading() : "—", "",
             attOk ? drone.getRoll() : "—", "",
             attOk ? drone.getPitch() : "—", "",
             attOk ? drone.getYaw() : "—", "",
             battOk ? drone.getBatteryPct() : "—", "battery",
             battOk ? drone.getVoltage() : "—", "",
             rcOk ? drone.getRssi() : "—", "ok",
-            posOk ? drone.getSatellites() : "—", "ok",
-            posOk ? drone.getHdop() : "—", "ok",
+            gpsOk ? drone.getSatellites() : "—", "ok",
+            gpsOk ? drone.getHdop() : "—", "ok",
             hbOk ? (drone.isArmed() ? "已解锁" : "未解锁") : "—", drone.isArmed() ? "ok" : "off"
         };
         String[] formats = {
@@ -1973,8 +2567,84 @@ public class MainController {
         // 状态栏诚实标注：位置不可用时显示 "—"
         if (sbLat != null) sbLat.setText(posOk ? String.format("%.5f", drone.getLat()).substring(0, Math.min(8, String.format("%.5f", drone.getLat()).length())) : "—");
         if (sbLon != null) sbLon.setText(posOk ? String.format("%.5f", drone.getLon()).substring(0, Math.min(9, String.format("%.5f", drone.getLon()).length())) : "—");
-        if (sbGps != null) sbGps.setText(posOk ? ("3D·" + drone.getSatellites()) : "—");
-        if (sbHdop != null) sbHdop.setText(posOk ? String.format("%.1f", drone.getHdop()) : "—");
+        if (sbGps != null) sbGps.setText(gpsOk ? (drone.getFixTypeName() + "·" + drone.getSatellites()) : "—");
+        if (sbHdop != null) sbHdop.setText(gpsOk ? String.format("%.1f", drone.getHdop()) : "—");
+
+        // ================================================================
+        // P1/P2 新增：电池详情（电流/温度/电芯/剩余时间） + 姿态仪表可用性标签
+        // ================================================================
+        boolean bsOk = drone.isBatteryStatusAvailable();
+        setBatteryDetail(lblBatCurrent, bsOk,
+            String.format(Locale.ROOT, "%.2f A", drone.getBatteryCurrent()),
+            drone.getBatteryCurrent() >= 6.0 ? "err" : (drone.getBatteryCurrent() >= 3.0 ? "warn" : "ok"));
+        setBatteryDetail(lblBatTemp, bsOk,
+            String.format(Locale.ROOT, "%.1f °C", drone.getBatteryTemp()),
+            drone.getBatteryTemp() >= 55.0 ? "err" : (drone.getBatteryTemp() >= 45.0 ? "warn" : "ok"));
+        if (lblCells != null) {
+            int[] cv = drone.getCellVoltages();
+            int count = 0;
+            int minMv = Integer.MAX_VALUE;
+            int maxMv = Integer.MIN_VALUE;
+            for (int x : cv) {
+                if (x > 0) {
+                    count++;
+                    if (x < minMv) minMv = x;
+                    if (x > maxMv) maxMv = x;
+                }
+            }
+            if (!bsOk || count == 0) {
+                lblCells.setText("—");
+                lblCells.getStyleClass().removeAll("ok", "warn", "err", "off");
+                lblCells.getStyleClass().add("off");
+            } else {
+                int diff = maxMv - minMv;
+                lblCells.setText(String.format(Locale.ROOT, "%dS %d/%d mV", count, minMv, maxMv));
+                lblCells.getStyleClass().removeAll("ok", "warn", "err", "off");
+                if (diff <= 15) lblCells.getStyleClass().add("ok");
+                else if (diff <= 50) lblCells.getStyleClass().add("warn");
+                else lblCells.getStyleClass().add("err");
+            }
+        }
+        if (lblBatTimeLeft != null) {
+            double sec = batteryPredictor.predictDynamic();
+            if (!Double.isFinite(sec) || sec <= 0) {
+                int have = batteryPredictor.sampleCount();
+                if (have < 2) {
+                    lblBatTimeLeft.setText("观测中(" + have + "/" + 2 + ")");
+                } else {
+                    lblBatTimeLeft.setText("—");
+                }
+                lblBatTimeLeft.getStyleClass().removeAll("ok", "warn", "err", "off");
+                lblBatTimeLeft.getStyleClass().add("off");
+            } else {
+                long m = (long) (sec / 60);
+                long s = (long) (sec % 60);
+                lblBatTimeLeft.setText(String.format("%02d:%02d", m, s));
+                lblBatTimeLeft.getStyleClass().removeAll("ok", "warn", "err", "off");
+                if (sec >= 600) lblBatTimeLeft.getStyleClass().add("ok");
+                else if (sec >= 240) lblBatTimeLeft.getStyleClass().add("warn");
+                else lblBatTimeLeft.getStyleClass().add("err");
+            }
+        }
+        // 姿态不可用标签
+        if (attitudeUnavailableLabel != null) {
+            attitudeUnavailableLabel.setVisible(!attOk);
+            attitudeUnavailableLabel.setManaged(!attOk);
+            attitudeUnavailableLabel.setText(attOk ? "" : "姿态数据未接入 [E1]");
+        }
+    }
+
+    private void setBatteryDetail(Label lbl, boolean ok, String text, String stateIfOk) {
+        if (lbl == null) return;
+        if (!ok) {
+            lbl.setText("—");
+            lbl.getStyleClass().removeAll("ok", "warn", "err", "off");
+            lbl.getStyleClass().add("off");
+            return;
+        }
+        lbl.setText(text);
+        lbl.getStyleClass().removeAll("ok", "warn", "err", "off");
+        lbl.getStyleClass().add(stateIfOk);
     }
 
     // ===== Menu / Navigation =====
@@ -1986,6 +2656,259 @@ public class MainController {
     private void onGoSettingsTab() { if (workspaceTabs != null) workspaceTabs.getSelectionModel().select(settingsTab); }
     @FXML
     private void onGoAlgoTab() { if (workspaceTabs != null) workspaceTabs.getSelectionModel().select(algoTab); }
+    @FXML
+    private void onGoChargingTab() { if (workspaceTabs != null && chargingTab != null) workspaceTabs.getSelectionModel().select(chargingTab); }
+
+    // ===== Battery Charging Workspace =====
+    /** 请求飞控上报电池遥测（BATTERY_STATUS/SYS_STATUS/HIGHRES_IMU）。 */
+    @FXML
+    private void onChargingRequestBattery() {
+        if (comm == null || !comm.isLinkActive()) {
+            showToast("飞控链路未连接，无法请求电池遥测", "warn");
+            return;
+        }
+        batteryPredictor.reset();
+        comm.requestBatteryStatus();
+        comm.requestMessage(1);
+        comm.requestMessage(105);
+        showToast("已请求 BATTERY_STATUS(147) / SYS_STATUS(1) / HIGHRES_IMU(105)", "info");
+    }
+
+    /** 立即刷新电池充电工作区（手动触发）。 */
+    @FXML
+    private void onChargingRefresh() {
+        updateChargingWorkspace(true);
+        showToast("已刷新电池充电数据", "info");
+    }
+
+    /**
+     * 刷新电池充电工作区 UI。从 flushUiUpdates() 每 100ms 调用，
+     * 仅在 chargingTab 可见时执行重 UI 构建，否则只更新后端状态条。
+     */
+    private void updateChargingWorkspace() {
+        updateChargingWorkspace(false);
+    }
+
+    private void updateChargingWorkspace(boolean force) {
+        if (chargingTab == null) return;
+        boolean visible = force || (workspaceTabs != null
+                && workspaceTabs.getSelectionModel().getSelectedItem() == chargingTab);
+        BatteryChargingMonitor.Snapshot snap = chargingMonitor.snapshot();
+        if (snap == null) return;
+
+        // 后端状态条（始终更新，开销小）
+        updateChargingBackendBar(snap);
+
+        if (!visible) return;
+
+        // 摘要卡片
+        List<BatteryChargingMonitor.BatteryInfo> connected = new ArrayList<>();
+        int chargingCount = 0, fullCount = 0;
+        double totalPower = 0, capSum = 0;
+        int minEta = Integer.MAX_VALUE;
+        for (BatteryChargingMonitor.BatteryInfo b : snap.batteries) {
+            if (!b.connected) continue;
+            connected.add(b);
+            if (b.charging) chargingCount++;
+            if (b.capacity >= 100) fullCount++;
+            if (b.power != null) totalPower += b.power;
+            else if (b.voltage > 0 && b.current > 0) totalPower += b.voltage * b.current;
+            if (b.capacity >= 0) capSum += b.capacity;
+            if (b.charging && b.timeToFullMin > 0 && b.timeToFullMin < minEta) minEta = b.timeToFullMin;
+        }
+        if (chgSumCharging != null) {
+            chgSumCharging.setText(String.valueOf(chargingCount));
+            chgSumCharging.getStyleClass().setAll("bat-summary-val", chargingCount > 0 ? "ok" : "");
+        }
+        if (chgSumChargingSub != null) chgSumChargingSub.setText("共 " + connected.size() + " 个数据源");
+        if (chgSumFull != null) chgSumFull.setText(String.valueOf(fullCount));
+        if (chgSumFullSub != null) chgSumFullSub.setText(fullCount > 0 ? "可拔出" : "无");
+        if (chgSumPower != null) chgSumPower.setText(String.format("%.1f W", totalPower));
+        if (chgSumPowerSub != null) chgSumPowerSub.setText(snap.wmiAvailable ? "系统供电" : "—");
+        if (chgSumAvgCap != null)
+            chgSumAvgCap.setText(connected.isEmpty() ? "--%" : Math.round(capSum / connected.size()) + "%");
+        if (chgSumAvgSub != null) chgSumAvgSub.setText("所有已连接电池");
+        if (chgSumEta != null) chgSumEta.setText(minEta != Integer.MAX_VALUE ? formatChgTime(minEta) : "--");
+        if (chgSumEtaSub != null) chgSumEtaSub.setText(minEta != Integer.MAX_VALUE ? "剩余时间最短" : "无充电中");
+
+        // 验证面板
+        updateChargingValidation(snap);
+
+        // 电池卡片网格
+        if (chgGridHost != null) {
+            chgGridHost.getChildren().setAll(buildChargingCards(snap));
+        }
+    }
+
+    private void updateChargingBackendBar(BatteryChargingMonitor.Snapshot snap) {
+        boolean hasReal = snap.wmiAvailable || snap.mavlinkConnected;
+        String dotStyle = hasReal ? "online" : "offline";
+        String text = hasReal ? "电池监控运行中" : "无可用数据源";
+        StringBuilder meta = new StringBuilder();
+        if (snap.wmiAvailable) meta.append("WMI:可用");
+        if (snap.mavlinkConnected) {
+            if (meta.length() > 0) meta.append(" · ");
+            meta.append("MAVLink:").append(snap.mavlinkPort != null ? snap.mavlinkPort : "已连接");
+            if (!snap.mavlinkBatterySupported) meta.append("(无电池遥测)");
+        }
+        if (bbbDot != null) {
+            bbbDot.getStyleClass().setAll("bbb-dot", dotStyle);
+        }
+        if (bbbText != null) bbbText.setText(text);
+        if (bbbMeta != null) bbbMeta.setText(meta.length() > 0 ? meta.toString() : "无数据源");
+    }
+
+    private void updateChargingValidation(BatteryChargingMonitor.Snapshot snap) {
+        BatteryChargingMonitor.ValidationSummary val = snap.validation;
+        if (chgValidationBox != null) {
+            chgValidationBox.getStyleClass().setAll("bat-validation-section",
+                    "err".equals(val.status) ? "err" : "warn".equals(val.status) ? "warn" : "");
+        }
+        if (chgValStatus != null) {
+            chgValStatus.getStyleClass().setAll("bat-validation-status", val.status);
+            chgValStatus.setText("pass".equals(val.status) ? "通过"
+                    : "warn".equals(val.status) ? "警告" : "异常");
+        }
+        if (chgValBody != null) {
+            if (snap.anomalies.isEmpty()) {
+                chgValBody.getChildren().setAll(new Label("✓ 所有已校验电池充电状态正常"));
+                chgValBody.getChildren().get(0).getStyleClass().add("bat-validation-empty");
+            } else {
+                List<javafx.scene.Node> items = new ArrayList<>();
+                for (BatteryChargingMonitor.Anomaly a : snap.anomalies) {
+                    HBox row = new HBox(8);
+                    row.getStyleClass().addAll("bat-anomaly-item", a.level);
+                    Label code = new Label(a.code);
+                    code.getStyleClass().add("bat-anomaly-code");
+                    Label msg = new Label(a.msg);
+                    msg.getStyleClass().add("bat-anomaly-msg");
+                    msg.setWrapText(true);
+                    row.getChildren().addAll(code, msg);
+                    items.add(row);
+                }
+                chgValBody.getChildren().setAll(items);
+            }
+        }
+        if (chgValChecked != null) chgValChecked.setText(String.valueOf(val.checkedBatteries));
+        if (chgValAnomalies != null) chgValAnomalies.setText(String.valueOf(val.totalAnomalies));
+        if (chgValErrors != null) chgValErrors.setText(String.valueOf(val.errors));
+        if (chgValWarnings != null) chgValWarnings.setText(String.valueOf(val.warnings));
+        if (chgValSources != null) {
+            StringBuilder sb = new StringBuilder();
+            for (BatteryChargingMonitor.BatteryInfo b : snap.batteries) {
+                if (sb.length() > 0) sb.append("+");
+                sb.append("wmi".equals(b.source) ? "WMI" : "mavlink".equals(b.source) ? "MAVLink" : b.source);
+            }
+            chgValSources.setText(sb.length() > 0 ? sb.toString() : "--");
+        }
+    }
+
+    private List<javafx.scene.Node> buildChargingCards(BatteryChargingMonitor.Snapshot snap) {
+        List<javafx.scene.Node> cards = new ArrayList<>();
+        for (BatteryChargingMonitor.BatteryInfo b : snap.batteries) {
+            cards.add(buildChargingCard(b));
+        }
+        return cards;
+    }
+
+    private VBox buildChargingCard(BatteryChargingMonitor.BatteryInfo b) {
+        VBox card = new VBox();
+        card.getStyleClass().addAll("bat-card", b.source);
+        if (b.charging) card.getStyleClass().add("charging");
+        if (b.capacity >= 100) card.getStyleClass().add("full");
+
+        // 头部
+        HBox head = new HBox(8);
+        head.getStyleClass().add("bat-card-head");
+        head.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+        Label title = new Label(b.name);
+        title.getStyleClass().add("bat-card-title");
+        Label pill = new Label("wmi".equals(b.source) ? "WMI" : "MAVLink");
+        pill.getStyleClass().addAll("bat-source-pill", b.source);
+        head.getChildren().addAll(title, pill);
+        card.getChildren().add(head);
+
+        // 主体
+        VBox body = new VBox(10);
+        body.getStyleClass().add("bat-card-body");
+        body.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+
+        // 容量条
+        HBox capRow = new HBox(6);
+        capRow.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+        Region barWrap = new Region();
+        barWrap.getStyleClass().add("bat-cap-bar-wrap");
+        HBox.setHgrow(barWrap, javafx.scene.layout.Priority.ALWAYS);
+        Region barFill = new Region();
+        barFill.getStyleClass().addAll("bat-cap-bar-fill",
+                b.charging ? "charging" : b.capacity >= 100 ? "full" : "");
+        double capPct = Math.max(0, Math.min(100, b.capacity >= 0 ? b.capacity : 0));
+        barFill.setPrefWidth(capPct * 2.5);
+        barFill.setMaxWidth(capPct * 2.5);
+        // 用 StackPane 叠放进度条
+        StackPane barStack = new StackPane();
+        barStack.getChildren().addAll(barWrap, barFill);
+        HBox.setHgrow(barStack, javafx.scene.layout.Priority.ALWAYS);
+        Label capPctLabel = new Label(b.capacity >= 0 ? Math.round(b.capacity) + "%" : "--");
+        capPctLabel.getStyleClass().add("bat-cap-pct");
+        capRow.getChildren().addAll(barStack, capPctLabel);
+        body.getChildren().add(capRow);
+
+        // 信息行
+        if (b.valid) {
+            body.getChildren().add(infoRow("电池编号", b.batteryId != null ? b.batteryId : "--", null));
+            body.getChildren().add(infoRow("电压", b.voltage > 0 ? String.format("%.2f V", b.voltage) : "—",
+                    b.voltage > 0 ? "ok" : "pending"));
+            body.getChildren().add(infoRow("电流", b.current >= 0 ? String.format("%.2f A", b.current) : "—",
+                    b.current > 5 ? "err" : b.current > 3 ? "warn" : "ok"));
+            if (b.power != null && b.power > 0)
+                body.getChildren().add(infoRow("充电功率", String.format("%.2f W", b.power), "ok"));
+            if (b.temperature != null)
+                body.getChildren().add(infoRow("温度", String.format("%.1f °C", b.temperature),
+                        b.temperature > 60 ? "err" : b.temperature > 45 ? "warn" : "ok"));
+            else
+                body.getChildren().add(infoRow("温度", "—", "pending"));
+            body.getChildren().add(infoRow("电源接入", b.powerOnline ? "是" : "否",
+                    b.powerOnline ? "ok" : "err"));
+            body.getChildren().add(infoRow("剩余时间", b.charging && b.timeToFullMin > 0
+                    ? formatChgTime(b.timeToFullMin) : "—", b.charging ? "ok" : null));
+        } else if (b.note != null) {
+            Label noteLabel = new Label(b.note);
+            noteLabel.setWrapText(true);
+            noteLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: -fx-text-muted; -fx-padding: 14 0;");
+            body.getChildren().add(noteLabel);
+        }
+        card.getChildren().add(body);
+
+        // 状态行
+        Label status = new Label(b.valid ? (b.charging ? "⚡ 充电中"
+                + (b.current > 0 ? " " + String.format("%.1f", b.current) + "A" : "")
+                : b.capacity >= 100 ? "✓ 已充满" : "⏸ 待机")
+                : "⚙ 等待遥测");
+        status.getStyleClass().add("bat-card-status");
+        card.getChildren().add(status);
+        return card;
+    }
+
+    private HBox infoRow(String label, String value, String styleClass) {
+        HBox row = new HBox(8);
+        row.getStyleClass().add("bat-info-row");
+        row.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+        Label l = new Label(label);
+        l.getStyleClass().add("bat-info-label");
+        Label v = new Label(value);
+        v.getStyleClass().add("bat-info-val");
+        if (styleClass != null) v.getStyleClass().add(styleClass);
+        row.getChildren().addAll(l, v);
+        return row;
+    }
+
+    private static String formatChgTime(int minutes) {
+        if (minutes <= 0) return "—";
+        if (minutes < 60) return Math.round(minutes) + " 分";
+        int h = minutes / 60, m = minutes % 60;
+        return h + "时" + (m < 10 ? "0" : "") + m + "分";
+    }
 
     @FXML
     private void onClearWaypoints() {

@@ -39,6 +39,13 @@ public class Main extends Application {
     }
 
     public static void main(String[] args) {
+        // WebView 内高德暗色底图使用 CSS filter 实现；Windows Direct3D 管线合成
+        // 滤镜时会触发 Prism RTTexture 渲染缺陷（瓦片整层不绘制）。
+        // 软件渲染管线可稳定渲染滤镜内容；若用户已手动指定 prism.order 则尊重之。
+        if (System.getProperty("prism.order") == null
+                && System.getProperty("os.name", "").toLowerCase().contains("win")) {
+            System.setProperty("prism.order", "sw");
+        }
         launch(args);
     }
 }

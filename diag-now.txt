@@ -1,0 +1,209 @@
+﻿[INFO] Scanning for projects...
+[INFO] 
+[INFO] --------------------------< cn.edu.nuaa:gcs >---------------------------
+[INFO] Building SkyLink GCS 2.1.0
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- exec:3.1.0:java (default-cli) @ gcs ---
+============================================
+  BATTERY_STATUS ��Ϲ���
+  ����: COM5 @ 115200
+============================================
+[Serial] �򿪴���: COM5 @ 115200
+[Serial] �����Ѵ�, ��������...
+[TX] HEARTBEAT �ѷ���
+[TX] REQUEST BATTERY_STATUS(147) �ѷ���
+[Serial] �յ�����: 144 bytes
+[TX] REQUEST SYS_STATUS(1) �ѷ���
+[Serial] �յ�����: 21 bytes
+[TX] REQUEST HIGHRES_IMU(105) �ѷ���
+[Serial] �յ�����: 21 bytes
+[TX] PARAM_REQUEST_LIST �ѷ���
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[TX] REQUEST AUTOPILOT_VERSION �ѷ���
+
+[RX] ���� 15 ��...
+
+[Serial] �յ�����: 32 bytes
+[RX] msgId=126
+[RX] COMMAND_ACK: command=512 result=3(UNSUPPORTED)
+[RX] COMMAND_ACK: command=512 result=3(UNSUPPORTED)
+[RX] COMMAND_ACK: command=512 result=3(UNSUPPORTED)
+[RX] PARAM_VALUE: name=CTL_R_RATE_P value=0.0600 (0/112)
+[RX] PARAM_VALUE: name=CTL_R_RATE_I value=0.1000 (1/112)
+[RX] PARAM_VALUE: name=CTL_R_RATE_D value=0.0010 (2/112)
+[..] ������ 0s: HEARTBEAT=0 ATTITUDE=0 IMU=0 MOTOR=0
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 14 bytes
+[RX] msgId=148 [CRC FAIL]
+[RX] COMMAND_ACK: command=512 result=0(ACCEPTED)
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 32 bytes
+[Serial] �յ�����: 18 bytes
+[RX] msgId=126
+[..] ������ 11s: HEARTBEAT=0 ATTITUDE=0 IMU=0 MOTOR=0
+
+============================================
+  ��Ͻ������
+============================================
+HEARTBEAT(0)       : 0 ֡
+SYS_STATUS(1)      : 0 ֡
+ATTITUDE_QUAT(31)  : 0 ֡
+SCALED_IMU(26)     : 0 ֡
+RC_CHANNELS_RAW(35): 0 ֡
+ACTUATOR_TGT(140)  : 0 ֡
+EXT_SYS_STATE(245) : 0 ֡
+HIGHRES_IMU(105)   : 0 ֡
+BATTERY_STATUS(147): 0 ֡
+STATUSTEXT(253)    : 0 ֡
+PARAM_VALUE(22)    : 112 ֡
+COMMAND_ACK(77)    : 4 ֡
+����               : 3 ֡
+
+CRC У��ͳ��: ͨ��=118 ʧ��=1 ͨ����=99.2%
+
+REQUEST_MESSAGE ACK: command=512 result=0(ACCEPTED)
+
+--- ������ݣ����һ���յ��� ---
+
+--- ���� ---
+[X] �ɿ�δ�ظ� BATTERY_STATUS(147)
+[X] �ɿ�δ�ظ� SYS_STATUS(1)
+[X] �ɿ�δ�ظ� HIGHRES_IMU(105)
+============================================
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  17.004 s
+[INFO] Finished at: 2026-09-03T15:56:23+08:00
+[INFO] ------------------------------------------------------------------------

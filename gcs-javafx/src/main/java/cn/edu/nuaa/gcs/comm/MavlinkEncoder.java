@@ -86,6 +86,23 @@ public class MavlinkEncoder {
                 CMD_REQUEST_MESSAGE, CMD_REQUEST_AUTOPILOT_VERSION, 0, 0, 0, 0, 0, 0, 0);
     }
 
+    /**
+     * 请求任意 MAVLink 消息（只读，安全）。
+     * 使用 MAV_CMD_REQUEST_MESSAGE(512)，param1 = 目标 msgId。
+     * 若飞控固件支持该消息，会回传一帧；不支持则返回 COMMAND_ACK 结果非 0。
+     */
+    public static byte[] requestMessage(int gcsSysId, int gcsCompId,
+                                        int targetSystem, int targetComponent, int msgId) {
+        return commandLong(gcsSysId, gcsCompId, targetSystem, targetComponent,
+                CMD_REQUEST_MESSAGE, msgId, 0, 0, 0, 0, 0, 0, 0);
+    }
+
+    /** 请求 BATTERY_STATUS(147) - 电池状态（只读，安全）。 */
+    public static byte[] requestBatteryStatus(int gcsSysId, int gcsCompId,
+                                              int targetSystem, int targetComponent) {
+        return requestMessage(gcsSysId, gcsCompId, targetSystem, targetComponent, 147);
+    }
+
     /** 请求参数列表（只读，安全）。 */
     public static byte[] paramRequestList(int gcsSysId, int gcsCompId, int targetSystem, int targetComponent) {
         // payload(2): target_system(u8) target_component(u8)

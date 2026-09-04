@@ -1,0 +1,3201 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SkyLink 天链 · 无人机地面控制站 (电池充电监控增强版)</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<style>
+/* ===== Design Tokens ===== */
+:root{
+  --primary:#3b82f6; --accent-blue:#4b8bf5; --accent-light-blue:#7aabff; --accent-gold:#f0a500;
+  --success:#22c55e; --warning:#f59e0b; --danger:#ef4444; --info:#8b949e;
+  --text-primary:#e6edf3; --text-secondary:#c9d1d9; --text-muted:#6e7681; --text-link:#58a6ff;
+  --border-default:#21262d; --border-hover:#30363d; --border-highlight:#3b82f6;
+  --bg-base:#0d1117; --bg-panel:#161b22; --bg-hover:#1c2128; --bg-bar:#21262d;
+  --shadow-pop:0 4px 12px #00000040;
+  --font-mono:'JetBrains Mono',monospace;
+  --radius-sm:4px; --radius-md:4px; --radius-lg:6px;
+  --data-fill:#7d8590;
+  --nav-h:40px; --ws-tab-h:36px; --status-bar-h:28px; --left-panel-w:280px;
+  --src-e1:#3b82f6; --src-phone:#22c55e; --src-system:#a78bfa; --src-api:#f59e0b;
+}
+[data-theme="light"]{
+  --primary:#0f6cbd; --accent-blue:#0f6cbd; --accent-light-blue:#4a9ee1; --accent-gold:#c47f00;
+  --success:#107c10; --warning:#9a6700; --danger:#c42b1c; --info:#605e5c;
+  --text-primary:#1a1a1a; --text-secondary:#424242; --text-muted:#8c8c8c; --text-link:#0f6cbd;
+  --border-default:#e5e5e5; --border-hover:#d1d1d1; --border-highlight:#0f6cbd;
+  --bg-base:#f3f3f3; --bg-panel:#ffffff; --bg-hover:#f0f0f0; --bg-bar:#fafafa;
+  --shadow-pop:0 2px 8px #00000026;
+  --data-fill:#8c8c8c;
+  --src-e1:#0f6cbd; --src-phone:#107c10; --src-system:#7c3aed; --src-api:#9a6700;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg-base);color:var(--text-primary);font-family:-apple-system,'Segoe UI','Microsoft YaHei',sans-serif;font-size:11px;line-height:1.5}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select{font-family:inherit;font-size:11px;color:var(--text-primary);background:var(--bg-base);border:1px solid var(--border-default);border-radius:4px;padding:4px 8px;outline:none;transition:border-color .15s}
+input:focus,select:focus{border-color:var(--primary);box-shadow:0 0 0 1px var(--primary)}
+[data-theme="light"] input,[data-theme="light"] select{background:var(--bg-panel)}
+input:disabled{background:var(--bg-hover);color:var(--text-muted)}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-hover);border-radius:3px}
+
+/* ===== Top Menu Bar ===== */
+.topnav{height:var(--nav-h);background:var(--bg-base);border-bottom:1px solid var(--border-default);display:flex;align-items:center;padding:0 12px;gap:0;flex-shrink:0;z-index:100}
+.nav-brand{font-size:12px;font-weight:700;color:var(--text-primary);letter-spacing:.5px;white-space:nowrap;display:flex;align-items:center;gap:6px;flex-shrink:0;margin-right:16px}
+.menu-bar{display:flex;gap:0;height:100%;align-items:stretch}
+.menu-item{display:flex;align-items:center;padding:0 10px;font-size:12px;color:var(--text-secondary);cursor:pointer;transition:background .15s,color .15s;position:relative;white-space:nowrap}
+.menu-item:hover{background:var(--bg-hover);color:var(--text-primary)}
+.menu-dropdown{position:absolute;top:100%;left:0;background:var(--bg-panel);border:1px solid var(--border-default);border-radius:var(--radius-sm);box-shadow:var(--shadow-pop);min-width:180px;z-index:200;display:none;flex-direction:column;padding:4px 0}
+.menu-item.open .menu-dropdown{display:flex}
+.menu-dropdown-item{padding:6px 16px;font-size:11px;color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.menu-dropdown-item:hover{background:var(--bg-hover);color:var(--text-primary)}
+.menu-dropdown-sep{height:1px;background:var(--border-default);margin:4px 0}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:11px;color:var(--info)}
+
+/* ===== Mode Switcher ===== */
+.mode-switcher{display:flex;gap:0;border:1px solid var(--border-default);border-radius:var(--radius-sm);overflow:hidden;flex-shrink:0}
+.ms-btn{padding:3px 10px;font-size:10px;font-weight:600;color:var(--info);background:var(--bg-panel);transition:all .15s;cursor:pointer;white-space:nowrap;border:none;border-right:1px solid var(--border-default)}
+.ms-btn:last-child{border-right:none}
+.ms-btn:hover{color:var(--text-secondary)}
+.ms-btn.active{background:var(--primary);color:#fff}
+.ms-btn.active[data-mode="e1_real"]{background:var(--warning);color:#1a1a1a}
+.ms-btn.active[data-mode="phone_assist"]{background:var(--success);color:#1a1a1a}
+
+/* Theme toggle */
+.theme-toggle{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:var(--radius-sm);color:var(--text-secondary);transition:all .15s}
+.theme-toggle:hover{background:var(--bg-hover);color:var(--text-primary)}
+.theme-toggle svg{transition:transform .3s}
+.theme-toggle:active svg{transform:rotate(180deg)}
+.conn-dot{width:8px;height:8px;border-radius:50%;background:var(--text-muted);transition:background .15s;flex-shrink:0}
+.conn-dot.on{background:var(--success)}
+.conn-dot.off{background:var(--danger)}
+.conn-dot.warn{background:var(--warning)}
+
+/* ===== Data Source Tags ===== */
+.src-tag{display:inline-block;font-size:8px;font-weight:700;padding:0 4px;border-radius:2px;margin-left:3px;vertical-align:middle;line-height:1.5;white-space:nowrap}
+.src-tag.e1{background:var(--src-e1);color:#fff}
+.src-tag.phone{background:var(--src-phone);color:#fff}
+.src-tag.system{background:var(--src-system);color:#fff}
+.src-tag.api{background:var(--src-api);color:#1a1a1a}
+
+/* ===== Workspace Tabs ===== */
+.ws-tabs{height:var(--ws-tab-h);background:var(--bg-base);border-bottom:1px solid var(--border-default);display:flex;align-items:stretch;padding:0 12px;flex-shrink:0;gap:0}
+.ws-tab{display:flex;align-items:center;padding:0 16px;font-size:12px;color:var(--info);border-bottom:2px solid transparent;transition:color .15s,border-color .15s;cursor:pointer;gap:6px;white-space:nowrap}
+.ws-tab:hover{color:var(--text-primary)}
+.ws-tab.active{color:var(--text-primary);border-bottom-color:var(--primary)}
+.ws-tab svg{width:14px;height:14px;flex-shrink:0}
+
+/* ===== Workspace Container ===== */
+.workspace{display:none;height:calc(100vh - var(--nav-h) - var(--ws-tab-h));overflow:hidden}
+.workspace.active{display:flex}
+
+/* ===== Safe Test Banner ===== */
+.safe-banner{background:linear-gradient(90deg,#f59e0b15,#f59e0b08);border-bottom:1px solid var(--border-default);padding:4px 12px;display:flex;align-items:center;gap:8px;font-size:11px;color:var(--warning);flex-shrink:0}
+.safe-banner svg{flex-shrink:0}
+.safe-banner .sb-action{margin-left:auto;padding:3px 10px;border:1px solid var(--warning);border-radius:4px;cursor:pointer;font-size:10px;font-weight:600;color:var(--warning);transition:all .15s}
+.safe-banner .sb-action:hover{background:var(--warning);color:#1a1a1a}
+.safe-banner .sb-action.danger{border-color:var(--danger);color:var(--danger)}
+.safe-banner .sb-action.danger:hover{background:var(--danger);color:#fff}
+
+/* ===== Mission Workspace ===== */
+.mission-ws{flex-direction:column}
+.mission-body{flex:1;display:flex;overflow:hidden}
+.left-panel{width:var(--left-panel-w);flex-shrink:0;background:var(--bg-panel);border-right:1px solid var(--border-default);display:flex;flex-direction:column;overflow:hidden}
+.lp-section{border-bottom:1px solid var(--border-default);display:flex;flex-direction:column;min-height:0}
+.lp-section-title{font-size:10px;font-weight:700;color:var(--text-muted);letter-spacing:.04em;padding:8px 12px 4px;text-transform:uppercase;display:flex;align-items:center;gap:6px;flex-shrink:0}
+.lp-section-body{padding:4px 12px 8px;overflow-y:auto;flex:1;min-height:0}
+
+/* E1 / Phone status */
+.dev-status{display:flex;flex-direction:column;gap:3px}
+.dev-row{display:flex;align-items:center;justify-content:space-between;font-size:10px;padding:2px 0}
+.dev-row .dr-label{color:var(--text-muted)}
+.dev-row .dr-val{font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--text-secondary)}
+.dev-row .dr-val.ok{color:var(--success)}
+.dev-row .dr-val.warn{color:var(--warning)}
+.dev-row .dr-val.err{color:var(--danger)}
+.dev-row .dr-val.off{color:var(--text-muted)}
+.dev-conn-banner{display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:4px;font-size:10px;font-weight:600;margin-bottom:4px}
+.dev-conn-banner.online{background:#22c55e15;color:var(--success)}
+.dev-conn-banner.offline{background:#ef44440d;color:var(--danger)}
+
+/* UAV Status */
+.uav-status-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border-default);border:1px solid var(--border-default);border-radius:var(--radius-sm);overflow:hidden}
+.us-cell{background:var(--bg-panel);display:flex;flex-direction:column;gap:2px;padding:6px 8px}
+.us-label{color:var(--text-muted);font-size:9px}
+.us-val{color:var(--text-primary);font-family:var(--font-mono);font-size:12px;font-weight:600}
+.us-val.ok{color:var(--success)}
+.us-val.warn{color:var(--warning)}
+.us-val.err{color:var(--danger)}
+.us-val.info{color:var(--primary)}
+.us-val.off{color:var(--text-muted)}
+.us-val.disabled{color:var(--text-muted);font-style:italic;font-weight:400}
+
+/* Waypoint list */
+.wp-list{padding:0}
+.wp-item{padding:6px 10px;transition:background .15s;cursor:pointer;border-left:3px solid transparent;display:flex;align-items:flex-start;gap:8px}
+.wp-item:hover{background:var(--bg-hover)}
+.wp-item.active{background:var(--bg-hover);border-left-color:var(--primary)}
+.wp-seq{color:#fff;background:var(--primary);border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
+.wp-info{flex:1;min-width:0}
+.wp-coords{font-family:var(--font-mono);font-size:10px;color:var(--info);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wp-meta{display:flex;flex-wrap:wrap;gap:4px 8px;font-size:9px;color:var(--text-muted);margin-top:2px}
+.wp-meta b{color:var(--text-secondary);font-weight:600}
+.wp-meta .wp-act-tag{color:var(--primary);font-weight:600}
+.wp-del{color:var(--danger);cursor:pointer;font-size:10px;padding:0 2px;opacity:.4;transition:opacity .15s;flex-shrink:0;margin-top:2px}
+.wp-del:hover{opacity:1}
+
+/* Mission ops buttons */
+.mission-ops{display:flex;flex-direction:column;gap:4px}
+.mo-btn{padding:5px 10px;border-radius:var(--radius-sm);font-size:11px;border:1px solid var(--border-default);background:var(--bg-panel);color:var(--text-secondary);transition:all .15s;cursor:pointer;text-align:left;display:flex;align-items:center;gap:6px}
+.mo-btn:hover{background:var(--bg-hover);color:var(--text-primary);border-color:var(--border-hover)}
+.mo-btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+.mo-btn.primary:hover{filter:brightness(1.1)}
+.mo-btn:disabled{opacity:.4;cursor:not-allowed}
+.mo-btn-gated{position:relative}
+.mo-btn-gated .gate-hint{display:none;position:absolute;left:100%;top:0;margin-left:8px;background:var(--bg-panel);border:1px solid var(--border-default);border-radius:4px;padding:6px 10px;font-size:10px;color:var(--warning);white-space:nowrap;z-index:300;box-shadow:var(--shadow-pop);max-width:220px;white-space:normal}
+.mo-btn-gated:hover .gate-hint{display:block}
+
+/* Center map */
+.center-map{flex:1;position:relative;overflow:hidden;min-width:0}
+#mainMap{width:100%;height:100%}
+.map-toolbar{position:absolute;top:10px;right:10px;z-index:10;background:var(--bg-panel);border:1px solid var(--border-hover);border-radius:var(--radius-md);padding:4px 8px;display:flex;gap:4px;align-items:center}
+.map-toolbar button{color:var(--text-secondary);background:none;border:none;width:26px;height:26px;border-radius:4px;font-size:12px;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s;cursor:pointer}
+.map-toolbar button:hover{color:var(--text-primary);background:var(--bg-hover)}
+.map-toolbar button.active{color:var(--primary)}
+.tb-divider{width:1px;height:18px;background:var(--border-hover);margin:0 4px}
+.map-hint{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);color:var(--text-muted);background:var(--bg-base);border-radius:var(--radius-sm);padding:3px 10px;font-size:10px;z-index:5}
+
+/* Sensor mini curves entry */
+.sensor-entry{position:absolute;bottom:8px;right:10px;z-index:10;display:flex;gap:6px}
+.sensor-entry-item{background:var(--bg-panel);border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:4px 10px;display:flex;align-items:center;gap:4px;cursor:pointer;transition:all .15s}
+.sensor-entry-item:hover{border-color:var(--primary);color:var(--text-primary)}
+.sensor-entry-item .se-dot{width:6px;height:6px;border-radius:50%}
+.sensor-entry-item .se-label{font-size:10px;color:var(--text-muted)}
+.sensor-entry-item .se-val{font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--text-primary)}
+
+/* Data Source Drawer */
+.ds-drawer{position:absolute;bottom:38px;right:10px;z-index:15;background:var(--bg-panel);border:1px solid var(--border-default);border-radius:var(--radius-md);box-shadow:var(--shadow-pop);width:280px;display:none;flex-direction:column;max-height:300px;overflow:hidden}
+.ds-drawer.open{display:flex}
+.ds-drawer-head{border-bottom:1px solid var(--border-default);padding:8px 12px;font-size:11px;font-weight:600;color:var(--text-primary);display:flex;align-items:center;gap:6px}
+.ds-drawer-body{padding:8px 12px;overflow-y:auto;flex:1}
+.ds-source-card{border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:6px}
+.ds-source-name{font-size:11px;font-weight:600;color:var(--text-primary);display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.ds-source-rows{display:flex;flex-direction:column;gap:2px}
+.ds-source-row{display:flex;justify-content:space-between;font-size:10px}
+.ds-source-row .dsr-label{color:var(--text-muted)}
+.ds-source-row .dsr-val{font-family:var(--font-mono);color:var(--text-secondary)}
+.ds-source-row .dsr-val.ok{color:var(--success)}
+.ds-source-row .dsr-val.err{color:var(--danger)}
+
+/* Bottom status bar */
+.status-bar{height:var(--status-bar-h);background:var(--bg-base);border-top:1px solid var(--border-default);display:flex;align-items:center;gap:0;flex-shrink:0;overflow-x:auto}
+.sb-item{display:flex;align-items:center;gap:5px;padding:0 12px;border-right:1px solid var(--border-default);white-space:nowrap;flex-shrink:0}
+.sb-label{color:var(--text-muted);font-size:9px}
+.sb-val{color:var(--text-secondary);font-family:var(--font-mono);font-size:11px;font-weight:600}
+.sb-val.ok{color:var(--success)}
+.sb-val.warn{color:var(--warning)}
+.sb-val.err{color:var(--danger)}
+.sb-spacer{flex:1}
+
+/* ===== Data Workspace ===== */
+.data-ws{flex-direction:column}
+.data-tabs{display:flex;border-bottom:1px solid var(--border-default);padding:0 8px;flex-shrink:0}
+.data-tab{padding:8px 16px;font-size:12px;color:var(--info);cursor:pointer;border-bottom:2px solid transparent;transition:color .15s;display:flex;align-items:center;gap:6px}
+.data-tab:hover{color:var(--text-secondary)}
+.data-tab.active{color:var(--text-primary);border-bottom-color:var(--primary)}
+.data-tab svg{width:12px;height:12px}
+.data-tab-content{flex:1;overflow:hidden;display:none}
+.data-tab-content.active{display:flex}
+
+/* Waveform */
+.wave-toolbar{background:var(--bg-panel);border-bottom:1px solid var(--border-default);padding:8px 12px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.wave-toolbar .stat-info{color:var(--info);margin-left:auto;font-size:11px}
+.wave-tr-btn{padding:3px 8px;font-size:11px;border-radius:4px;border:1px solid var(--border-default);background:var(--bg-panel);color:var(--info);cursor:pointer}
+.wave-tr-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.wave-body{flex:1;display:flex;overflow:hidden}
+.wave-chart{flex:1;background:var(--bg-base);position:relative}
+#waveCanvas{width:100%;height:100%;display:block}
+.wave-sidebar{background:var(--bg-panel);border-left:1px solid var(--border-default);width:160px;overflow-y:auto;padding-bottom:8px;flex-shrink:0}
+.wave-sidebar-group{color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;padding:4px 12px 2px;font-size:10px;font-weight:600}
+.wave-channel{border-radius:4px;margin:1px 4px;padding:3px 12px;transition:background .15s;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:11px}
+.wave-channel:hover{background:var(--bg-hover)}
+.wave-channel.enabled .ch-dot{opacity:1}
+.ch-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;opacity:.3;transition:opacity .2s}
+.ch-name{color:var(--text-secondary)}
+.ch-unit{color:var(--text-muted);font-size:10px;margin-left:auto}
+
+/* Flight logs */
+.flight-body{flex:1;display:flex;overflow:hidden;width:100%}
+.flight-list{background:var(--bg-panel);border-right:1px solid var(--border-default);width:260px;display:flex;flex-direction:column;flex-shrink:0}
+.flight-list-head{border-bottom:1px solid var(--border-default);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px}
+.flight-list-title{font-size:13px;font-weight:600;color:var(--text-primary)}
+.flight-list-body{flex:1;padding:6px;overflow-y:auto}
+.flight-item{border:1px solid transparent;border-radius:var(--radius-sm);margin-bottom:4px;padding:8px 10px;transition:all .12s;cursor:pointer}
+.flight-item:hover{background:var(--bg-hover)}
+.flight-item.active{background:var(--bg-hover);border-color:var(--primary)}
+.flight-item-id{color:var(--primary);font-family:var(--font-mono);font-size:11px;font-weight:700}
+.flight-item-type{color:var(--text-secondary);font-size:11px}
+.flight-item-time{color:var(--info);margin-bottom:4px;font-size:11px}
+.flight-item-stats{color:var(--info);gap:8px;font-size:10px;display:flex}
+.flight-detail{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.flight-detail-head{background:var(--bg-panel);border-bottom:1px solid var(--border-default);padding:12px 16px}
+.flight-detail-title{color:var(--text-primary);margin-bottom:4px;font-size:14px;font-weight:600}
+.flight-detail-meta{color:var(--info);gap:8px;font-size:12px;display:flex}
+#flightMap{flex:1;width:100%;overflow:hidden;background:var(--bg-base)}
+.flight-detail-stats{display:flex;border-top:1px solid var(--border-default);flex-shrink:0}
+.flight-stat-item{border-right:1px solid var(--border-default);padding:10px;flex:1;text-align:center}
+.flight-stat-item:last-child{border-right:none}
+.flight-stat-val{color:var(--text-primary);font-family:var(--font-mono);font-size:16px;font-weight:700}
+.flight-stat-label{color:var(--info);margin-top:2px;font-size:10px}
+
+/* ===== Settings Workspace ===== */
+.settings-ws{flex-direction:column;overflow-y:auto;padding:20px}
+.settings-section{max-width:600px;margin-bottom:24px}
+.settings-section-title{font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:4px}
+.settings-section-sub{font-size:11px;color:var(--info);margin-bottom:12px}
+.settings-row{display:flex;flex-direction:column;gap:14px}
+.settings-field{display:flex;flex-direction:column;gap:4px}
+.settings-field label{font-size:11px;color:var(--info)}
+.settings-field input,.settings-field select{max-width:200px}
+.settings-hint{font-size:10px;color:var(--text-muted);margin-top:2px}
+
+/* ===== Algorithm Workspace ===== */
+.algo-ws{flex-direction:column;overflow-y:auto;padding:20px}
+.algo-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:1000px;width:100%}
+.algo-card{background:var(--bg-panel);border:1px solid var(--border-default);border-radius:var(--radius-md);overflow:hidden;display:flex;flex-direction:column}
+.algo-card-head{border-bottom:1px solid var(--border-default);padding:10px 14px;display:flex;align-items:center;gap:8px}
+.algo-card-title{font-size:13px;font-weight:600;color:var(--text-primary)}
+.algo-card-sub{margin-left:auto;font-size:10px;color:var(--text-muted)}
+.algo-card-body{padding:14px;flex:1}
+.algo-stat-row{display:flex;justify-content:space-between;padding:4px 0;font-size:12px;color:var(--info)}
+.algo-stat-row .mono{color:var(--text-primary)}
+.algo-stat-row .improved{color:var(--success)}
+.algo-stat-row .worse{color:var(--danger)}
+.algo-input-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.algo-input-row label{font-size:11px;color:var(--info);width:80px;flex-shrink:0}
+.algo-input-row input{flex:1;max-width:120px}
+.algo-compare{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px}
+.algo-compare-item{border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:8px 10px;text-align:center}
+.algo-compare-label{font-size:10px;color:var(--text-muted);margin-bottom:4px}
+.algo-compare-val{font-family:var(--font-mono);font-size:16px;font-weight:700}
+.algo-compare-val.original{color:var(--warning)}
+.algo-compare-val.optimized{color:var(--success)}
+
+/* ===== Control Test Panel ===== */
+.ctrl-panel{background:var(--bg-panel);border:1px solid var(--border-default);border-radius:var(--radius-md);padding:12px;margin-top:8px}
+.ctrl-panel-title{font-size:11px;font-weight:600;color:var(--warning);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.ctrl-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.ctrl-btn{padding:6px 10px;border-radius:var(--radius-sm);font-size:11px;border:1px solid var(--border-default);background:var(--bg-panel);color:var(--text-secondary);cursor:pointer;text-align:center;transition:all .15s}
+.ctrl-btn:hover:not(:disabled){background:var(--bg-hover);color:var(--text-primary)}
+.ctrl-btn.arm{border-color:var(--warning);color:var(--warning)}
+.ctrl-btn.arm:hover:not(:disabled){background:var(--warning);color:#1a1a1a}
+.ctrl-btn.disarm{border-color:var(--danger);color:var(--danger)}
+.ctrl-btn.disarm:hover:not(:disabled){background:var(--danger);color:#fff}
+.ctrl-btn:disabled{opacity:.3;cursor:not-allowed}
+.ctrl-status{font-size:10px;color:var(--text-muted);text-align:center;margin-top:6px}
+
+/* ===== AMap overrides ===== */
+.amap-container{background:var(--bg-base)!important}
+.amap-logo,.amap-copyright{display:none!important}
+.amap-ctrl-list-layer{display:none!important}
+.amap-info-content{background:var(--bg-panel)!important;color:var(--text-primary)!important;border:1px solid var(--border-default);border-radius:var(--radius-md);font-size:11px;padding:8px 12px;box-shadow:var(--shadow-pop)}
+.amap-info-close{display:none!important}
+.amap-info-sharp{border-top-color:var(--bg-panel)!important}
+.amap-drone-marker{width:40px;height:40px;cursor:pointer;position:relative}
+.amap-drone-marker .drone-alt-tag{position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--bg-panel);color:var(--primary);font-size:9px;font-family:var(--font-mono);padding:1px 4px;border-radius:3px;border:1px solid var(--border-default);white-space:nowrap}
+.wp-marker{width:24px;height:24px;cursor:pointer}
+.map-ctrl-bar{position:absolute;top:10px;left:112px;z-index:10;display:flex;gap:6px}
+.map-ctrl-btn{background:var(--bg-base);border:1.5px solid var(--border-hover);color:var(--text-primary);padding:4px 10px;border-radius:var(--radius-sm);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s}
+.map-ctrl-btn:hover{background:var(--bg-hover);border-color:var(--primary)}
+.map-ctrl-btn.active{background:var(--primary);border-color:var(--accent-light-blue);color:#fff}
+
+/* Map loading */
+.map-loading{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:5;color:var(--text-muted);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px}
+.map-loading .ml-spin{width:24px;height:24px;border:2.5px solid var(--border-default);border-top-color:var(--primary);border-radius:50%;animation:mlSpin .8s linear infinite}
+@keyframes mlSpin{to{transform:rotate(360deg)}}
+
+/* Toast */
+.toast{position:fixed;top:60px;right:20px;z-index:9999;padding:10px 16px;border-radius:var(--radius-sm);font-size:12px;transition:opacity .3s;box-shadow:var(--shadow-pop)}
+.toast.success{background:#22c55e14;border:1px solid #22c55e40;color:var(--success)}
+.toast.warn{background:#f59e0b1f;border:1px solid #f59e0b59;color:var(--warning)}
+.toast.err{background:#ef44440d;border:1px solid #ef444440;color:var(--danger)}
+
+/* Upload status */
+.upload-status{font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;margin-left:6px;white-space:nowrap}
+.upload-status.dirty{background:#f59e0b26;color:var(--warning)}
+.upload-status.synced{background:#22c55e1a;color:var(--success)}
+
+/* Hidden */
+.hidden{display:none!important}
+
+/* Airspace management */
+.aspace-status{font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;white-space:nowrap}
+.aspace-status.pass{background:#22c55e1a;color:var(--success)}
+.aspace-status.warn{background:#f59e0b1f;color:var(--warning)}
+.aspace-status.block{background:#ef44440d;color:var(--danger)}
+.aspace-status.unknown{background:var(--bg-hover);color:var(--text-muted)}
+.aspace-status.idle{background:var(--bg-hover);color:var(--text-muted)}
+.aspace-layer-toggle{display:flex;flex-wrap:wrap;gap:6px}
+.aspace-layer-chip{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-secondary);padding:4px 10px;border:1px solid var(--border-default);border-radius:4px;cursor:pointer;transition:all .15s}
+.aspace-layer-chip:hover{border-color:var(--primary)}
+.aspace-layer-chip.active{border-color:var(--primary);background:#3b82f615;color:var(--primary)}
+.aspace-layer-chip .lc-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.aspace-pkg-card{border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:6px}
+.aspace-pkg-name{font-size:11px;font-weight:600;color:var(--text-primary);display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.aspace-pkg-rows{display:flex;flex-direction:column;gap:2px}
+.aspace-pkg-row{display:flex;justify-content:space-between;font-size:10px}
+.aspace-pkg-row .apr-label{color:var(--text-muted)}
+.aspace-pkg-row .apr-val{font-family:var(--font-mono);color:var(--text-secondary)}
+.aspace-pkg-row .apr-val.warn{color:var(--warning)}
+.aspace-pkg-row .apr-val.ok{color:var(--success)}
+.aspace-disclaimer{font-size:10px;color:var(--text-muted);padding:8px 10px;border:1px dashed var(--border-default);border-radius:var(--radius-sm);margin-top:8px;line-height:1.5}
+.aspace-disclaimer svg{flex-shrink:0;margin-right:4px;vertical-align:middle}
+
+/* ===== Battery Charging Monitor (Left Panel) ===== */
+.bat-port-item{background:var(--bg-hover);border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:6px 8px;margin-bottom:4px;transition:border-color .15s}
+.bat-port-item.charging{border-color:var(--success)}
+.bat-port-item.full{border-color:var(--accent-gold)}
+.bat-port-item.offline{opacity:.5}
+.bat-port-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.bat-port-name{font-size:10px;font-weight:600;color:var(--text-secondary);display:flex;align-items:center;gap:4px}
+.bat-port-status{font-size:9px;font-weight:700;padding:1px 5px;border-radius:2px;white-space:nowrap}
+.bat-port-status.charging{background:#22c55e1a;color:var(--success)}
+.bat-port-status.full{background:#f0a5001a;color:var(--accent-gold)}
+.bat-port-status.idle{background:var(--bg-bar);color:var(--text-muted)}
+.bat-port-status.offline{background:#ef44440d;color:var(--danger)}
+.bat-cap-row{display:flex;align-items:center;gap:6px}
+.bat-cap-bar-wrap{flex:1;height:14px;background:var(--bg-bar);border-radius:3px;overflow:hidden;position:relative}
+.bat-cap-bar-fill{height:100%;border-radius:3px;transition:width .5s ease;position:relative;overflow:hidden}
+.bat-cap-bar-fill.charging{background:linear-gradient(90deg,var(--success),var(--accent-light-blue))}
+.bat-cap-bar-fill.full{background:linear-gradient(90deg,var(--accent-gold),var(--warning))}
+.bat-cap-bar-fill.charging::after{content:'';position:absolute;top:0;left:-40%;width:40%;height:100%;background:linear-gradient(90deg,transparent,#ffffff30,transparent);animation:batShine 1.8s infinite}
+@keyframes batShine{to{left:120%}}
+.bat-cap-pct{font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text-primary);min-width:32px;text-align:right}
+.bat-port-detail{display:flex;gap:8px;margin-top:3px;font-size:9px;color:var(--text-muted)}
+.bat-port-detail .bpd-val{font-family:var(--font-mono);color:var(--text-secondary);font-weight:600}
+.bat-charge-summary{font-size:10px;color:var(--text-muted);padding:4px 0 0;display:flex;justify-content:space-between}
+.bat-charge-summary .bcs-val{font-family:var(--font-mono);color:var(--text-secondary);font-weight:600}
+
+/* ===== Battery Charging Workspace ===== */
+.bat-ws{flex-direction:column;overflow-y:auto;padding:20px}
+.bat-summary-row{display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+.bat-summary-card{background:var(--bg-panel);border:1px solid var(--border-default);border-radius:var(--radius-md);padding:14px 20px;min-width:140px;flex:1}
+.bat-summary-label{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+.bat-summary-val{font-family:var(--font-mono);font-size:22px;font-weight:700;color:var(--text-primary)}
+.bat-summary-val.ok{color:var(--success)}
+.bat-summary-val.warn{color:var(--warning)}
+.bat-summary-sub{font-size:10px;color:var(--text-muted);margin-top:2px}
+.bat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;max-width:100%;margin-bottom:20px}
+.bat-card{background:var(--bg-panel);border:1px solid var(--border-default);border-radius:var(--radius-md);overflow:hidden;display:flex;flex-direction:column;transition:border-color .2s}
+.bat-card.charging{border-color:var(--success)}
+.bat-card.full{border-color:var(--accent-gold)}
+.bat-card.offline{opacity:.6}
+.bat-card-head{border-bottom:1px solid var(--border-default);padding:10px 14px;display:flex;align-items:center;gap:8px}
+.bat-card-title{font-size:12px;font-weight:600;color:var(--text-primary)}
+.bat-card-sub{margin-left:auto;font-size:10px;color:var(--text-muted)}
+.bat-card-body{padding:14px;display:flex;gap:14px;align-items:flex-start}
+.bat-ring-wrap{position:relative;width:80px;height:80px;flex-shrink:0}
+.bat-ring-wrap svg{transform:rotate(-90deg)}
+.bat-ring-bg{fill:none;stroke:var(--bg-bar);stroke-width:6}
+.bat-ring-fg{fill:none;stroke:var(--success);stroke-width:6;stroke-linecap:round;transition:stroke-dashoffset .5s ease,stroke .3s}
+.bat-ring-fg.full{stroke:var(--accent-gold)}
+.bat-ring-fg.offline{stroke:var(--text-muted)}
+.bat-ring-pct{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:var(--font-mono);font-size:16px;font-weight:700;color:var(--text-primary)}
+.bat-ring-label{position:absolute;bottom:-16px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--text-muted);white-space:nowrap}
+.bat-card-info{flex:1;display:flex;flex-direction:column;gap:3px}
+.bat-info-row{display:flex;justify-content:space-between;font-size:11px}
+.bat-info-row .bir-label{color:var(--text-muted)}
+.bat-info-row .bir-val{font-family:var(--font-mono);color:var(--text-secondary);font-weight:600}
+.bat-info-row .bir-val.ok{color:var(--success)}
+.bat-info-row .bir-val.warn{color:var(--warning)}
+.bat-info-row .bir-val.err{color:var(--danger)}
+.bat-card-foot{border-top:1px solid var(--border-default);padding:8px 14px;display:flex;align-items:center;gap:8px}
+.bat-card-foot button{padding:4px 10px;font-size:10px;border-radius:4px;border:1px solid var(--border-default);background:var(--bg-panel);color:var(--text-secondary);cursor:pointer;transition:all .15s}
+.bat-card-foot button:hover{background:var(--bg-hover);color:var(--text-primary)}
+.bat-card-foot button.danger{border-color:var(--danger);color:var(--danger)}
+.bat-card-foot button.danger:hover{background:var(--danger);color:#fff}
+.bat-card-foot .bat-foot-status{margin-left:auto;font-size:10px;color:var(--text-muted)}
+
+/* Battery chart */
+.bat-chart-section{background:var(--bg-panel);border:1px solid var(--border-default);border-radius:var(--radius-md);overflow:hidden;margin-bottom:20px}
+.bat-chart-head{border-bottom:1px solid var(--border-default);padding:10px 14px;display:flex;align-items:center;gap:8px}
+.bat-chart-title{font-size:12px;font-weight:600;color:var(--text-primary)}
+.bat-chart-body{padding:12px;position:relative;height:220px}
+#batChartCanvas{width:100%;height:100%;display:block}
+.bat-chart-legend{display:flex;gap:12px;flex-wrap:wrap;padding:0 14px 8px}
+.bat-legend-item{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text-muted);cursor:pointer;transition:color .15s}
+.bat-legend-item:hover{color:var(--text-secondary)}
+.bat-legend-item.disabled{opacity:.4}
+.bat-legend-dot{width:10px;height:3px;border-radius:2px}
+
+/* Port config */
+.bat-config-section{background:var(--bg-panel);border:1px solid var(--border-default);border-radius:var(--radius-md);overflow:hidden}
+.bat-config-head{border-bottom:1px solid var(--border-default);padding:10px 14px;font-size:12px;font-weight:600;color:var(--text-primary);display:flex;align-items:center;gap:6px}
+.bat-config-body{padding:14px}
+.bat-config-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border-default)}
+.bat-config-row:last-child{border-bottom:none}
+.bat-config-port{font-size:11px;font-weight:600;color:var(--text-secondary);min-width:100px}
+.bat-config-select{font-size:11px;max-width:180px}
+.bat-config-hint{font-size:10px;color:var(--text-muted);margin-top:8px;line-height:1.5}
+
+/* ===== Backend bridge status bar (battery workspace) ===== */
+.bat-backend-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--bg-panel);border:1px solid var(--border-default);border-radius:var(--radius-md);padding:10px 14px;margin-bottom:16px}
+.bbb-status{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600}
+.bbb-dot{width:8px;height:8px;border-radius:50%;background:var(--text-muted);flex-shrink:0}
+.bbb-dot.online{background:var(--success);box-shadow:0 0 6px var(--success)}
+.bbb-dot.offline{background:var(--danger)}
+.bbb-dot.connecting{background:var(--warning);animation:bbbPulse 1s infinite}
+@keyframes bbbPulse{0%,100%{opacity:1}50%{opacity:.3}}
+.bbb-meta{font-size:10px;color:var(--text-muted);font-family:var(--font-mono)}
+.bbb-actions{margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.bbb-btn{padding:4px 10px;font-size:10px;border-radius:4px;border:1px solid var(--border-default);background:var(--bg-panel);color:var(--text-secondary);cursor:pointer;transition:all .15s}
+.bbb-btn:hover{background:var(--bg-hover);color:var(--text-primary);border-color:var(--primary)}
+.bbb-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.bbb-select{font-size:10px;padding:3px 6px;max-width:140px}
+
+/* Source provenance tag variants (real vs sim) */
+.src-tag.real{background:var(--success);color:#fff}
+.src-tag.mavlink{background:var(--primary);color:#fff}
+.src-tag.wmi{background:#8b5cf6;color:#fff}
+
+/* ===== Charging Validation Panel ===== */
+.bat-validation-section{background:var(--bg-panel);border:1px solid var(--border-default);border-radius:var(--radius-md);overflow:hidden;margin-bottom:20px}
+.bat-validation-section.err{border-color:var(--danger)}
+.bat-validation-section.warn{border-color:var(--warning)}
+.bat-validation-head{border-bottom:1px solid var(--border-default);padding:10px 14px;display:flex;align-items:center;gap:8px}
+.bat-validation-title{font-size:12px;font-weight:600;color:var(--text-primary)}
+.bat-validation-status{margin-left:auto;font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px}
+.bat-validation-status.pass{background:#22c55e1a;color:var(--success)}
+.bat-validation-status.warn{background:#f59e0b1f;color:var(--warning)}
+.bat-validation-status.err{background:#ef44440d;color:var(--danger)}
+.bat-validation-body{padding:10px 14px;display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto}
+.bat-anomaly-item{display:flex;align-items:flex-start;gap:8px;padding:6px 8px;border-radius:4px;font-size:11px;line-height:1.4}
+.bat-anomaly-item.err{background:#ef44440d;border-left:3px solid var(--danger)}
+.bat-anomaly-item.warn{background:#f59e0b1f;border-left:3px solid var(--warning)}
+.bat-anomaly-code{font-family:var(--font-mono);font-size:9px;color:var(--text-muted);white-space:nowrap;flex-shrink:0;margin-top:1px}
+.bat-anomaly-msg{color:var(--text-secondary);flex:1}
+.bat-validation-empty{font-size:11px;color:var(--text-muted);text-align:center;padding:12px 0}
+.bat-validation-stats{display:flex;gap:14px;padding:8px 14px;border-top:1px solid var(--border-default);font-size:10px;color:var(--text-muted)}
+.bat-validation-stats b{font-family:var(--font-mono);color:var(--text-secondary)}
+
+/* Backend source card in grid */
+.bat-card[data-source="wmi"]{border-left:3px solid #8b5cf6}
+.bat-card[data-source="mavlink"]{border-left:3px solid var(--primary)}
+.bat-card[data-source="sim"]{border-left:3px solid var(--text-muted)}
+.bat-source-pill{font-size:8px;font-weight:700;padding:1px 5px;border-radius:2px;text-transform:uppercase;letter-spacing:.03em}
+.bat-source-pill.wmi{background:#8b5cf633;color:#a78bfa}
+.bat-source-pill.mavlink{background:#3b82f633;color:var(--accent-light-blue)}
+.bat-source-pill.sim{background:var(--bg-bar);color:var(--text-muted)}
+.bat-info-row .bir-val.pending{color:var(--text-muted);font-style:italic}
+
+/* Responsive */
+@media (max-width:760px){
+  .left-panel{width:240px}
+  .algo-grid{grid-template-columns:1fr}
+  .bat-grid{grid-template-columns:1fr}
+  .bat-summary-row{flex-direction:column}
+  .bat-summary-card{min-width:auto}
+  .topnav{flex-wrap:wrap;height:auto;min-height:var(--nav-h);padding:6px 12px;gap:8px}
+  .menu-item{padding:4px 8px}
+}
+</style>
+</head>
+<body>
+
+<!-- ===== Top Menu Bar ===== -->
+<nav class="topnav">
+  <div class="nav-brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" style="color:var(--primary)"><path d="M12 2 L18 12 L22 14 L12 22 L2 14 L6 12 Z"/></svg> SkyLink <span style="color:var(--primary)">天链</span></div>
+  <div class="menu-bar">
+    <div class="menu-item" onclick="this.classList.toggle('open')">
+      文件
+      <div class="menu-dropdown">
+        <div class="menu-dropdown-item" onclick="event.stopPropagation();loadMissionXml();closeMenus()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg> 导入任务 XML</div>
+        <div class="menu-dropdown-item" onclick="event.stopPropagation();saveMissionXml();closeMenus()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg> 导出任务 XML</div>
+        <div class="menu-dropdown-sep"></div>
+        <div class="menu-dropdown-item" onclick="event.stopPropagation();exportFlightCSV();closeMenus()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg> 导出飞行日志 CSV</div>
+        <div class="menu-dropdown-item" onclick="event.stopPropagation();document.getElementById('csvImportInput').click();closeMenus()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg> 导入飞行日志 CSV</div>
+        <input type="file" id="csvImportInput" accept=".csv" style="display:none" onchange="importFlightCSV(this)">
+      </div>
+    </div>
+    <div class="menu-item" onclick="this.classList.toggle('open')">
+      任务
+      <div class="menu-dropdown">
+        <div class="menu-dropdown-item" onclick="event.stopPropagation();addWaypointAtCenter();closeMenus()">新增航点</div>
+        <div class="menu-dropdown-item" onclick="event.stopPropagation();clearWaypoints();closeMenus()" style="color:var(--danger)">清空航点</div>
+        <div class="menu-dropdown-sep"></div>
+        <div class="menu-dropdown-item" onclick="event.stopPropagation();previewPath();closeMenus()">路径预览</div>
+        <div class="menu-dropdown-item" onclick="event.stopPropagation();optimizePath();closeMenus()">路径优化</div>
+        <div class="menu-dropdown-item" onclick="event.stopPropagation();checkConflicts();closeMenus()">冲突检测</div>
+        <div class="menu-dropdown-sep"></div>
+        <div class="menu-dropdown-item" onclick="event.stopPropagation();uploadToE1();closeMenus()" style="color:var(--warning)">上传至 E1 <span style="font-size:9px;color:var(--text-muted)">(门控)</span></div>
+        <div class="menu-dropdown-item" onclick="event.stopPropagation();startAutoMission();closeMenus()" style="color:var(--warning)">开始自动任务 <span style="font-size:9px;color:var(--text-muted)">(门控)</span></div>
+      </div>
+    </div>
+    <div class="menu-item" onclick="this.classList.toggle('open')">
+      视图
+      <div class="menu-dropdown">
+        <div class="menu-dropdown-item" onclick="event.stopPropagation();switchWorkspace('mission');closeMenus()">任务与监控</div>
+        <div class="menu-dropdown-item" onclick="event.stopPropagation();switchWorkspace('data');closeMenus()">数据与日志</div>
+        <div class="menu-dropdown-item" onclick="event.stopPropagation();switchWorkspace('settings');closeMenus()">系统设置</div>
+        <div class="menu-dropdown-item" onclick="event.stopPropagation();switchWorkspace('algorithm');closeMenus()">算法分析</div>
+        <div class="menu-dropdown-item" onclick="event.stopPropagation();switchWorkspace('battery');closeMenus()">电池充电</div>
+        <div class="menu-dropdown-sep"></div>
+        <div class="menu-dropdown-item" onclick="event.stopPropagation();toggleTheme();closeMenus()">切换主题</div>
+      </div>
+    </div>
+    <div class="menu-item" onclick="switchWorkspace('settings');closeMenus()">系统设置</div>
+    <div class="menu-item" onclick="this.classList.toggle('open')">
+      帮助
+      <div class="menu-dropdown">
+        <div class="menu-dropdown-item" onclick="event.stopPropagation();toast('SkyLink 天链 · 无人机地面控制站 v2.0');closeMenus()">关于</div>
+        <div class="menu-dropdown-item" onclick="event.stopPropagation();toast('快捷键: 1-5 切换工作区 | Ctrl+S 保存XML');closeMenus()">快捷键</div>
+      </div>
+    </div>
+  </div>
+  <div class="nav-right">
+    <!-- Mode Switcher -->
+    <div class="mode-switcher" id="modeSwitcher">
+      <button class="ms-btn active" data-mode="e1_real" onclick="switchRunMode('e1_real')">E1 实机</button>
+      <button class="ms-btn" data-mode="phone_assist" onclick="switchRunMode('phone_assist')">手机辅助</button>
+    </div>
+    <span class="conn-dot on" id="connDot" title="连接状态"></span>
+    <span id="connText" style="font-size:10px;color:var(--info)">已连接 · COM3 115200</span>
+    <span class="mono" id="sysClock" style="color:var(--text-secondary)">--:--:--</span>
+    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="切换深色/浅色主题"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></button>
+  </div>
+</nav>
+
+<!-- ===== Workspace Tabs ===== -->
+<div class="ws-tabs">
+  <div class="ws-tab active" data-ws="mission" onclick="switchWorkspace('mission')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17 L8 12 L12 16 L21 7"/><circle cx="21" cy="7" r="2"/></svg>任务与监控</div>
+  <div class="ws-tab" data-ws="data" onclick="switchWorkspace('data')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 20 L7 14 L10 17 L17 8 L21 12"/></svg>数据与日志</div>
+  <div class="ws-tab" data-ws="settings" onclick="switchWorkspace('settings')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3M4.5 4.5l2 2M17.5 17.5l2 2M4.5 19.5l2-2M17.5 6.5l2-2"/></svg>系统设置</div>
+  <div class="ws-tab" data-ws="algorithm" onclick="switchWorkspace('algorithm')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 L3 14 h7 l-1 8 10-12 h-7 z"/></svg>算法分析</div>
+  <div class="ws-tab" data-ws="battery" onclick="switchWorkspace('battery')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="16" height="10" rx="2"/><path d="M22 11v2"/><path d="M6 10v4M10 10v4M14 10v4"/></svg>电池充电</div>
+</div>
+
+<!-- ===== Workspace 1: 任务与监控 ===== -->
+<div class="workspace active ws-mission mission-ws" id="ws-mission">
+  <!-- Safe Test Banner (visible in e1_real mode) -->
+  <div class="safe-banner hidden" id="safeBanner">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M12 9v4M12 17h.01"/><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+    <span>安全测试模式 · 仅限无桨/架台测试 · 实机控制默认只读</span>
+    <button class="sb-action" id="btnEnterCtrl" onclick="enterControlTest()">进入控制测试</button>
+    <button class="sb-action danger hidden" id="btnExitCtrl" onclick="exitControlTest()">退出控制测试</button>
+  </div>
+  <div class="mission-body">
+    <!-- Left Panel 280px -->
+    <div class="left-panel">
+      <!-- E1 Flight Controller Status -->
+      <div class="lp-section hidden" id="e1Section" style="flex-shrink:0">
+        <div class="lp-section-title">E1 飞控 <span class="src-tag e1">飞控</span></div>
+        <div class="lp-section-body" style="padding:4px 12px 6px">
+          <div class="dev-conn-banner" id="e1ConnBanner">--</div>
+          <div class="dev-status">
+            <div class="dev-row"><span class="dr-label">IP 地址</span><span class="dr-val" id="e1Ip">--</span></div>
+            <div class="dev-row"><span class="dr-label">UDP 端口</span><span class="dr-val" id="e1Port">--</span></div>
+            <div class="dev-row"><span class="dr-label">通信延迟</span><span class="dr-val" id="e1Latency">--</span></div>
+            <div class="dev-row"><span class="dr-label">解锁状态</span><span class="dr-val off" id="e1Armed">未解锁</span></div>
+            <div class="dev-row"><span class="dr-label">油门</span><span class="dr-val" id="e1Throttle">0%</span></div>
+            <div class="dev-row"><span class="dr-label">控制来源</span><span class="dr-val" id="e1CtrlSrc">--</span></div>
+            <div class="dev-row"><span class="dr-label">心跳</span><span class="dr-val" id="e1Heartbeat">--</span></div>
+            <div class="dev-row"><span class="dr-label">链路质量</span><span class="dr-val" id="e1LinkQuality">--</span></div>
+          </div>
+        </div>
+      </div>
+      <!-- Phone Companion Status -->
+      <div class="lp-section hidden" id="phoneSection" style="flex-shrink:0">
+        <div class="lp-section-title">手机伴随定位 <span class="src-tag phone">手机</span></div>
+        <div class="lp-section-body" style="padding:4px 12px 6px">
+          <div class="dev-conn-banner" id="phoneConnBanner">--</div>
+          <div class="dev-status">
+            <div class="dev-row"><span class="dr-label">GPS 定位</span><span class="dr-val off" id="phoneGps">未接入</span></div>
+            <div class="dev-row"><span class="dr-label">定位精度</span><span class="dr-val" id="phoneGpsAcc">--</span></div>
+            <div class="dev-row"><span class="dr-label">当前位置</span><span class="dr-val" id="phonePos">--</span></div>
+            <div class="dev-row"><span class="dr-label">罗盘</span><span class="dr-val off" id="phoneCompass">--</span></div>
+            <div class="dev-row"><span class="dr-label">气压计</span><span class="dr-val off" id="phoneBaro">--</span></div>
+            <div class="dev-row"><span class="dr-label">最后更新</span><span class="dr-val" id="phoneLastUpdate">--</span></div>
+          </div>
+        </div>
+      </div>
+      <!-- UAV Status -->
+      <div class="lp-section" style="flex-shrink:0">
+        <div class="lp-section-title">无人机状态</div>
+        <div class="lp-section-body" style="padding:4px 12px 8px">
+          <div class="uav-status-grid">
+            <div class="us-cell"><span class="us-label">飞行模式</span><span class="us-val info" id="usMode">AUTO</span></div>
+            <div class="us-cell"><span class="us-label">阶段</span><span class="us-val" id="usPhase">待命</span></div>
+            <div class="us-cell"><span class="us-label">纬度 LAT</span><span class="us-val" id="usLat">32.060300°<span class="src-tag" id="srcLat">模拟</span></span></div>
+            <div class="us-cell"><span class="us-label">经度 LON</span><span class="us-val" id="usLon">118.792100°<span class="src-tag" id="srcLon">模拟</span></span></div>
+            <div class="us-cell"><span class="us-label">高度 ALT</span><span class="us-val" id="usAlt">86.4 m<span class="src-tag" id="srcAlt">模拟</span></span></div>
+            <div class="us-cell"><span class="us-label">地速 GS</span><span class="us-val" id="usGs">8.2 m/s<span class="src-tag" id="srcGs">模拟</span></span></div>
+            <div class="us-cell"><span class="us-label">航向 HDG</span><span class="us-val" id="usHdg">128°<span class="src-tag" id="srcHdg">模拟</span></span></div>
+            <div class="us-cell"><span class="us-label">横滚 ROLL</span><span class="us-val" id="usRoll">2.3°<span class="src-tag" id="srcRoll">模拟</span></span></div>
+            <div class="us-cell"><span class="us-label">俯仰 PITCH</span><span class="us-val" id="usPitch">1.5°<span class="src-tag" id="srcPitch">模拟</span></span></div>
+            <div class="us-cell"><span class="us-label">偏航 YAW</span><span class="us-val" id="usYaw">128°<span class="src-tag" id="srcYaw">模拟</span></span></div>
+            <div class="us-cell"><span class="us-label">电量 BAT</span><span class="us-val ok" id="usBatt">72%<span class="src-tag" id="srcBatt">模拟</span></span></div>
+            <div class="us-cell"><span class="us-label">电压 V</span><span class="us-val" id="usVolt">12.4V<span class="src-tag" id="srcVolt">模拟</span></span></div>
+            <div class="us-cell"><span class="us-label">信号 RSSI</span><span class="us-val" id="usSignal">88%<span class="src-tag" id="srcSignal">模拟</span></span></div>
+            <div class="us-cell"><span class="us-label">卫星 SAT</span><span class="us-val" id="usSat">14<span class="src-tag" id="srcSat">模拟</span></span></div>
+            <div class="us-cell"><span class="us-label">HDOP</span><span class="us-val" id="usHdop">1.2<span class="src-tag" id="srcHdop2">模拟</span></span></div>
+            <div class="us-cell"><span class="us-label">解锁</span><span class="us-val off" id="usArmed">未解锁</span></div>
+          </div>
+        </div>
+      </div>
+      <!-- Battery Charging Monitor (Left Panel Compact) -->
+      <div class="lp-section" style="flex-shrink:0" id="batChargeSection">
+        <div class="lp-section-title">电池充电监控 <span class="src-tag system">系统</span></div>
+        <div class="lp-section-body" id="batChargeList" style="padding:4px 12px 8px"></div>
+      </div>
+      <!-- Waypoint List -->
+      <div class="lp-section" style="flex:1;min-height:0">
+        <div class="lp-section-title">
+          航点列表 <span class="upload-status synced" id="uploadStatus">已同步</span>
+          <span style="margin-left:auto;font-size:10px;color:var(--text-muted)" id="wpCount">0 航点</span>
+        </div>
+        <div class="lp-section-body" style="padding:0">
+          <div class="wp-list" id="wpList"></div>
+        </div>
+      </div>
+      <!-- Mission Operations -->
+      <div class="lp-section" style="flex-shrink:0">
+        <div class="lp-section-title">任务操作</div>
+        <div class="lp-section-body">
+          <div class="mission-ops">
+            <button class="mo-btn" onclick="loadMissionXml()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg> 导入 XML</button>
+            <button class="mo-btn" onclick="saveMissionXml()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg> 导出 XML</button>
+            <button class="mo-btn primary" onclick="addWaypointAtCenter()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg> 新增航点</button>
+            <button class="mo-btn" onclick="deleteSelectedWp()" style="color:var(--danger)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg> 删除航点</button>
+            <button class="mo-btn" onclick="previewPath()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M5 3 L19 12 L5 21 Z"/></svg> 路径预览</button>
+            <button class="mo-btn" onclick="checkConflicts()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="10"/></svg> 冲突检测</button>
+            <button class="mo-btn" onclick="AirspaceService.validateMission()" id="btnAirspaceCheck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> 空域校验</button>
+            <button class="mo-btn primary" onclick="optimizePath()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M13 2 L3 14 h7 l-1 8 10-12 h-7 z"/></svg> 路径优化</button>
+            <!-- Capability-gated buttons -->
+            <div style="border-top:1px solid var(--border-default);margin-top:4px;padding-top:4px">
+              <button class="mo-btn mo-btn-gated" id="btnUploadE1" disabled onclick="uploadToE1()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+                上传至 E1
+                <span class="gate-hint" id="gateUploadHint">上传至 E1 需要启用导航任务协议</span>
+              </button>
+              <button class="mo-btn mo-btn-gated" id="btnAutoMission" disabled onclick="startAutoMission()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M5 3 L19 12 L5 21 Z"/></svg>
+                开始自动任务
+                <span class="gate-hint" id="gateMissionHint">需要 E1 实机模式 + 已解锁 + 已上传航点 + GPS 已接入</span>
+              </button>
+            </div>
+          </div>
+          <div style="border-top:1px solid var(--border-default);margin-top:6px;padding-top:6px">
+            <div class="algo-stat-row"><span>总航程</span><span class="mono" id="moTotalDist">0.00 km <span class="src-tag system">系统</span></span></div>
+            <div class="algo-stat-row"><span>预计耗时</span><span class="mono" id="moEstTime">--</span></div>
+            <div class="algo-stat-row"><span>冲突检测</span><span id="moConflict" style="color:var(--info)">无航点</span></div>
+            <div class="algo-stat-row"><span>空域校验</span><span><span class="aspace-status idle" id="moAirspaceStatus">未校验</span> <span class="src-tag system" id="moAirspaceSrc" style="display:none">系统</span></span></div>
+            <div class="algo-stat-row" id="moAirspaceDetail" style="display:none"><span style="color:var(--text-muted);font-size:9px" id="moAirspaceMsg"></span></div>
+          </div>
+          <!-- Control Test Panel (E1 mode only) -->
+          <div class="ctrl-panel hidden" id="ctrlPanel">
+            <div class="ctrl-panel-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M12 2v6M12 8L8 4M12 8l4-4M2 12h6M8 12l-4 4M8 12l-4-4M22 12h-6M16 12l4 4M16 12l-4-4M12 22v-6M12 16l4 4M12 16l-4-4"/></svg> 控制测试（仅限无桨/架台）</div>
+            <div class="ctrl-grid">
+              <button class="ctrl-btn arm" id="btnArm" onclick="tryArm()">解锁</button>
+              <button class="ctrl-btn disarm" id="btnDisarm" onclick="tryDisarm()" disabled>急停/上锁</button>
+              <button class="ctrl-btn" onclick="setE1Mode('MANUAL')">手动模式</button>
+              <button class="ctrl-btn" onclick="setE1Mode('STABILIZE')">自稳模式</button>
+            </div>
+            <div class="ctrl-status" id="ctrlStatus">实机只读 · 需进入控制测试</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Center Map -->
+    <div class="center-map">
+      <div id="mainMap" style="position:relative;flex:1;min-height:0;overflow:hidden;background:var(--bg-base)"></div>
+      <div class="map-ctrl-bar">
+        <button class="map-ctrl-btn active" id="btnFollow" onclick="toggleFollow()">跟随</button>
+        <button class="map-ctrl-btn active" id="btnTrajectory" onclick="toggleTrajectory()">轨迹</button>
+      </div>
+      <div class="map-toolbar">
+        <button onclick="toggleDataSourceDrawer()" title="数据源" id="btnDataSource"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.27 6.96 12 12.01l8.73-5.05M12 22.08V12"/></svg></button>
+        <button onclick="fitWaypoints()" title="适配视图"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M4 9 V4 H9"/><path d="M15 4 H20 V9"/><path d="M20 15 V20 H15"/><path d="M9 20 H4 V15"/></svg></button>
+        <div class="tb-divider"></div>
+        <button id="mapStyleBtn" onclick="toggleMapStyle()" title="切换底图"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M9 2 L3 14 L9 14 L6 22 L21 7 L15 7 L18 2 Z"/></svg></button>
+        <button id="aspaceToggleBtn" class="active" onclick="toggleAirspaceOnMap()" title="空域图层"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v8M8 12h8"/></svg></button>
+      </div>
+      <div class="map-hint" id="mapHint">点击地图添加航点 · 拖动调整位置 · 左侧面板管理任务</div>
+      <!-- Sensor mini curves entry -->
+      <div class="sensor-entry">
+        <div class="sensor-entry-item" onclick="switchWorkspace('data')">
+          <span class="se-dot" style="background:#fb7185"></span>
+          <span class="se-label">温度</span>
+          <span class="se-val" id="seTemp">26.5°C</span>
+        </div>
+        <div class="sensor-entry-item" onclick="switchWorkspace('data')">
+          <span class="se-dot" style="background:#34d399"></span>
+          <span class="se-label">湿度</span>
+          <span class="se-val" id="seHum">65%</span>
+        </div>
+        <div class="sensor-entry-item" onclick="switchWorkspace('data')">
+          <span class="se-dot" style="background:#22d3ee"></span>
+          <span class="se-label">气压</span>
+          <span class="se-val" id="sePres">1013.2</span>
+        </div>
+      </div>
+      <!-- Data Source Drawer -->
+      <div class="ds-drawer" id="dsDrawer">
+        <div class="ds-drawer-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg> 数据源状态</div>
+        <div class="ds-drawer-body" id="dsDrawerBody"></div>
+      </div>
+    </div>
+  </div>
+  <!-- Bottom Status Bar -->
+  <div class="status-bar">
+    <div class="sb-item"><span class="sb-label">串口</span><span class="sb-val ok" id="sbSerial">COM3</span></div>
+    <div class="sb-item"><span class="sb-label">波特率</span><span class="sb-val" id="sbBaud">115200</span></div>
+    <div class="sb-item"><span class="sb-label">采样间隔</span><span class="sb-val" id="sbSample">1s</span></div>
+    <div class="sb-item"><span class="sb-label">最后更新</span><span class="sb-val" id="sbLastUpdate">--:--:--</span></div>
+    <div class="sb-item"><span class="sb-label">LAT</span><span class="sb-val" id="sbLat">32.06030</span></div>
+    <div class="sb-item"><span class="sb-label">LON</span><span class="sb-val" id="sbLon">118.79210</span></div>
+    <div class="sb-item"><span class="sb-label">缩放</span><span class="sb-val" id="sbZoom">16</span></div>
+    <div class="sb-item"><span class="sb-label">航点</span><span class="sb-val" id="sbWp">0/0</span></div>
+    <div class="sb-spacer"></div>
+    <div class="sb-item"><span class="sb-label">GPS</span><span class="sb-val ok" id="sbGps">3D·14</span></div>
+    <div class="sb-item"><span class="sb-label">HDOP</span><span class="sb-val" id="sbHdop">1.2</span></div>
+  </div>
+</div>
+
+<!-- ===== Workspace 2: 数据与日志 ===== -->
+<div class="workspace ws-data data-ws" id="ws-data">
+  <div class="data-tabs">
+    <div class="data-tab active" onclick="dataTab(this,'waveform')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 20 L7 10 L10 15 L14 5 L18 12 L21 8"/></svg>传感器曲线</div>
+    <div class="data-tab" onclick="dataTab(this,'logs')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2 H6 a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>飞行日志</div>
+  </div>
+  <div class="data-tab-content active" id="dt-waveform">
+    <div style="display:flex;flex-direction:column;width:100%">
+      <div class="wave-toolbar">
+        <button class="wave-tr-btn active" onclick="setTimeRange(this,5)">5s</button>
+        <button class="wave-tr-btn" onclick="setTimeRange(this,10)">10s</button>
+        <button class="wave-tr-btn" onclick="setTimeRange(this,30)">30s</button>
+        <button class="wave-tr-btn" onclick="setTimeRange(this,60)">60s</button>
+        <div class="tb-divider"></div>
+        <button class="wave-tr-btn" onclick="togglePause(this)">暂停</button>
+        <button class="wave-tr-btn" onclick="clearWave()">清空</button>
+        <button class="wave-tr-btn" onclick="exportWave()">导出CSV</button>
+        <span class="stat-info" id="waveStat">5 通道 · 0 样本</span>
+      </div>
+      <div class="wave-body">
+        <div class="wave-chart"><canvas id="waveCanvas" width="0" height="0"></canvas></div>
+        <div class="wave-sidebar" id="waveSidebar"></div>
+      </div>
+    </div>
+  </div>
+  <div class="data-tab-content" id="dt-logs">
+    <div class="flight-body">
+      <div class="flight-list">
+        <div class="flight-list-head">
+          <span class="flight-list-title">飞行记录</span>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">
+            <input type="date" id="logDateFilter" style="font-size:11px;padding:3px 6px" onchange="filterFlights()">
+            <select id="logModelFilter" style="font-size:11px;padding:3px 6px" onchange="filterFlights()">
+              <option value="">全部型号</option>
+              <option value="CF-Drone-E1">CF-Drone E1 Mini</option>
+              <option value="DJI-M300">DJI-M300</option>
+              <option value="PX4-Vtol">PX4-Vtol</option>
+            </select>
+            <button class="wave-tr-btn" onclick="exportFlightCSV()">导出CSV</button>
+            <label class="wave-tr-btn" style="cursor:pointer;position:relative">导入CSV<input type="file" accept=".csv" style="display:none" onchange="importFlightCSV(this)"></label>
+            <button class="wave-tr-btn" onclick="refreshFlights()">刷新</button>
+          </div>
+        </div>
+        <div class="flight-list-body" id="flightList"></div>
+      </div>
+      <div class="flight-detail">
+        <div class="flight-detail-head">
+          <div class="flight-detail-title" id="flightDetailTitle">选择一条飞行记录</div>
+          <div class="flight-detail-meta" id="flightDetailMeta"></div>
+        </div>
+        <div id="flightMap" style="flex:1;width:100%;overflow:hidden;background:var(--bg-base)"></div>
+        <div class="flight-detail-stats" id="flightStats" style="display:none">
+          <div class="flight-stat-item"><div class="flight-stat-val mono" id="fsPoints">—</div><div class="flight-stat-label">数据点</div></div>
+          <div class="flight-stat-item"><div class="flight-stat-val mono" id="fsAlt">—</div><div class="flight-stat-label">最高高度</div></div>
+          <div class="flight-stat-item"><div class="flight-stat-val mono" id="fsSpeed">—</div><div class="flight-stat-label">最大速度</div></div>
+          <div class="flight-stat-item"><div class="flight-stat-val mono" id="fsVolt">—</div><div class="flight-stat-label">最低电压</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Workspace 3: 系统设置 ===== -->
+<div class="workspace ws-settings settings-ws" id="ws-settings">
+  <div class="settings-section">
+    <div class="settings-section-title">运行模式</div>
+    <div class="settings-section-sub">选择当前运行模式，不同模式下功能可用性不同</div>
+    <div class="settings-row">
+      <div class="settings-field">
+        <label>当前模式</label>
+        <select id="setRunMode" onchange="switchRunMode(this.value)">
+          <option value="e1_real" selected>E1 实机模式（真实飞控遥测）</option>
+          <option value="phone_assist">手机辅助模式（GPS 定位补充）</option>
+        </select>
+        <div class="settings-hint">E1 实机：姿态/电压/解锁来自飞控 | 手机辅助：GPS 来自手机</div>
+      </div>
+    </div>
+  </div>
+  <div class="settings-section">
+    <div class="settings-section-title">E1 飞控连接</div>
+    <div class="settings-section-sub">Wi-Fi / UDP 连接配置（E1 实机模式生效）</div>
+    <div class="settings-row">
+      <div class="settings-field">
+        <label>E1 IP 地址</label>
+        <input type="text" id="setE1Ip" value="192.168.4.1" style="max-width:180px" onchange="state.e1.ip=this.value;updateE1Status()">
+      </div>
+      <div class="settings-field">
+        <label>UDP 端口</label>
+        <input type="number" id="setE1Port" value="14550" min="1" max="65535" style="max-width:120px" onchange="state.e1.udpPort=parseInt(this.value);updateE1Status()">
+      </div>
+      <div class="settings-field">
+        <label>心跳超时 (ms)</label>
+        <input type="number" id="setHeartbeatTimeout" value="3000" min="500" max="10000" step="500" style="max-width:120px">
+        <div class="settings-hint">超时未收到心跳则判定链路断开</div>
+      </div>
+    </div>
+  </div>
+  <div class="settings-section">
+    <div class="settings-section-title">手机伴随定位</div>
+    <div class="settings-section-sub">手机传感器配置（手机辅助模式生效）</div>
+    <div class="settings-row">
+      <div class="settings-field">
+        <label>手机 GPS</label>
+        <select id="setPhoneGps" onchange="state.phone.gpsAvailable=this.value==='on';updatePhoneStatus()">
+          <option value="on" selected>启用</option>
+          <option value="off">禁用</option>
+        </select>
+        <div class="settings-hint">手机 GPS 作为定位数据来源，精度通常 3-10m</div>
+      </div>
+      <div class="settings-field">
+        <label>手机罗盘</label>
+        <select id="setPhoneCompass" onchange="state.phone.compassAvailable=this.value==='on';updatePhoneStatus()">
+          <option value="on" selected>启用</option>
+          <option value="off">禁用</option>
+        </select>
+      </div>
+      <div class="settings-field">
+        <label>手机气压计</label>
+        <select id="setPhoneBaro" onchange="state.phone.baroAvailable=this.value==='on';updatePhoneStatus()">
+          <option value="on">启用</option>
+          <option value="off" selected>禁用（多数手机不可靠）</option>
+        </select>
+        <div class="settings-hint">手机气压计精度有限，建议仅作参考</div>
+      </div>
+    </div>
+  </div>
+  <div class="settings-section">
+    <div class="settings-section-title">串口通信</div>
+    <div class="settings-section-sub">串口号、波特率与传输频率配置（E1 实机模式生效）</div>
+    <div class="settings-row">
+      <div class="settings-field">
+        <label>串口号</label>
+        <select id="setSerialPort" onchange="state.serialPort=this.value;toast('串口已设为 '+this.value);updateConnStatus()">
+          <option value="COM3" selected>COM3</option>
+          <option value="COM4">COM4</option>
+          <option value="COM5">COM5</option>
+          <option value="UDP">UDP 127.0.0.1:14550</option>
+        </select>
+      </div>
+      <div class="settings-field">
+        <label>波特率</label>
+        <select id="setBaudRate" onchange="state.baudRate=parseInt(this.value);toast('波特率已设为 '+this.value);updateConnStatus()">
+          <option value="115200" selected>115200</option>
+          <option value="57600">57600</option>
+          <option value="38400">38400</option>
+          <option value="9600">9600</option>
+        </select>
+      </div>
+      <div class="settings-field">
+        <label>MAVLink 传输频率</label>
+        <select id="setTxRate" onchange="state.txRate=parseInt(this.value);toast('传输频率已设为 '+this.value+'Hz')">
+          <option value="1">1 Hz</option>
+          <option value="5">5 Hz</option>
+          <option value="10" selected>10 Hz</option>
+          <option value="50">50 Hz</option>
+        </select>
+      </div>
+    </div>
+  </div>
+  <div class="settings-section">
+    <div class="settings-section-title">数据采样</div>
+    <div class="settings-section-sub">采样间隔与数据记录设置</div>
+    <div class="settings-row">
+      <div class="settings-field">
+        <label>数据采样间隔</label>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="range" id="sampleIntervalSlider" min="1" max="10" step="1" value="1" style="flex:1;max-width:200px" oninput="updateSampleInterval(this.value)">
+          <span class="mono" id="sampleIntervalVal" style="width:40px;text-align:center">1s</span>
+        </div>
+        <div class="settings-hint">范围 1-10 秒，值越小刷新越快</div>
+      </div>
+    </div>
+  </div>
+  <div class="settings-section">
+    <div class="settings-section-title">地图与显示</div>
+    <div class="settings-section-sub">地图缩放级别与主题设置</div>
+    <div class="settings-row">
+      <div class="settings-field">
+        <label>地图缩放级别</label>
+        <select id="setMapZoom" onchange="state.mapZoom=parseInt(this.value);toast('默认缩放级别已设为 '+this.value)">
+          <option value="14">14 (概览)</option>
+          <option value="16" selected>16 (默认)</option>
+          <option value="18">18 (详细)</option>
+        </select>
+      </div>
+      <div class="settings-field">
+        <label>界面主题</label>
+        <div style="display:flex;gap:8px">
+          <button class="mo-btn" onclick="setTheme('dark')" style="width:80px">深色主题</button>
+          <button class="mo-btn" onclick="setTheme('light')" style="width:80px">浅色主题</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="settings-section">
+    <div class="settings-section-title">空域数据管理</div>
+    <div class="settings-section-sub">导入区域空域限制数据包，支持禁飞区 / 限飞区 / 临时限制区图层</div>
+    <div class="settings-row">
+      <div class="settings-field">
+        <label>数据源类型</label>
+        <div style="display:flex;gap:6px;align-items:center">
+          <select id="aspaceSourceType" style="max-width:160px">
+            <option value="geojson">本地 GeoJSON</option>
+            <option value="json">本地 JSON</option>
+          </select>
+          <button class="mo-btn" onclick="document.getElementById('aspaceFileInput').click()" style="padding:4px 10px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg> 导入数据包</button>
+          <input type="file" id="aspaceFileInput" accept=".geojson,.json" style="display:none" onchange="importAirspacePkg(this)">
+        </div>
+        <div class="settings-hint">支持 GeoJSON / JSON 格式，包含禁飞区、限飞区多边形数据</div>
+      </div>
+    </div>
+    <div class="settings-row">
+      <div class="settings-field">
+        <label>图层开关</label>
+        <div class="aspace-layer-toggle" id="aspaceLayerToggle">
+          <div class="aspace-layer-chip active" onclick="toggleAirspaceLayer('nofly',this)"><span class="lc-dot" style="background:#ef4444"></span> 禁飞区</div>
+          <div class="aspace-layer-chip active" onclick="toggleAirspaceLayer('restriction',this)"><span class="lc-dot" style="background:#f59e0b"></span> 限飞区</div>
+          <div class="aspace-layer-chip active" onclick="toggleAirspaceLayer('temporary',this)"><span class="lc-dot" style="background:#a78bfa"></span> 临时限制区</div>
+          <div class="aspace-layer-chip active" onclick="toggleAirspaceLayer('custom',this)"><span class="lc-dot" style="background:#3b82f6"></span> 用户自定义围栏</div>
+        </div>
+      </div>
+    </div>
+    <div class="settings-row">
+      <div class="settings-field">
+        <label>已导入数据包</label>
+        <div id="aspacePkgList"><div style="font-size:11px;color:var(--text-muted);padding:8px 0">暂无数据包，点击上方导入</div></div>
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <button class="mo-btn" onclick="loadDemoAirspace()" style="padding:4px 10px;font-size:10px">加载示例空域（南京仙林）</button>
+          <button class="mo-btn" onclick="clearAllAirspace()" style="padding:4px 10px;font-size:10px;color:var(--danger)">清空全部</button>
+        </div>
+      </div>
+    </div>
+    <div class="aspace-disclaimer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12" style="display:inline-block;vertical-align:middle;margin-right:4px"><path d="M12 9v4M12 17h.01"/><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+      空域分析结果仅供辅助参考，起飞前仍需通过官方实时渠道确认。空域和临时管制会变化，法规明确管制空域未经批准不得飞行。依据《无人驾驶航空器飞行管理暂行条例》。
+    </div>
+  </div>
+  <div class="settings-section">
+    <div class="settings-section-title">无人机参数（扩展）</div>
+    <div class="settings-section-sub">机型 · 最大航程 · 传感器类型</div>
+    <div class="settings-row">
+      <div class="settings-field">
+        <label>无人机型号</label>
+        <select id="droneModelSel" style="max-width:300px" onchange="updateDroneParam('model',this.value)">
+          <option value="CF-Drone-E1">CF-Drone E1 Mini</option>
+          <option value="DJI-M300">DJI Matrice 300 RTK</option>
+          <option value="PX4-Vtol">PX4 VTOL (复合翼)</option>
+          <option value="Custom">自定义</option>
+        </select>
+      </div>
+      <div class="settings-field">
+        <label>最大航程 (m)</label>
+        <input type="number" id="droneRangeInput" value="5000" min="100" max="50000" step="100" style="max-width:120px" onchange="updateDroneParam('range',this.value)">
+      </div>
+      <div class="settings-field">
+        <label>传感器类型</label>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text-secondary);padding:4px 10px;border:1px solid var(--border-default);border-radius:4px;cursor:pointer"><input type="checkbox" checked onchange="toggleDroneSensor('IMU',this.checked)"> IMU</label>
+          <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text-secondary);padding:4px 10px;border:1px solid var(--border-default);border-radius:4px;cursor:pointer"><input type="checkbox" checked onchange="toggleDroneSensor('COMPASS',this.checked)"> COMPASS</label>
+          <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text-secondary);padding:4px 10px;border:1px solid var(--border-default);border-radius:4px;cursor:pointer"><input type="checkbox" checked onchange="toggleDroneSensor('BARO',this.checked)"> BARO</label>
+          <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text-secondary);padding:4px 10px;border:1px solid var(--border-default);border-radius:4px;cursor:pointer"><input type="checkbox" checked onchange="toggleDroneSensor('GPS',this.checked)"> GPS</label>
+        </div>
+      </div>
+      <button class="mo-btn primary" onclick="saveDroneParams()" style="max-width:120px">保存参数</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Workspace 4: 算法分析 ===== -->
+<div class="workspace ws-algorithm algo-ws" id="ws-algorithm">
+  <div class="algo-grid">
+    <div class="algo-card">
+      <div class="algo-card-head">
+        <span class="algo-card-title">路径优化分析</span>
+        <span class="algo-card-sub">贪婪算法 · Nearest Neighbor</span>
+      </div>
+      <div class="algo-card-body">
+        <div class="algo-compare">
+          <div class="algo-compare-item">
+            <div class="algo-compare-label">原始路径</div>
+            <div class="algo-compare-val original mono" id="algoOrigDist">— km</div>
+          </div>
+          <div class="algo-compare-item">
+            <div class="algo-compare-label">优化路径</div>
+            <div class="algo-compare-val optimized mono" id="algoOptDist">— km</div>
+          </div>
+        </div>
+        <div class="algo-stat-row"><span>航点数量</span><span class="mono" id="algoWpCount">0</span></div>
+        <div class="algo-stat-row"><span>航程变化</span><span class="mono" id="algoDelta">—</span></div>
+        <div class="algo-stat-row"><span>优化率</span><span class="mono" id="algoRate">—</span></div>
+        <button class="mo-btn primary" onclick="optimizePath();updateAlgoPage()" style="margin-top:10px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M13 2 L3 14 h7 l-1 8 10-12 h-7 z"/></svg> 执行路径优化</button>
+      </div>
+    </div>
+    <div class="algo-card">
+      <div class="algo-card-head">
+        <span class="algo-card-title">续航预测</span>
+        <span class="algo-card-sub">线性回归模型</span>
+      </div>
+      <div class="algo-card-body">
+        <div class="algo-input-row"><label>飞行距离</label><input type="number" value="0.00" id="bpDist" step="0.01" readonly style="color:var(--primary)"><span style="font-size:11px;color:var(--text-muted)">km</span></div>
+        <div class="algo-input-row"><label>载重</label><input type="number" value="0.5" step="0.1" id="bpLoad"><span style="font-size:11px;color:var(--text-muted)">kg</span></div>
+        <div class="algo-input-row"><label>风速</label><input type="number" value="3" id="bpWind" style="width:60px"><button class="mo-btn" id="btnFetchWind" onclick="fetchWind()" style="padding:3px 8px;font-size:10px;flex-shrink:0">获取</button><span style="font-size:11px;color:var(--text-muted)">m/s</span></div>
+        <div id="windInfo" style="font-size:10px;color:var(--text-muted);margin-bottom:8px">点击「获取」拉取实时气象风速（Open-Meteo）<span class="src-tag api">API</span></div>
+        <div class="algo-compare">
+          <div class="algo-compare-item">
+            <div class="algo-compare-label">预测续航</div>
+            <div class="algo-compare-val optimized mono" id="bpTime">—</div>
+          </div>
+          <div class="algo-compare-item">
+            <div class="algo-compare-label">预计耗电</div>
+            <div class="algo-compare-val original mono" id="bpCost">—</div>
+          </div>
+        </div>
+        <button class="mo-btn primary" onclick="predictBattery()" style="margin-top:10px">预测续航</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Workspace 5: 电池充电监控 ===== -->
+<div class="workspace ws-battery bat-ws" id="ws-battery">
+  <!-- Summary Cards -->
+  <div class="bat-summary-row">
+    <div class="bat-summary-card">
+      <div class="bat-summary-label">充电中电池</div>
+      <div class="bat-summary-val ok" id="batSumCharging">0</div>
+      <div class="bat-summary-sub" id="batSumChargingSub">共 0 个端口</div>
+    </div>
+    <div class="bat-summary-card">
+      <div class="bat-summary-label">已充满</div>
+      <div class="bat-summary-val" style="color:var(--accent-gold)" id="batSumFull">0</div>
+      <div class="bat-summary-sub" id="batSumFullSub">可拔出</div>
+    </div>
+    <div class="bat-summary-card">
+      <div class="bat-summary-label">总充电功率</div>
+      <div class="bat-summary-val" id="batSumPower">0.0 W</div>
+      <div class="bat-summary-sub" id="batSumPowerSub">笔记本供电</div>
+    </div>
+    <div class="bat-summary-card">
+      <div class="bat-summary-label">平均容量</div>
+      <div class="bat-summary-val" id="batSumAvgCap">--%</div>
+      <div class="bat-summary-sub" id="batSumAvgSub">所有已连接电池</div>
+    </div>
+    <div class="bat-summary-card">
+      <div class="bat-summary-label">最快充满</div>
+      <div class="bat-summary-val" id="batSumEta">--</div>
+      <div class="bat-summary-sub" id="batSumEtaSub">剩余时间最短</div>
+    </div>
+  </div>
+
+  <!-- Backend Bridge Status Bar -->
+  <div class="bat-backend-bar" id="batBackendBar">
+    <div class="bbb-status">
+      <span class="bbb-dot offline" id="bbbDot"></span>
+      <span id="bbbText">后端未连接</span>
+    </div>
+    <span class="bbb-meta" id="bbbMeta">尝试连接 http://127.0.0.1:8765 ...</span>
+    <div class="bbb-actions">
+      <select class="bbb-select" id="bbbPortSel" title="选择串口（飞控 MAVLink）"></select>
+      <button class="bbb-btn" id="bbbConnBtn" onclick="BatteryBackend.toggleSerial()">连接串口</button>
+      <button class="bbb-btn" id="bbbReqBtn" onclick="BatteryBackend.requestBattery()">请求电池遥测</button>
+      <button class="bbb-btn" id="bbbToggleBtn" onclick="BatteryBackend.toggle()">启用实时数据</button>
+    </div>
+  </div>
+
+  <!-- Charging Validation Panel -->
+  <div class="bat-validation-section" id="batValidationSection">
+    <div class="bat-validation-head">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      <span class="bat-validation-title">充电状态验证</span>
+      <span class="bat-validation-status pass" id="batValStatus">通过</span>
+    </div>
+    <div class="bat-validation-body" id="batValBody">
+      <div class="bat-validation-empty">等待后端数据...</div>
+    </div>
+    <div class="bat-validation-stats" id="batValStats">
+      <span>已校验电池 <b id="batValChecked">0</b></span>
+      <span>异常 <b id="batValAnomalies">0</b></span>
+      <span>错误 <b id="batValErrors">0</b></span>
+      <span>警告 <b id="batValWarnings">0</b></span>
+      <span style="margin-left:auto">数据源 <b id="batValSources">--</b></span>
+    </div>
+  </div>
+
+  <!-- Battery Cards Grid -->
+  <div class="bat-grid" id="batGrid"></div>
+
+  <!-- Charging Curve Chart -->
+  <div class="bat-chart-section">
+    <div class="bat-chart-head">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M3 20 L7 10 L10 15 L14 5 L18 12 L21 8"/></svg>
+      <span class="bat-chart-title">充电容量曲线</span>
+      <span style="margin-left:auto;font-size:10px;color:var(--text-muted)" id="batChartStat">实时刷新中</span>
+    </div>
+    <div class="bat-chart-body">
+      <canvas id="batChartCanvas" width="0" height="0"></canvas>
+    </div>
+    <div class="bat-chart-legend" id="batChartLegend"></div>
+  </div>
+
+  <!-- Port Configuration -->
+  <div class="bat-config-section">
+    <div class="bat-config-head">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="2" y="7" width="16" height="10" rx="2"/><path d="M22 11v2"/></svg>
+      端口模拟配置
+    </div>
+    <div class="bat-config-body" id="batConfigBody"></div>
+    <div class="bat-config-hint">
+      <b>实时数据源（后端 battery_bridge.py）：</b>系统电池经 Windows WMI (root/wmi:BatteryStatus) 读取电压/容量/充电速率/电源接入状态；无人机电池经串口 MAVLink v2 主动请求 BATTERY_STATUS(147)/SYS_STATUS(1)（若飞控固件支持）。<br>
+      <b>模拟回退：</b>当后端未运行或无真实数据源时，下方端口配置提供高保真模拟电池（CC-CV 充电曲线），数据源以 <span class="src-tag sim">模拟</span> 标签标注，与真实数据 <span class="src-tag wmi">WMI</span> / <span class="src-tag mavlink">MAVLink</span> 明确区分。
+    </div>
+  </div>
+</div>
+
+<script src="https://webapi.amap.com/maps?v=2.0&amp;key=e8327a3b1618e6d0c100ee550c824af3&amp;plugin=AMap.Scale,AMap.ControlBar,AMap.TileLayer.Satellite,AMap.InfoWindow,AMap.Marker,AMap.Polyline,AMap.Polygon"></script>
+<script>
+/* ===== Global State ===== */
+var state = {
+  runMode: 'e1_real', // 'e1_real' | 'phone_assist'
+  connected:true, mode:'AUTO',
+  remaining:72, voltageV:12.4, signalPct:88, satellites:14, fixType:3, hdop:1.2,
+  heading:128, rollDeg:2.3, pitchDeg:1.5, yawDeg:128, relAltM:86.4, speedMs:8.2, climbRate:0.6,
+  lat:32.0612, lon:118.793,
+  homeLat:32.0612, homeLon:118.793, flightTime:0,
+  baroPresAbs:1013.2, baroTemp:2650, humidity:65,
+  current:8.5,
+  missionPhase:'standby', missionState:'idle', missionWpIndex:0, missionWpTotal:6, missionUploaded:false,
+  geofenceCenterLat:32.0612, geofenceCenterLon:118.793, geofenceRadiusM:500, geofenceBreached:false,
+  dataDelay:12, batteryTimeRemaining:0,
+  droneModel:'CF-Drone-E1', droneMaxRange:5000, droneSensors:['IMU','COMPASS','BARO','GPS','OPTFLOW'],
+  sampleInterval:1, tickTimer:null,
+  serialPort:'COM3', baudRate:115200, txRate:10, mapZoom:16,
+  safeMode:true, controlTestActive:false,
+  // E1 flight controller
+  e1:{
+    connected:false, ip:'192.168.4.1', udpPort:14550, latency:0,
+    armed:false, throttle:0, controlSource:'web', heartbeat:0, linkQuality:0,
+    rollDeg:0, pitchDeg:0, yawDeg:0, voltageV:0, current:0, mode:'MANUAL',
+    lastUpdate:0
+  },
+  // Phone companion
+  phone:{
+    connected:false, gpsAvailable:true, compassAvailable:true, baroAvailable:false,
+    gpsAccuracy:0, lat:0, lon:0, heading:0, baroPres:0,
+    lastUpdate:0
+  },
+  // Data source mapping
+  src:{
+    roll:'e1', pitch:'e1', yaw:'e1', voltage:'e1', batt:'e1',
+    lat:'phone', lon:'phone', speedMs:'phone', alt:'e1', signal:'e1',
+    satellites:'phone', hdop:'phone', temp:'system', humidity:'system', baroPres:'e1'
+  },
+  // Airspace data management
+  airspace:{
+    packages:[], // {id,name,coverage,version,updatedAt,expiresAt,zones:[]}
+    layers:{nofly:true,restriction:true,temporary:true,custom:true},
+    lastCheckResult:'idle', // 'pass'|'warn'|'block'|'unknown'|'idle'
+    lastCheckMsg:''
+  },
+  // Battery charging monitor (laptop USB ports)
+  charging:{
+    ports:[
+      {id:'usb-c-1',name:'USB-C #1',type:'USB-C',connected:true,batteryId:'BAT-A001',capacity:65,voltage:11.8,current:2.1,temperature:32,cycles:45,health:92,charging:true,maxVoltage:12.6,nominalCapacity:5000,startTime:Date.now(),timeToFull:0,history:[]},
+      {id:'usb-c-2',name:'USB-C #2',type:'USB-C',connected:true,batteryId:'BAT-A002',capacity:88,voltage:12.3,current:1.2,temperature:35,cycles:120,health:78,charging:true,maxVoltage:12.6,nominalCapacity:5000,startTime:Date.now(),timeToFull:0,history:[]},
+      {id:'usb-a-1',name:'USB-A #1',type:'USB-A',connected:false,batteryId:null,capacity:0,voltage:0,current:0,temperature:0,cycles:0,health:0,charging:false,maxVoltage:12.6,nominalCapacity:5000,startTime:0,timeToFull:0,history:[]},
+      {id:'usb-a-2',name:'USB-A #2',type:'USB-A',connected:true,batteryId:'BAT-B003',capacity:100,voltage:12.6,current:0,temperature:28,cycles:200,health:65,charging:false,maxVoltage:12.6,nominalCapacity:5200,startTime:Date.now(),timeToFull:0,history:[]}
+    ],
+    chartHistory:{}, // portId -> [{t, capacity}]
+    chartEnabled:{}, // portId -> bool
+    chartCanvas:null,
+    chartCtx:null,
+    initialized:false
+  }
+};
+var alertIdCounter=0;
+var alertLifecycles=[];
+var ALERT_RULES={
+  gps_hdop:{triggerHdop:2.5,triggerSecs:5,recoverHdop:2.0,recoverSecs:10,msg:'GPS 精度下降',level:'warn',autoRecover:true},
+  low_battery:{triggerBat:25,msg:'电池电量低',level:'err',autoRecover:false},
+  geofence_breach:{msg:'地理围栏越界',level:'err',autoRecover:true},
+  altitude_limit:{triggerAlt:120,recoverAlt:120,msg:'高度超限',level:'warn',autoRecover:true},
+  phone_gps_lost:{msg:'手机定位缺失',level:'warn',autoRecover:true},
+  fc_link_lost:{msg:'飞控链路断开',level:'err',autoRecover:true},
+  bat_overtemp:{triggerTemp:45,recoverTemp:42,msg:'充电电池温度过高',level:'warn',autoRecover:true}
+};
+var alertConditionTimers={};
+
+/* ===== Theme ===== */
+var currentTheme='dark';
+try{var savedTheme=localStorage.getItem('skylink-theme');if(savedTheme==='light'||savedTheme==='dark')currentTheme=savedTheme;}catch(e){}
+document.documentElement.setAttribute('data-theme',currentTheme);
+function applyThemeIcon(){
+  var btn=document.getElementById('themeToggle');
+  if(btn){btn.innerHTML=currentTheme==='dark'
+    ?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>'
+    :'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v3M12 20v3M1 12h3M20 12h3M4.5 4.5l2 2M17.5 17.5l2 2M4.5 19.5l2-2M17.5 6.5l2-2"></path></svg>';}
+}
+applyThemeIcon();
+function toggleTheme(){setTheme(currentTheme==='dark'?'light':'dark');}
+function setTheme(t){
+  currentTheme=t;
+  document.documentElement.setAttribute('data-theme',t);
+  try{localStorage.setItem('skylink-theme',t)}catch(e){}
+  applyThemeIcon();
+  updateMapTheme();
+  toast('已切换到'+(t==='dark'?'深色':'浅色')+'主题');
+}
+function updateMapTheme(){
+  var style=currentTheme==='dark'?'amap://styles/dark':'amap://styles/normal';
+  if(mainMap)mainMap.setMapStyle(style);
+  if(flightMap)flightMap.setMapStyle(style);
+}
+
+/* ===== Menu ===== */
+function closeMenus(){document.querySelectorAll('.menu-item.open').forEach(m=>m.classList.remove('open'));}
+document.addEventListener('click',function(e){if(!e.target.closest('.menu-item'))closeMenus();});
+
+/* ===== Run Mode Switching ===== */
+function switchRunMode(mode){
+  state.runMode=mode;
+  document.querySelectorAll('.ms-btn').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
+  var setSel=document.getElementById('setRunMode');if(setSel)setSel.value=mode;
+  applyModeGating();
+  updateConnStatus();
+  updateE1Status();
+  updatePhoneStatus();
+  updateDataSources();
+  toast('已切换到'+({e1_real:'E1 实机',phone_assist:'手机辅助'})[mode]+'模式');
+}
+function applyModeGating(){
+  var e1=state.runMode==='e1_real';
+  var phone=state.runMode==='phone_assist';
+  // E1 section
+  document.getElementById('e1Section').classList.toggle('hidden',!e1);
+  // Phone section
+  document.getElementById('phoneSection').classList.toggle('hidden',!(phone||e1));
+  // Safe banner
+  document.getElementById('safeBanner').classList.toggle('hidden',!e1);
+  // Control panel
+  document.getElementById('ctrlPanel').classList.toggle('hidden',!e1);
+  // Gated buttons
+  var btnUpload=document.getElementById('btnUploadE1');
+  var btnMission=document.getElementById('btnAutoMission');
+  var gateUpload=document.getElementById('gateUploadHint');
+  var gateMission=document.getElementById('gateMissionHint');
+  if(e1){
+    btnUpload.disabled=!state.e1.connected;
+    gateUpload.textContent=state.e1.connected?'可上传至 E1':'需要 E1 已连接并启用导航任务协议';
+    btnMission.disabled=!(state.e1.connected&&state.e1.armed&&state.missionUploaded&&state.phone.gpsAvailable);
+    gateMission.textContent=(!state.e1.connected?'E1 未连接':!state.e1.armed?'需要先解锁':!state.missionUploaded?'需要先上传航点':!state.phone.gpsAvailable?'需要 GPS/导航模块':'可开始自动任务');
+  }else{
+    btnUpload.disabled=true;
+    btnMission.disabled=true;
+    gateUpload.textContent='需要 E1 实机模式并启用导航任务协议';
+    gateMission.textContent='需要 E1 实机模式 + 已解锁 + 已上传航点 + GPS 已接入';
+  }
+  // Data sources
+  if(e1){
+    state.src={roll:'e1',pitch:'e1',yaw:'e1',voltage:'e1',batt:'e1',lat:state.phone.gpsAvailable?'phone':'system',lon:state.phone.gpsAvailable?'phone':'system',speedMs:state.phone.gpsAvailable?'phone':'system',alt:'e1',signal:'e1',satellites:state.phone.gpsAvailable?'phone':'system',hdop:state.phone.gpsAvailable?'phone':'system',temp:'system',humidity:'system',baroPres:'e1'};
+    state.e1.connected=true;
+    state.phone.connected=state.phone.gpsAvailable;
+  }else if(phone){
+    state.src={roll:'e1',pitch:'e1',yaw:'e1',voltage:'e1',batt:'e1',lat:'phone',lon:'phone',speedMs:'phone',alt:'e1',signal:'e1',satellites:'phone',hdop:'phone',temp:'system',humidity:'system',baroPres:state.phone.baroAvailable?'phone':'system'};
+    state.e1.connected=true;
+    state.phone.connected=true;
+  }
+  updateSrcTags();
+}
+function updateSrcTags(){
+  var tagMap={e1:{cls:'e1',txt:'E1'},phone:{cls:'phone',txt:'手机'},system:{cls:'system',txt:'系统'},api:{cls:'api',txt:'API'}};
+  function setTag(id,src){
+    var el=document.getElementById(id);if(!el)return;
+    var t=tagMap[src];if(!t)return;
+    el.className='src-tag '+t.cls;
+    el.textContent=t.txt;
+  }
+  setTag('srcRoll',state.src.roll);setTag('srcPitch',state.src.pitch);setTag('srcYaw',state.src.yaw);
+  setTag('srcBatt',state.src.batt);setTag('srcVolt',state.src.voltage);
+  setTag('srcLat',state.src.lat);setTag('srcLon',state.src.lon);setTag('srcGs',state.src.speedMs);
+  setTag('srcAlt',state.src.alt);setTag('srcSignal',state.src.signal);
+  setTag('srcSat',state.src.satellites);setTag('srcHdop2',state.src.hdop);
+}
+function updateE1Status(){
+  var e1=state.e1;
+  var banner=document.getElementById('e1ConnBanner');
+  if(!banner)return;
+  if(e1.connected){
+    banner.className='dev-conn-banner online';banner.textContent='E1 已连接';
+    document.getElementById('e1Ip').textContent=e1.ip;
+    document.getElementById('e1Port').textContent=e1.udpPort;
+    document.getElementById('e1Latency').textContent=e1.latency.toFixed(0)+' ms';
+    var armEl=document.getElementById('e1Armed');
+    armEl.textContent=e1.armed?'已解锁':'未解锁';
+    armEl.className='dr-val '+(e1.armed?'warn':'off');
+    document.getElementById('e1Throttle').textContent=e1.throttle+'%';
+    document.getElementById('e1CtrlSrc').textContent=e1.controlSource;
+    document.getElementById('e1Heartbeat').textContent=e1.heartbeat+' bpm';
+    var lqEl=document.getElementById('e1LinkQuality');
+    lqEl.textContent=e1.linkQuality+'%';
+    lqEl.className='dr-val '+(e1.linkQuality>70?'ok':e1.linkQuality>40?'warn':'err');
+  }else{
+    banner.className='dev-conn-banner offline';banner.textContent='E1 未连接';
+    ['e1Ip','e1Port','e1Latency','e1Throttle','e1CtrlSrc','e1Heartbeat','e1LinkQuality'].forEach(function(id){var el=document.getElementById(id);if(el)el.textContent='--';});
+    var armEl=document.getElementById('e1Armed');if(armEl){armEl.textContent='未解锁';armEl.className='dr-val off';}
+  }
+}
+function updatePhoneStatus(){
+  var p=state.phone;
+  var banner=document.getElementById('phoneConnBanner');
+  if(!banner)return;
+  if(p.connected){
+    banner.className='dev-conn-banner online';banner.textContent='手机已连接';
+    var gpsEl=document.getElementById('phoneGps');
+    gpsEl.textContent=p.gpsAvailable?'已接入':'未接入';
+    gpsEl.className='dr-val '+(p.gpsAvailable?'ok':'err');
+    document.getElementById('phoneGpsAcc').textContent=p.gpsAvailable?'±'+p.gpsAccuracy.toFixed(1)+'m':'--';
+    document.getElementById('phonePos').textContent=p.gpsAvailable?p.lat.toFixed(5)+', '+p.lon.toFixed(5):'--';
+    var compEl=document.getElementById('phoneCompass');
+    compEl.textContent=p.compassAvailable?'可用':'禁用';
+    compEl.className='dr-val '+(p.compassAvailable?'ok':'off');
+    var baroEl=document.getElementById('phoneBaro');
+    baroEl.textContent=p.baroAvailable?'可用':'禁用';
+    baroEl.className='dr-val '+(p.baroAvailable?'ok':'off');
+    document.getElementById('phoneLastUpdate').textContent=p.lastUpdate?new Date(p.lastUpdate).toLocaleTimeString('zh-CN',{hour12:false}):'--';
+  }else{
+    banner.className='dev-conn-banner offline';banner.textContent='手机未连接';
+    ['phoneGps','phoneGpsAcc','phonePos','phoneCompass','phoneBaro','phoneLastUpdate'].forEach(function(id){var el=document.getElementById(id);if(el){el.textContent='--';el.className='dr-val off';}});
+  }
+}
+function updateDataSources(){
+  var body=document.getElementById('dsDrawerBody');if(!body)return;
+  var html='';
+  // E1 source
+  var e1Online=state.e1.connected;
+  html+='<div class="ds-source-card"><div class="ds-source-name"><span class="conn-dot '+(e1Online?'on':'off')+'"></span> E1 飞控 <span class="src-tag e1">飞控</span></div><div class="ds-source-rows">';
+  html+='<div class="ds-source-row"><span class="dsr-label">状态</span><span class="dsr-val '+(e1Online?'ok':'err')+'">'+(e1Online?'在线':'离线')+'</span></div>';
+  html+='<div class="ds-source-row"><span class="dsr-label">IP:Port</span><span class="dsr-val">'+(e1Online?state.e1.ip+':'+state.e1.udpPort:'--')+'</span></div>';
+  html+='<div class="ds-source-row"><span class="dsr-label">延迟</span><span class="dsr-val">'+(e1Online?state.e1.latency.toFixed(0)+'ms':'--')+'</span></div>';
+  html+='<div class="ds-source-row"><span class="dsr-label">链路质量</span><span class="dsr-val '+(e1Online?(state.e1.linkQuality>70?'ok':state.e1.linkQuality>40?'':'err'):'')+'">'+(e1Online?state.e1.linkQuality+'%':'--')+'</span></div>';
+  html+='<div class="ds-source-row"><span class="dsr-label">最后更新</span><span class="dsr-val">'+(state.e1.lastUpdate?new Date(state.e1.lastUpdate).toLocaleTimeString('zh-CN',{hour12:false}):'--')+'</span></div>';
+  html+='</div></div>';
+  // Phone source
+  var phoneOnline=state.phone.connected;
+  html+='<div class="ds-source-card"><div class="ds-source-name"><span class="conn-dot '+(phoneOnline?'on':'off')+'"></span> 手机伴随定位 <span class="src-tag phone">手机</span></div><div class="ds-source-rows">';
+  html+='<div class="ds-source-row"><span class="dsr-label">状态</span><span class="dsr-val '+(phoneOnline?'ok':'err')+'">'+(phoneOnline?'在线':'离线')+'</span></div>';
+  html+='<div class="ds-source-row"><span class="dsr-label">GPS</span><span class="dsr-val '+(phoneOnline&&state.phone.gpsAvailable?'ok':'err')+'">'+(phoneOnline&&state.phone.gpsAvailable?'±'+state.phone.gpsAccuracy.toFixed(1)+'m':'未接入')+'</span></div>';
+  html+='<div class="ds-source-row"><span class="dsr-label">罗盘</span><span class="dsr-val '+(phoneOnline&&state.phone.compassAvailable?'ok':'')+'">'+(phoneOnline&&state.phone.compassAvailable?'可用':'禁用')+'</span></div>';
+  html+='<div class="ds-source-row"><span class="dsr-label">气压计</span><span class="dsr-val '+(phoneOnline&&state.phone.baroAvailable?'ok':'')+'">'+(phoneOnline&&state.phone.baroAvailable?'可用':'禁用')+'</span></div>';
+  html+='<div class="ds-source-row"><span class="dsr-label">最后更新</span><span class="dsr-val">'+(state.phone.lastUpdate?new Date(state.phone.lastUpdate).toLocaleTimeString('zh-CN',{hour12:false}):'--')+'</span></div>';
+  html+='</div></div>';
+  // System calculated
+  html+='<div class="ds-source-card"><div class="ds-source-name"><span class="conn-dot on" style="background:var(--src-system)"></span> 系统计算 <span class="src-tag system">系统</span></div><div class="ds-source-rows">';
+  html+='<div class="ds-source-row"><span class="dsr-label">状态</span><span class="dsr-val ok">始终可用</span></div>';
+  html+='<div class="ds-source-row"><span class="dsr-label">内容</span><span class="dsr-val">航程/优化/预测</span></div>';
+  html+='</div></div>';
+  // Environment data
+  html+='<div class="ds-source-card"><div class="ds-source-name"><span class="conn-dot on" style="background:var(--src-system)"></span> 环境数据 <span class="src-tag system">系统</span></div><div class="ds-source-rows">';
+  html+='<div class="ds-source-row"><span class="dsr-label">状态</span><span class="dsr-val" style="color:var(--warning)">手动/估算</span></div>';
+  html+='<div class="ds-source-row"><span class="dsr-label">内容</span><span class="dsr-val">温度/湿度</span></div>';
+  html+='<div class="ds-source-row"><span class="dsr-label">说明</span><span class="dsr-val" style="font-size:9px">非飞控实测，仅供演示</span></div>';
+  html+='</div></div>';
+  body.innerHTML=html;
+}
+function toggleDataSourceDrawer(){document.getElementById('dsDrawer').classList.toggle('open');}
+
+/* ===== Safe Test Mode ===== */
+function enterControlTest(){
+  if(state.e1.remaining<=20){toast('低电状态，禁止解锁！','err');return;}
+  if(state.e1.linkQuality<40){toast('通信不稳定，禁止进入控制测试！','err');return;}
+  if(Math.abs(state.e1.rollDeg)>30||Math.abs(state.e1.pitchDeg)>30){toast('姿态异常，禁止进入控制测试！','err');return;}
+  if(!confirm('确认进入控制测试？\n\n此操作将允许实机控制。\n请确保：\n- 已拆除螺旋桨\n- 飞行器已固定在架台\n- 电池电量充足\n- 通信链路稳定'))return;
+  state.controlTestActive=true;
+  document.getElementById('btnEnterCtrl').classList.add('hidden');
+  document.getElementById('btnExitCtrl').classList.remove('hidden');
+  document.getElementById('ctrlStatus').textContent='控制测试已激活 · 可执行解锁/模式切换';
+  document.getElementById('ctrlStatus').style.color='var(--success)';
+  toast('已进入控制测试 · 请确保无桨/架台');
+}
+function exitControlTest(){
+  if(state.e1.armed){tryDisarm();}
+  state.controlTestActive=false;
+  document.getElementById('btnEnterCtrl').classList.remove('hidden');
+  document.getElementById('btnExitCtrl').classList.add('hidden');
+  document.getElementById('ctrlStatus').textContent='实机只读 · 需进入控制测试';
+  document.getElementById('ctrlStatus').style.color='';
+  toast('已退出控制测试');
+}
+function tryArm(){
+  if(!state.controlTestActive){toast('请先进入控制测试','warn');return;}
+  if(state.e1.remaining<=20){toast('低电状态，禁止解锁！','err');return;}
+  if(state.e1.linkQuality<40){toast('通信不稳定，禁止解锁！','err');return;}
+  if(!confirm('确认解锁？\n\n请确保已拆除螺旋桨！'))return;
+  state.e1.armed=true;
+  document.getElementById('btnArm').disabled=true;
+  document.getElementById('btnDisarm').disabled=false;
+  updateE1Status();
+  applyModeGating();
+  toast('E1 已解锁 · 仅限架台测试');
+}
+function tryDisarm(){
+  state.e1.armed=false;
+  state.e1.throttle=0;
+  document.getElementById('btnArm').disabled=false;
+  document.getElementById('btnDisarm').disabled=true;
+  updateE1Status();
+  applyModeGating();
+  toast('E1 已上锁');
+}
+function setE1Mode(m){
+  if(!state.controlTestActive){toast('请先进入控制测试','warn');return;}
+  state.e1.mode=m;
+  toast('E1 模式已设为 '+m);
+}
+
+/* ===== Workspace Switching ===== */
+function switchWorkspace(name){
+  document.querySelectorAll('.ws-tab').forEach(t=>t.classList.toggle('active',t.dataset.ws===name));
+  document.querySelectorAll('.workspace').forEach(p=>p.classList.remove('active'));
+  document.getElementById('ws-'+name).classList.add('active');
+  if(typeof AMap==='undefined'){toast('高德地图API加载失败，请检查网络','err');return;}
+  if(name==='mission' && !mainMap) setTimeout(function(){initMainMap();},50);
+  if(name==='data' && !waveCanvas){initWaveCanvas();setTimeout(function(){if(!flightMap)initDataMaps();},50);}
+  if(name==='mission' && mainMap && mainMap.resize) setTimeout(function(){mainMap.resize();},150);
+  if(name==='data' && flightMap && flightMap.resize) setTimeout(function(){flightMap.resize();},150);
+  if(name==='algorithm') updateAlgoPage();
+  if(name==='battery'){renderBatteryWorkspace();if(!state.charging.chartCtx)setTimeout(function(){initBatChart();},50);}
+}
+
+/* ===== Toast ===== */
+function toast(msg,type){
+  type=type||'success';
+  var d=document.createElement('div');d.className='toast '+type;d.textContent=msg;
+  document.body.appendChild(d);
+  setTimeout(()=>{d.style.opacity='0';setTimeout(()=>d.remove(),300)},2500);
+}
+function updateConnStatus(){
+  var dot=document.getElementById('connDot');var txt=document.getElementById('connText');
+  if(!dot||!txt)return;
+  if(state.runMode==='e1_real'){
+    if(state.e1.connected){dot.className='conn-dot on';txt.textContent='E1 已连接 · '+state.e1.ip+':'+state.e1.udpPort;}
+    else{dot.className='conn-dot off';txt.textContent='E1 未连接';}
+  }else if(state.runMode==='phone_assist'){
+    if(state.phone.connected){dot.className='conn-dot on';txt.textContent='手机已连接 · GPS '+(state.phone.gpsAvailable?'可用':'未接入');}
+    else{dot.className='conn-dot warn';txt.textContent='手机未连接';}
+  }
+}
+
+/* ===== Alert System ===== */
+function createAlert(type,message,level){
+  var ex=alertLifecycles.find(a=>a.type===type&&(a.status==='active'||a.status==='acknowledged'));
+  if(ex)return ex;
+  var a={id:++alertIdCounter,type:type,message:message,level:level||'warn',status:'active',timestamp:Date.now(),ackTime:null,recoverTime:null};
+  alertLifecycles.unshift(a);
+  if(alertLifecycles.length>20)alertLifecycles.pop();
+  toast(message,level);
+  return a;
+}
+function recoverAlert(id){var a=alertLifecycles.find(x=>x.id===id);if(a){a.status='recovered';a.recoverTime=Date.now();}}
+function updateAlertSystem(){
+  var r=ALERT_RULES;
+  if(!state.e1.connected){var fca=alertLifecycles.find(a=>a.type==='fc_link_lost'&&a.status==='active');if(!fca)createAlert('fc_link_lost',r.fc_link_lost.msg,r.fc_link_lost.level);}
+  else{var fca2=alertLifecycles.find(a=>a.type==='fc_link_lost'&&a.status==='active');if(fca2)recoverAlert(fca2.id);}
+  if(state.runMode==='phone_assist'||state.runMode==='e1_real'){
+    if(state.phone.gpsAvailable===false){var pga=alertLifecycles.find(a=>a.type==='phone_gps_lost'&&a.status==='active');if(!pga)createAlert('phone_gps_lost',r.phone_gps_lost.msg,r.phone_gps_lost.level);}
+  }
+  var batA=alertLifecycles.find(a=>a.type==='low_battery'&&(a.status==='active'||a.status==='acknowledged'));
+  if(!batA&&state.remaining<=r.low_battery.triggerBat)createAlert('low_battery',r.low_battery.msg+' ('+Math.round(state.remaining)+'%)',r.low_battery.level);
+  // Battery charging over-temperature check
+  state.charging.ports.forEach(function(p){
+    if(!p.connected)return;
+    var otA=alertLifecycles.find(a=>a.type==='bat_overtemp_'+p.id&&(a.status==='active'||a.status==='acknowledged'));
+    if(!otA&&p.temperature>r.bat_overtemp.triggerTemp){
+      createAlert('bat_overtemp_'+p.id,r.bat_overtemp.msg+' ('+p.name+' · '+p.batteryId+' · '+Math.round(p.temperature)+'°C)',r.bat_overtemp.level);
+    }else if(otA&&p.temperature<r.bat_overtemp.recoverTemp){
+      recoverAlert(otA.id);
+    }
+  });
+}
+function haversineMeters(lat1,lon1,lat2,lon2){var R=6371000;var dLat=(lat2-lat1)*Math.PI/180;var dLon=(lon2-lon1)*Math.PI/180;var a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}
+
+/* ===== Main Map ===== */
+var mainMap=null, droneMarker=null, mainInfoWindow=null, mainPath=[], mainPolyline=null, mapFollowMode=true, showTrajectory=true, homeMarker=null;
+var mapSat=false, satLayer=null, waypoints=[], selWp=null, planMarkers=[], planLine=null;
+var geofencePolygon=null;
+
+function initMainMap(){
+  try{
+    var container=document.getElementById('mainMap');
+    container.innerHTML='<div class="map-loading" id="mainMapLoading"><div class="ml-spin"></div>地图加载中...</div>';
+    mainMap=new AMap.Map('mainMap',{
+      zoom:state.mapZoom, center:[state.lon,state.lat],
+      viewMode:'3D', pitch:45, rotation:0, resizeEnable:true,
+      mapStyle:currentTheme==='dark'?'amap://styles/dark':'amap://styles/normal'
+    });
+    mainMap.on('complete',function(){var l=document.getElementById('mainMapLoading');if(l)l.remove();});
+    setTimeout(function(){var l=document.getElementById('mainMapLoading');if(l)l.remove();},5000);
+    mainMap.addControl(new AMap.Scale({position:'LB'}));
+    mainMap.addControl(new AMap.ControlBar({position:{left:'10px',top:'10px'},showZoomBar:true,showControlButton:true}));
+    mainMap.on('click',function(e){addWaypoint(e.lngLat.getLat(),e.lngLat.getLng());});
+    mainMap.on('zoomchange',function(){var z=document.getElementById('sbZoom');if(z)z.textContent=mainMap.getZoom();});
+    mainMap.on('complete',function(){AirspaceService.renderLayers();});
+    var el=document.createElement('div');el.className='amap-drone-marker';
+    el.innerHTML='<div class="drone-alt-tag" id="droneAltTag">'+state.relAltM.toFixed(1)+'m</div><svg width="40" height="40" viewBox="0 0 40 40"><g transform="translate(20,20)"><path d="M0,-16 L11,10 L3,4 L0,14 L-3,4 L-11,10 Z" fill="#ef4444" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></g></svg>';
+    droneMarker=new AMap.Marker({position:[state.lon,state.lat],content:el,anchor:'center'});
+    droneMarker.setMap(mainMap);
+    mainInfoWindow=new AMap.InfoWindow({content:'',offset:new AMap.Pixel(0,-35),closeWhenClickMap:true});
+    droneMarker.on('click',function(){
+      mainInfoWindow.setContent('<div style="min-width:120px"><div style="font-weight:600;margin-bottom:4px;color:var(--primary)">无人机状态</div><div>高度: '+state.relAltM.toFixed(1)+'m</div><div>速度: '+state.speedMs.toFixed(1)+'m/s</div><div>航向: '+state.heading.toFixed(0)+'°</div><div>经纬: '+state.lat.toFixed(5)+', '+state.lon.toFixed(5)+'</div></div>');
+      mainInfoWindow.open(mainMap,droneMarker.getPosition());
+    });
+    mainPath=[[state.lon,state.lat]];
+    mainPolyline=new AMap.Polyline({path:mainPath,strokeColor:'#3b82f6',strokeWeight:2.5,strokeOpacity:0.85});
+    mainPolyline.setMap(mainMap);
+    var homeEl=document.createElement('div');
+    homeEl.innerHTML='<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><circle cx="12" cy="14" r="2" fill="#22c55e"/></svg>';
+    homeMarker=new AMap.Marker({position:[state.homeLon,state.homeLat],content:homeEl,anchor:'center',zIndex:50});
+    homeMarker.setMap(mainMap);
+    addGeofenceToMap();
+    fetchWind();
+  }catch(e){
+    console.error('initMainMap error:',e);
+    document.getElementById('mainMap').innerHTML='<div style="color:#ef4444;padding:20px;text-align:center">地图加载失败: '+e.message+'<br>请检查网络连接</div>';
+  }
+}
+function toggleFollow(){mapFollowMode=!mapFollowMode;var b=document.getElementById('btnFollow');if(b){b.classList.toggle('active',mapFollowMode);b.textContent=mapFollowMode?'跟随':'自由';}}
+function toggleTrajectory(){showTrajectory=!showTrajectory;var b=document.getElementById('btnTrajectory');if(b){b.classList.toggle('active',showTrajectory);b.textContent=showTrajectory?'轨迹':'轨迹关';}}
+function toggleMapStyle(){
+  mapSat=!mapSat;
+  if(mapSat){if(!satLayer)satLayer=new AMap.TileLayer.Satellite({opacity:0.9});satLayer.setMap(mainMap);mainMap.setMapStyle('amap://styles/normal');}
+  else{if(satLayer)satLayer.setMap(null);mainMap.setMapStyle(currentTheme==='dark'?'amap://styles/dark':'amap://styles/normal');}
+  renderPlanMarkers();
+}
+function addGeofenceToMap(){
+  if(!mainMap)return;
+  var rd=state.geofenceRadiusM/111320;var path=[];
+  for(var i=0;i<=64;i++){var a=(i/64)*2*Math.PI;path.push([state.geofenceCenterLon+rd*Math.cos(a)/Math.cos(state.geofenceCenterLat*Math.PI/180),state.geofenceCenterLat+rd*Math.sin(a)]);}
+  geofencePolygon=new AMap.Polygon({path:path,strokeColor:'#f59e0b',strokeWeight:2,strokeOpacity:0.6,strokeStyle:'dashed',fillColor:'#f59e0b',fillOpacity:0.05});
+  geofencePolygon.setMap(mainMap);
+}
+
+/* ===== Waypoint Management ===== */
+function haversine(a,b){var R=6371000,la1=a.lat*Math.PI/180,la2=b.lat*Math.PI/180,da=(b.lat-a.lat)*Math.PI/180,do2=(b.lon-a.lon)*Math.PI/180;var h=Math.sin(da/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin(do2/2)**2;return 2*R*Math.asin(Math.sqrt(h));}
+function totalDist(list){var d=0;for(var i=1;i<list.length;i++)d+=haversine(list[i-1],list[i]);return d;}
+function formatMissionTime(sec){var m=Math.floor(sec/60),s=Math.round(sec%60);if(m>=60){var h=Math.floor(m/60);m=m%60;return h+':'+(m<10?'0':'')+m+':'+(s<10?'0':'')+s}return m+':'+(s<10?'0':'')+s;}
+
+function addWaypoint(lat,lon){
+  waypoints.push({seq:waypoints.length,lat:lat,lon:lon,alt:100,spd:5,hold:0,act:'CRUISE',pri:3});
+  selWp=waypoints.length-1;renderPlan();markDirty();
+}
+function addWaypointAtCenter(){
+  if(!mainMap){toast('地图未加载','warn');return;}
+  var c=mainMap.getCenter();addWaypoint(c.getLat(),c.getLng());toast('已添加航点 #'+waypoints.length);
+}
+function delWp(seq){waypoints=waypoints.filter(w=>w.seq!==seq);waypoints.forEach((w,i)=>w.seq=i);if(selWp===seq)selWp=null;renderPlan();markDirty();}
+function deleteSelectedWp(){if(selWp===null){toast('请先选中一个航点','warn');return;}delWp(selWp);toast('已删除航点');}
+function clearWaypoints(){if(waypoints.length===0)return;if(confirm('清空全部航点？')){waypoints=[];selWp=null;renderPlan();markDirty();toast('已清空航点');}}
+function renderPlan(){
+  var list=document.getElementById('wpList');if(!list)return;list.innerHTML='';
+  var cumDist=0,cumTime=0;
+  waypoints.forEach((wp,idx)=>{
+    var prevDist=idx>0?haversine(waypoints[idx-1],wp):0;cumDist+=prevDist;
+    var segTime=wp.spd>0?prevDist/wp.spd:0;cumTime+=segTime+wp.hold;
+    var div=document.createElement('div');div.className='wp-item'+(selWp===wp.seq?' active':'');
+    div.onclick=function(){selWp=selWp===wp.seq?null:wp.seq;renderPlan();if(mainMap)mainMap.setCenter([wp.lon,wp.lat]);};
+    var actLabel={CRUISE:'巡航',LOITER:'悬停',TAKEPHOTO:'拍照'}[wp.act]||wp.act;
+    var distStr=idx>0?(prevDist>=1000?(prevDist/1000).toFixed(2)+' km':Math.round(prevDist)+' m'):'起点';
+    div.innerHTML='<span class="wp-seq">'+(wp.seq+1)+'</span><div class="wp-info"><div class="wp-coords">'+wp.lat.toFixed(5)+', '+wp.lon.toFixed(5)+'</div><div class="wp-meta"><b>H</b> '+wp.alt+'m <b>V</b> '+wp.spd+'m/s <span class="wp-act-tag">'+actLabel+'</span> <b>距</b> '+distStr+'</div></div><span class="wp-del" onclick="event.stopPropagation();delWp('+wp.seq+')"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M1 1L9 9M9 1L1 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>';
+    list.appendChild(div);
+  });
+  var wc=document.getElementById('wpCount');if(wc)wc.textContent=waypoints.length+' 航点';
+  var td=totalDist(waypoints);
+  var mo=document.getElementById('moTotalDist');if(mo)mo.innerHTML=(td/1000).toFixed(2)+' km <span class="src-tag system">系统</span>';
+  var me=document.getElementById('moEstTime');if(me)me.textContent=waypoints.length>0?formatMissionTime(cumTime):'--';
+  var bpd=document.getElementById('bpDist');if(bpd)bpd.value=(td/1000).toFixed(2);
+  var hasConflict=waypoints.some((wp,i)=>waypoints.some((w,j)=>i!==j&&haversine(w,wp)<50));
+  var cf=document.getElementById('moConflict');
+  if(cf){if(waypoints.length===0){cf.textContent='无航点';cf.style.color='var(--info)';}else if(hasConflict){cf.textContent='航点过近 <50m';cf.style.color='var(--danger)';}else{cf.textContent='无冲突';cf.style.color='var(--success)';}}
+  renderPlanMarkers();
+}
+function renderPlanMarkers(){
+  if(!mainMap)return;
+  planMarkers.forEach(m=>m.setMap(null));planMarkers=[];
+  if(planLine){planLine.setMap(null);planLine=null;}
+  if(waypoints.length===0)return;
+  var coords=waypoints.map(w=>[w.lon,w.lat]);
+  planLine=new AMap.Polyline({path:coords,strokeColor:'#3b82f6',strokeWeight:2,strokeStyle:'dashed'});
+  planLine.setMap(mainMap);
+  waypoints.forEach(function(wp,i){
+    var el=document.createElement('div');el.className='wp-marker';
+    var isHome=i===0;var isSelected=selWp===wp.seq;
+    var sz=isSelected?30:24;var r=isSelected?12:10;
+    var stroke=isHome?'#22c55e':'#3b82f6';
+    var ring=isSelected?'<circle cx="12" cy="12" r="11" fill="none" stroke="#f59e0b" stroke-width="2" opacity="0.8"/>':'';
+    el.innerHTML='<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 24 24">'+ring+'<circle cx="12" cy="12" r="'+r+'" fill="'+stroke+'" stroke="#fff" stroke-width="1.5"/><text x="12" y="16" text-anchor="middle" fill="#fff" font-size="11" font-weight="bold">'+(i+1)+'</text></svg>';
+    var off=isSelected?-15:-12;
+    var m=new AMap.Marker({position:[wp.lon,wp.lat],content:el,draggable:true,offset:new AMap.Pixel(off,off),anchor:'center'});
+    m.setMap(mainMap);
+    m.on('click',function(){selWp=selWp===wp.seq?null:wp.seq;renderPlan();});
+    m.on('dragend',function(){var p=m.getPosition();wp.lat=p.getLat();wp.lon=p.getLng();renderPlan();markDirty();});
+    planMarkers.push(m);
+  });
+}
+function fitWaypoints(){if(waypoints.length===0||!mainMap)return;var items=[];if(planLine)items.push(planLine);planMarkers.forEach(m=>items.push(m));mainMap.setFitView(items,{padding:[60,60,60,60]});}
+function markDirty(){var us=document.getElementById('uploadStatus');if(us){us.textContent='本地修改';us.className='upload-status dirty';}state.missionUploaded=false;applyModeGating();}
+function saveMissionXml(){toast('已保存为 mission.xml');}
+function loadMissionXml(){toast('已加载任务文件');}
+function checkConflicts(){if(waypoints.length===0){toast('无航点','warn');return;}var hasConflict=waypoints.some((wp,i)=>waypoints.some((w,j)=>i!==j&&haversine(w,wp)<50));if(hasConflict)toast('检测到航点冲突（距离<50m）','warn');else toast('无航点冲突');}
+
+/* ===== Capability Gating ===== */
+function uploadToE1(){
+  if(state.runMode!=='e1_real'){toast('需要 E1 实机模式','warn');return;}
+  if(!state.e1.connected){toast('E1 未连接','warn');return;}
+  if(waypoints.length===0){toast('无航点可上传','warn');return;}
+  state.missionUploaded=true;
+  var us=document.getElementById('uploadStatus');if(us){us.textContent='已上传';us.className='upload-status synced';}
+  applyModeGating();
+  toast('航点已上传至 E1 ('+waypoints.length+' 航点)');
+}
+function startAutoMission(){
+  if(state.runMode!=='e1_real'){toast('需要 E1 实机模式','warn');return;}
+  if(!state.e1.connected){toast('E1 未连接','warn');return;}
+  if(!state.e1.armed){toast('需要先解锁','warn');return;}
+  if(!state.missionUploaded){toast('需要先上传航点','warn');return;}
+  if(!state.phone.gpsAvailable){toast('需要 GPS/导航模块','warn');return;}
+  if(!confirm('确认开始自动任务？\n\n请确保：\n- 已拆除螺旋桨（架台测试）\n- GPS 已接入\n- 航点已上传'))return;
+  state.missionState='running';state.missionPhase='mission';
+  toast('自动任务已启动 · '+state.missionWpTotal+' 航点');
+}
+
+/* ===== Path Optimization ===== */
+function optimizePath(){
+  if(waypoints.length<3){toast('至少需要 3 个航点','warn');return;}
+  var before=totalDist(waypoints);
+  var home=waypoints[0],rest=waypoints.slice(1).map(w=>Object.assign({},w));
+  var order=[home];
+  while(rest.length){var last=order[order.length-1];rest.sort((a,b)=>haversine(last,a)-haversine(last,b));order.push(rest.shift());}
+  order.forEach((w,i)=>w.seq=i);waypoints=order;
+  var after=totalDist(waypoints);
+  renderPlan();markDirty();
+  toast('路径优化完成: '+(before/1000).toFixed(2)+'km → '+(after/1000).toFixed(2)+'km');
+}
+function updateAlgoPage(){
+  var td=totalDist(waypoints);
+  document.getElementById('algoOrigDist').textContent=(td/1000).toFixed(2)+' km';
+  document.getElementById('algoWpCount').textContent=waypoints.length;
+  document.getElementById('algoOptDist').textContent=(td/1000).toFixed(2)+' km';
+  document.getElementById('algoDelta').textContent='—';
+  document.getElementById('algoRate').textContent='—';
+}
+
+/* ===== Path Preview ===== */
+var previewMarker=null,previewTimer=null,previewIdx=0,previewPathData=[];
+function previewPath(){
+  if(waypoints.length<2){toast('至少需要 2 个航点','warn');return;}
+  if(!mainMap){toast('地图未加载','warn');return;}
+  if(previewTimer){clearInterval(previewTimer);previewTimer=null;}
+  if(previewMarker){previewMarker.setMap(null);previewMarker=null;}
+  previewPathData=[];
+  for(var i=0;i<waypoints.length-1;i++){var a=waypoints[i],b=waypoints[i+1];var steps=Math.max(5,Math.round(haversine(a,b)/30));for(var j=0;j<steps;j++){var t=j/steps;previewPathData.push([a.lon+(b.lon-a.lon)*t,a.lat+(b.lat-a.lat)*t]);}}
+  previewPathData.push([waypoints[waypoints.length-1].lon,waypoints[waypoints.length-1].lat]);
+  var el=document.createElement('div');
+  el.innerHTML='<svg width="28" height="28" viewBox="0 0 40 40"><g transform="translate(20,20)"><path d="M0,-12 L9,8 L0,3 L-9,8 Z" fill="#f59e0b" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/></g></svg>';
+  previewMarker=new AMap.Marker({position:previewPathData[0],content:el,offset:new AMap.Pixel(-14,-14),anchor:'center'});
+  previewMarker.setMap(mainMap);previewIdx=0;
+  if(planLine)mainMap.setFitView([planLine],{padding:[80,80,80,80]});
+  previewTimer=setInterval(function(){
+    previewIdx++;
+    if(previewIdx>=previewPathData.length){clearInterval(previewTimer);previewTimer=null;previewMarker.setMap(null);previewMarker=null;toast('路径预览完成');return;}
+    previewMarker.setPosition(previewPathData[previewIdx]);
+  },120);
+  toast('开始预览飞行路径');
+}
+
+/* ===== Battery Prediction ===== */
+function predictBattery(){
+  var d=+document.getElementById('bpDist').value,l=+document.getElementById('bpLoad').value,w=+document.getElementById('bpWind').value;
+  var time=Math.max(1,22-3.2*d-2.1*l-0.8*w);var cost=Math.min(95,18+d*9+l*6+w*2);
+  document.getElementById('bpTime').textContent=time.toFixed(1)+' min';
+  document.getElementById('bpCost').textContent=Math.round(cost)+'%';
+  toast('预测完成');
+}
+function fetchWind(){
+  var btn=document.getElementById('btnFetchWind'),info=document.getElementById('windInfo');
+  if(btn){btn.disabled=true;btn.textContent='...';}
+  if(info)info.textContent='正在获取实时气象数据...';
+  var lat=waypoints[0]?waypoints[0].lat:32.0612;var lon=waypoints[0]?waypoints[0].lon:118.793;
+  var url='https://api.open-meteo.com/v1/forecast?latitude='+lat.toFixed(4)+'&longitude='+lon.toFixed(4)+'&current=wind_speed_10m,wind_direction_10m&wind_speed_unit=ms';
+  fetch(url).then(r=>r.json()).then(j=>{
+    if(!j||!j.current||j.current.wind_speed_10m==null)throw new Error('no data');
+    var ws=+j.current.wind_speed_10m,wd=j.current.wind_direction_10m;
+    document.getElementById('bpWind').value=ws.toFixed(1);
+    if(info)info.innerHTML='实时 '+ws.toFixed(1)+' m/s · 风向 '+Math.round(wd)+'° · Open-Meteo <span class="src-tag api">API</span>';
+    if(btn){btn.disabled=false;btn.textContent='获取';}
+    toast('风速已获取 '+ws.toFixed(1)+' m/s');
+  }).catch(()=>{
+    if(info)info.innerHTML='获取失败（网络受限），请手动输入风速 <span class="src-tag system">手动</span>';
+    if(btn){btn.disabled=false;btn.textContent='获取';}
+    toast('风速获取失败，请手动输入','err');
+  });
+}
+
+/* ===== Mission Page UI Updaters ===== */
+function updateMissionUI(){
+  var set=(id,v,cls)=>{var e=document.getElementById(id);if(e){e.innerHTML=v;if(cls!==undefined)e.className=cls;}};
+  var srcTag=function(src){var map={e1:'<span class="src-tag e1">E1</span>',phone:'<span class="src-tag phone">手机</span>',system:'<span class="src-tag system">系统</span>'};return map[src]||'';};
+  set('usMode',state.mode,'us-val info');
+  var phaseLabels={standby:'待命',takeoff:'起飞',mission:'执行任务',rtl:'返航',landing:'降落',landed:'已着陆'};
+  set('usPhase',phaseLabels[state.missionPhase]||state.missionPhase);
+  // GPS-dependent values
+  var gpsOk=(state.phone.gpsAvailable&&state.phone.connected);
+  if(gpsOk){
+    set('usLat',state.lat.toFixed(6)+'° '+srcTag(state.src.lat));
+    set('usLon',state.lon.toFixed(6)+'° '+srcTag(state.src.lon));
+    set('usGs',state.speedMs.toFixed(1)+' m/s '+srcTag(state.src.speedMs));
+    set('usHdg',Math.round(state.heading)+'° '+srcTag(state.src.yaw));
+    set('usSat',state.satellites+srcTag(state.src.satellites));
+    set('usHdop',state.hdop.toFixed(1)+srcTag(state.src.hdop));
+  }else{
+    set('usLat','<span class="us-val disabled">GPS 未接入</span>','us-val disabled');
+    set('usLon','<span class="us-val disabled">GPS 未接入</span>','us-val disabled');
+    set('usGs','<span class="us-val disabled">--</span>','us-val disabled');
+    set('usHdg','<span class="us-val disabled">--</span>','us-val disabled');
+    set('usSat','<span class="us-val disabled">--</span>','us-val disabled');
+    set('usHdop','<span class="us-val disabled">--</span>','us-val disabled');
+  }
+  set('usAlt',state.relAltM.toFixed(1)+' m '+srcTag(state.src.alt));
+  set('usRoll',state.rollDeg.toFixed(1)+'° '+srcTag(state.src.roll));
+  set('usPitch',state.pitchDeg.toFixed(1)+'° '+srcTag(state.src.pitch));
+  set('usYaw',state.yawDeg.toFixed(0)+'° '+srcTag(state.src.yaw));
+  var bp=Math.round(state.remaining);
+  set('usBatt',bp+'% '+srcTag(state.src.batt),bp<=20?'us-val err':bp<=40?'us-val warn':'us-val ok');
+  set('usVolt',state.voltageV.toFixed(1)+'V '+srcTag(state.src.voltage),state.voltageV<10.5?'us-val err':state.voltageV<11.1?'us-val warn':'us-val');
+  set('usSignal',state.signalPct+'% '+srcTag(state.src.signal));
+  var armEl=document.getElementById('usArmed');
+  if(armEl){armEl.innerHTML=state.e1.armed?'<span style="color:var(--warning)">已解锁</span> <span class="src-tag e1">E1</span>':'未解锁';armEl.className=state.e1.armed?'us-val warn':'us-val off';}
+  /* Bottom status bar */
+  set('sbSerial',state.serialPort,'sb-val ok');
+  set('sbBaud',state.baudRate);
+  set('sbSample',state.sampleInterval+'s');
+  set('sbLastUpdate',new Date().toLocaleTimeString('zh-CN',{hour12:false}));
+  set('sbLat',gpsOk?state.lat.toFixed(5):'--');
+  set('sbLon',gpsOk?state.lon.toFixed(5):'--');
+  if(mainMap){var z=document.getElementById('sbZoom');if(z)z.textContent=Math.round(mainMap.getZoom());}
+  set('sbWp',(state.missionWpIndex+1)+'/'+state.missionWpTotal);
+  set('sbGps',gpsOk?((state.fixType>=3?state.fixType+'D':'NO')+'·'+state.satellites):'未接入',gpsOk&&state.hdop<2&&state.satellites>=8?'sb-val ok':'sb-val warn');
+  set('sbHdop',gpsOk?state.hdop.toFixed(1):'--');
+  /* Sensor mini entry */
+  set('seTemp',(state.baroTemp/100).toFixed(1)+'°C');
+  set('seHum',Math.round(state.humidity)+'%');
+  set('sePres',state.baroPresAbs.toFixed(1));
+  /* Update drone marker */
+  if(gpsOk&&droneMarker&&mainMap&&!isNaN(state.lon)&&!isNaN(state.lat)){
+    try{
+      droneMarker.setPosition([state.lon,state.lat]);
+      var el=droneMarker.getContent();var altTag=el.querySelector('#droneAltTag');if(altTag)altTag.textContent=state.relAltM.toFixed(1)+'m';
+      if(showTrajectory&&mainPolyline){mainPath.push([state.lon,state.lat]);if(mainPath.length>600)mainPath.shift();mainPolyline.setPath(mainPath);mainPolyline.show();}
+      if(mapFollowMode)mainMap.setCenter([state.lon,state.lat]);
+    }catch(e){}
+  }
+}
+
+/* ===== Settings ===== */
+function updateSampleInterval(val){
+  state.sampleInterval=parseInt(val);
+  var el=document.getElementById('sampleIntervalVal');if(el)el.textContent=val+'s';
+  if(state.tickTimer){clearInterval(state.tickTimer);}
+  state.tickTimer=setInterval(tick,state.sampleInterval*1000);
+  var sb=document.getElementById('sbSample');if(sb)sb.textContent=val+'s';
+  toast('采样间隔已设为 '+val+' 秒');
+}
+function updateDroneParam(type,val){if(type==='model')state.droneModel=val;if(type==='range')state.droneMaxRange=parseInt(val)||5000;}
+function toggleDroneSensor(sensor,enabled){if(enabled&&state.droneSensors.indexOf(sensor)<0)state.droneSensors.push(sensor);if(!enabled)state.droneSensors=state.droneSensors.filter(s=>s!==sensor);}
+function saveDroneParams(){toast('无人机参数已保存: '+state.droneModel+' · 航程 '+state.droneMaxRange+'m');renderPlan();}
+
+/* ===== Data Page: Waveform ===== */
+var waveCanvas,waveCtx,waveData={},waveChannels,waveTimeRange=5,wavePaused=false,waveSampleCount=0;
+waveChannels=[
+  {key:'roll',label:'横滚 Roll',unit:'°',group:'姿态',color:'#3b82f6',enabled:true,src:'e1'},
+  {key:'pitch',label:'俯仰 Pitch',unit:'°',group:'姿态',color:'#22c55e',enabled:true,src:'e1'},
+  {key:'yaw',label:'偏航 Yaw',unit:'°',group:'姿态',color:'#fbbf24',enabled:false,src:'e1'},
+  {key:'alt',label:'相对高度',unit:'m',group:'飞行',color:'#a78bfa',enabled:true,src:'e1'},
+  {key:'volt',label:'电压',unit:'V',group:'电池',color:'#fbbf24',enabled:true,src:'e1'},
+  {key:'batt',label:'电量',unit:'%',group:'电池',color:'#4ade80',enabled:false,src:'e1'},
+  {key:'envTemp',label:'温度',unit:'°C',group:'环境数据',color:'#fb7185',enabled:true,src:'system'},
+  {key:'envPress',label:'气压',unit:'hPa',group:'环境数据',color:'#22d3ee',enabled:true,src:'e1'},
+  {key:'humidity',label:'湿度',unit:'%',group:'环境数据',color:'#34d399',enabled:true,src:'system'}
+];
+function initWaveCanvas(){
+  waveCanvas=document.getElementById('waveCanvas');waveCtx=waveCanvas.getContext('2d');
+  function resize(){var p=waveCanvas.parentElement;waveCanvas.width=p.offsetWidth;waveCanvas.height=p.offsetHeight;}
+  resize();new ResizeObserver(resize).observe(waveCanvas.parentElement);
+  waveCanvas.addEventListener('mousemove',function(e){var r=waveCanvas.getBoundingClientRect();waveHoverX=e.clientX-r.left;waveHoverY=e.clientY-r.top;});
+  waveCanvas.addEventListener('mouseleave',function(){waveHoverX=-1;});
+  initWaveSidebar();
+  setInterval(sampleWave,200);
+  setInterval(drawWave,100);
+}
+function initWaveSidebar(){
+  var sb=document.getElementById('waveSidebar');var groups={};
+  waveChannels.forEach(ch=>{if(!groups[ch.group])groups[ch.group]=[];groups[ch.group].push(ch);});
+  var h='';
+  Object.keys(groups).forEach(g=>{
+    h+='<div class="wave-sidebar-group">'+g+'</div>';
+    groups[g].forEach(ch=>{
+      h+='<div class="wave-channel'+(ch.enabled?' enabled':'')+'" onclick="toggleChannel(\''+ch.key+'\')"><span class="ch-dot" style="background:'+ch.color+'"></span><span class="ch-name">'+ch.label+'</span><span class="ch-unit">'+ch.unit+'</span></div>';
+    });
+  });
+  sb.innerHTML=h;
+}
+function toggleChannel(key){var ch=waveChannels.find(c=>c.key===key);if(!ch)return;ch.enabled=!ch.enabled;if(!ch.enabled)waveData[key]=[];initWaveSidebar();}
+function sampleWave(){
+  if(wavePaused)return;
+  var now=Date.now();
+  var vals={roll:state.rollDeg,pitch:state.pitchDeg,yaw:state.yawDeg,alt:state.relAltM,volt:state.voltageV,batt:state.remaining,envTemp:state.baroTemp/100,envPress:state.baroPresAbs,humidity:state.humidity};
+  waveChannels.forEach(ch=>{if(!ch.enabled)return;if(!waveData[ch.key])waveData[ch.key]=[];waveData[ch.key].push({t:now,v:vals[ch.key]});if(waveData[ch.key].length>6000)waveData[ch.key].shift();});
+  waveSampleCount++;
+  var enCount=waveChannels.filter(c=>c.enabled).length;
+  var stat=document.getElementById('waveStat');if(stat)stat.textContent=enCount+' 通道 · '+waveSampleCount+' 样本';
+}
+function drawWave(){
+  if(!waveCtx)return;
+  var w=waveCanvas.width,h=waveCanvas.height;waveCtx.clearRect(0,0,w,h);
+  var now=Date.now(),windowMs=waveTimeRange*1000;
+  var css=getComputedStyle(document.documentElement);
+  var gridColor=css.getPropertyValue('--border-default').trim()||'#21262d';
+  var labelColor=css.getPropertyValue('--text-muted').trim()||'#8b949e';
+  var L=64,R=w-16;var enabled=waveChannels.filter(c=>c.enabled);
+  if(enabled.length===0){waveCtx.fillStyle=labelColor;waveCtx.font='11px JetBrains Mono';waveCtx.fillText('在右侧选择要记录的通道',w/2-80,h/2);return;}
+  var groups=[],gmap={};
+  enabled.forEach(ch=>{if(!gmap[ch.group]){gmap[ch.group]={name:ch.group,unit:ch.unit,chs:[]};groups.push(gmap[ch.group]);}gmap[ch.group].chs.push(ch);});
+  var laneH=h/groups.length;
+  groups.forEach(function(g,gi){
+    var top=Math.round(gi*laneH),bot=Math.round((gi+1)*laneH);
+    waveCtx.strokeStyle=gridColor;waveCtx.lineWidth=1;waveCtx.beginPath();waveCtx.moveTo(L,bot);waveCtx.lineTo(R,bot);waveCtx.stroke();
+    var all=[];g.chs.forEach(ch=>{(waveData[ch.key]||[]).forEach(d=>{if(d.t>now-windowMs)all.push(d.v)});});
+    if(all.length){
+      var mn=Math.min.apply(null,all),mx=Math.max.apply(null,all);if(mn===mx){mn-=1;mx+=1;}
+      var pad=(mx-mn)*0.12;mn-=pad;mx+=pad;
+      g.chs.forEach(function(ch){
+        var data=(waveData[ch.key]||[]).filter(d=>d.t>now-windowMs);if(data.length<2)return;
+        waveCtx.strokeStyle=ch.color;waveCtx.lineWidth=1.5;waveCtx.beginPath();
+        data.forEach(function(d,i){var x=L+(d.t-(now-windowMs))/windowMs*(R-L);var y=bot-6-((d.v-mn)/(mx-mn))*(bot-top-18);if(i===0)waveCtx.moveTo(x,y);else waveCtx.lineTo(x,y);});
+        waveCtx.stroke();
+      });
+      waveCtx.fillStyle=labelColor;waveCtx.font='9px JetBrains Mono';waveCtx.fillText(mx.toFixed(1),4,top+12);waveCtx.fillText(mn.toFixed(1),4,bot-8);
+    }
+    waveCtx.fillStyle=labelColor;waveCtx.font='10px JetBrains Mono';waveCtx.fillText(g.name+(g.unit?' ('+g.unit+')':''),L+6,top+13);
+  });
+  waveCtx.fillStyle=labelColor;waveCtx.font='9px JetBrains Mono';waveCtx.fillText('-'+waveTimeRange+'s',L,h-2);waveCtx.fillText('now',R-22,h-2);
+}
+function exportWave(){
+  var enabled=waveChannels.filter(c=>c.enabled&&waveData[c.key]&&waveData[c.key].length>1);
+  if(enabled.length===0){toast('无数据可导出','warn');return;}
+  var base=waveData[enabled[0].key];var rows=['time,'+enabled.map(c=>c.label+'_'+(c.unit||'raw')).join(',')];
+  base.forEach(function(d,i){
+    var t=new Date(d.t);var ts=String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0')+':'+String(t.getSeconds()).padStart(2,'0')+'.'+String(t.getMilliseconds()).padStart(3,'0');
+    rows.push(ts+','+enabled.map(function(c){var arr=waveData[c.key];if(i<arr.length&&Math.abs(arr[i].t-d.t)<250)return typeof arr[i].v==='number'?arr[i].v.toFixed(2):arr[i].v;return '';}).join(','));
+  });
+  var blob=new Blob([rows.join('\n')],{type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='skylink_waveform.csv';document.body.appendChild(a);a.click();a.remove();
+  toast('已导出 '+rows.length+' 行 CSV');
+}
+function setTimeRange(el,s){waveTimeRange=s;document.querySelectorAll('.wave-toolbar .wave-tr-btn').forEach((b,i)=>{if(i<4)b.classList.remove('active')});el.classList.add('active');}
+function togglePause(el){wavePaused=!wavePaused;el.textContent=wavePaused?'继续':'暂停';}
+function clearWave(){waveData={};waveSampleCount=0;document.getElementById('waveStat').textContent='0 通道 · 0 样本';}
+
+/* ===== Data Page: Flight Logs ===== */
+var flightMap=null;
+var flights=[
+  {id:1,type:'CF-Drone-E1',started_at:'2026-08-31 14:19:00',ended_at:'2026-08-31 14:35:20',duration_s:980,max_alt:102.5,total_dist:4250},
+  {id:2,type:'CF-Drone-E1',started_at:'2026-08-30 10:15:00',ended_at:'2026-08-30 10:28:30',duration_s:810,max_alt:85.0,total_dist:3120},
+  {id:3,type:'DJI-M300',started_at:'2026-08-29 15:42:00',ended_at:'2026-08-29 16:12:10',duration_s:1790,max_alt:120.0,total_dist:8650},
+  {id:4,type:'CF-Drone-E1',started_at:'2026-08-28 09:20:00',ended_at:'2026-08-28 09:32:45',duration_s:765,max_alt:90.2,total_dist:3540},
+  {id:5,type:'DJI-M300',started_at:'2026-08-27 11:00:00',ended_at:'2026-08-27 11:28:30',duration_s:1710,max_alt:95.5,total_dist:6280},
+  {id:6,type:'PX4-Vtol',started_at:'2026-08-26 08:30:00',ended_at:'2026-08-26 09:05:20',duration_s:2120,max_alt:150.0,total_dist:12500},
+  {id:7,type:'PX4-Vtol',started_at:'2026-08-25 16:10:00',ended_at:'2026-08-25 16:35:40',duration_s:1540,max_alt:130.0,total_dist:9800}
+];
+function initDataMaps(){
+  renderFlights();
+  try{
+    document.getElementById('flightMap').innerHTML='<div class="map-loading" id="flightMapLoading"><div class="ml-spin"></div>地图加载中...</div>';
+    flightMap=new AMap.Map('flightMap',{zoom:14,center:[118.793,32.0612],viewMode:'3D',pitch:55,rotation:0,showIndoorMap:false,mapStyle:currentTheme==='dark'?'amap://styles/dark':'amap://styles/normal'});
+    flightMap.on('complete',function(){var l=document.getElementById('flightMapLoading');if(l)l.remove();});
+    setTimeout(function(){var l=document.getElementById('flightMapLoading');if(l)l.remove();},5000);
+    flightMap.addControl(new AMap.Scale({position:'LB'}));
+    flightMap.addControl(new AMap.ControlBar({position:{left:'10px',top:'10px'},showZoomBar:true,showControlButton:true}));
+  }catch(e){console.error('initDataMaps error:',e);}
+}
+function renderFlights(){
+  var lb=document.getElementById('flightList');if(!lb)return;
+  var list=getFilteredFlights();
+  if(list.length===0){lb.innerHTML='<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:12px">无匹配记录</div>';return;}
+  lb.innerHTML=list.map(f=>{var dur=Math.floor(f.duration_s/60)+'分'+(f.duration_s%60)+'秒';return '<div class="flight-item" onclick="selectFlight('+f.id+')"><div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span class="flight-item-id">#'+f.id+'</span><span class="flight-item-type">'+f.type+'</span></div><div class="flight-item-time">'+f.started_at+'</div><div class="flight-item-stats"><span>'+dur+'</span><span>'+f.max_alt+'m</span><span>'+(f.total_dist/1000).toFixed(2)+'km</span></div></div>';}).join('');
+}
+function getFilteredFlights(){
+  var df=document.getElementById('logDateFilter'),mf=document.getElementById('logModelFilter');
+  var dateVal=df?df.value:'',modelVal=mf?mf.value:'';
+  return flights.filter(f=>{if(modelVal&&f.type!==modelVal)return false;if(dateVal&&f.started_at.indexOf(dateVal)!==0)return false;return true;});
+}
+function filterFlights(){renderFlights();}
+function exportFlightCSV(){
+  var list=getFilteredFlights();if(list.length===0){toast('无记录可导出','warn');return;}
+  var rows=['ID,型号,开始时间,结束时间,时长(秒),最高高度(m),总距离(m),最低电压(V),最大速度(m/s)'];
+  list.forEach(f=>{rows.push([f.id,f.type,f.started_at,f.ended_at,f.duration_s,f.max_alt,f.total_dist,'11.2','12.3'].join(','));});
+  var blob=new Blob([rows.join('\n')],{type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='flight_logs_'+new Date().toISOString().slice(0,10)+'.csv';a.click();URL.revokeObjectURL(a.href);
+  toast('已导出 '+list.length+' 条飞行日志');
+}
+function importFlightCSV(input){
+  var file=input.files[0];if(!file)return;var reader=new FileReader();
+  reader.onload=function(e){
+    try{var text=e.target.result;var lines=text.split('\n').filter(l=>l.trim());
+    if(lines.length<2){toast('CSV 文件为空或格式错误','warn');return;}
+    var imported=0;
+    for(var i=1;i<lines.length;i++){var cols=lines[i].split(',');if(cols.length<7)continue;
+      flights.push({id:flights.length+1,type:cols[1]||'Unknown',started_at:cols[2]||'',ended_at:cols[3]||'',duration_s:parseInt(cols[4])||0,max_alt:parseFloat(cols[5])||0,total_dist:parseFloat(cols[6])||0});imported++;}
+    renderFlights();toast('已导入 '+imported+' 条飞行日志');
+    }catch(err){toast('CSV 解析失败: '+err.message,'warn');}
+    input.value='';
+  };
+  reader.readAsText(file);
+}
+function selectFlight(id){
+  document.querySelectorAll('.flight-item').forEach((el,i)=>el.classList.toggle('active',getFilteredFlights()[i]&&getFilteredFlights()[i].id===id));
+  var f=flights.find(x=>x.id===id);if(!f)return;
+  document.getElementById('flightDetailTitle').textContent='飞行记录 #'+id;
+  var dur=Math.floor(f.duration_s/60)+'分'+(f.duration_s%60)+'秒';
+  document.getElementById('flightDetailMeta').innerHTML='<span>开始: '+f.started_at+'</span><span>时长: '+dur+'</span><span>最高: '+f.max_alt+'m</span><span>距离: '+(f.total_dist/1000).toFixed(2)+'km</span>';
+  document.getElementById('flightStats').style.display='flex';
+  document.getElementById('fsPoints').textContent=Math.floor(f.duration_s/2);
+  document.getElementById('fsAlt').textContent=f.max_alt.toFixed(1)+'m';
+  document.getElementById('fsSpeed').textContent='12.3m/s';
+  document.getElementById('fsVolt').textContent='11.2V';
+  if(flightMap)drawTrajectory(id);
+}
+var flightPolyline=null,flightPlaybackMarker=null,flightPlaybackIdx=0,flightPlaybackTimer=null,flightPlaybackPath=[];
+function drawTrajectory(id){
+  if(!flightMap)return;
+  if(flightPolyline){flightPolyline.setMap(null);flightPolyline=null;}
+  if(flightPlaybackMarker){flightPlaybackMarker.setMap(null);flightPlaybackMarker=null;}
+  if(flightPlaybackTimer){clearInterval(flightPlaybackTimer);flightPlaybackTimer=null;}
+  var pts=[];var n=50;
+  for(var i=0;i<n;i++){var t=i/n;pts.push([118.793+Math.sin(t*6)*0.008,32.0612+Math.cos(t*4)*0.006]);}
+  flightPlaybackPath=pts;
+  flightPolyline=new AMap.Polyline({path:pts,strokeColor:'#3b82f6',strokeWeight:2,strokeOpacity:0.85});
+  flightPolyline.setMap(flightMap);
+  var pbEl=document.createElement('div');
+  pbEl.innerHTML='<svg width="32" height="32" viewBox="0 0 40 40"><g transform="translate(20,20)"><path d="M0,-14 L10,8 L3,3 L0,12 L-3,3 L-10,8 Z" fill="#3b82f6" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></g></svg>';
+  flightPlaybackMarker=new AMap.Marker({position:pts[0],content:pbEl,anchor:'center'});
+  flightPlaybackMarker.setMap(flightMap);
+  flightPlaybackIdx=0;
+  flightMap.setFitView([flightPolyline],{padding:[40,40,40,40]});
+  if(flightPlaybackTimer)clearInterval(flightPlaybackTimer);
+  flightPlaybackTimer=setInterval(function(){if(!flightPlaybackMarker||!flightPlaybackPath.length)return;flightPlaybackIdx=(flightPlaybackIdx+1)%flightPlaybackPath.length;flightPlaybackMarker.setPosition(flightPlaybackPath[flightPlaybackIdx]);},200);
+}
+function refreshFlights(){toast('已刷新飞行记录');}
+function dataTab(el,name){
+  document.querySelectorAll('.data-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.data-tab-content').forEach(c=>c.classList.remove('active'));
+  document.getElementById('dt-'+name).classList.add('active');
+  if(name==='logs'&&flightMap)setTimeout(()=>flightMap.resize(),100);
+}
+
+/* ===== Telemetry Update ===== */
+var tickT=0;
+function tick(){
+  tickT++;
+  state.e1.latency=8+Math.sin(tickT/5)*4;
+  state.e1.heartbeat=60+Math.round(Math.sin(tickT/10)*5);
+  state.e1.linkQuality=Math.round(85+Math.sin(tickT/15)*10);
+  state.e1.lastUpdate=Date.now();
+  state.e1.rollDeg=2+Math.sin(tickT/6)*3;
+  state.e1.pitchDeg=1+Math.cos(tickT/7)*2;
+  state.e1.yawDeg=128+Math.sin(tickT/20)*15;
+  state.e1.voltageV=12+state.remaining/100;
+  state.e1.current=8+Math.sin(tickT/8)*2;
+  // Copy E1 data to main state
+  state.rollDeg=state.e1.rollDeg;state.pitchDeg=state.e1.pitchDeg;state.yawDeg=state.e1.yawDeg;
+  state.voltageV=state.e1.voltageV;state.current=state.e1.current;
+  state.signalPct=state.e1.linkQuality;
+  state.remaining=Math.max(10,72-tickT*0.015);
+  state.batteryTimeRemaining=Math.max(0,state.remaining/100*1800);
+  state.relAltM=86+Math.sin(tickT/8)*4;
+  state.baroPresAbs=1013.2+Math.sin(tickT/30)*1.5;
+  // Phone data
+  if(state.phone.connected){
+    state.phone.gpsAccuracy=3.5+Math.sin(tickT/12)*1.5;
+    state.phone.lastUpdate=Date.now();
+    if(state.phone.gpsAvailable){
+      var ang2=tickT*0.035, rad2=0.0022;
+      state.phone.lat=32.0612+rad2*Math.sin(ang2);
+      state.phone.lon=118.793+rad2*Math.cos(ang2);
+      state.lat=state.phone.lat;state.lon=state.phone.lon;
+      var dN2=0.001*111320*Math.cos(ang2), dE2=0.001*111320*Math.sin(ang2);
+      state.speedMs=Math.abs(Math.sin(tickT/3))*5+0.5;
+      state.heading=(((Math.atan2(dE2,dN2)*180/Math.PI)+360)%360);
+      state.satellites=Math.round(8+Math.sin(tickT/9)*2);
+      state.hdop=1.5+Math.abs(Math.sin(tickT/11))*0.5;
+    }
+    if(state.phone.baroAvailable){
+      state.baroPresAbs=1013.0+Math.sin(tickT/30)*2;
+    }
+  }
+  state.baroTemp=2650+Math.sin(tickT/40)*80;
+  state.humidity=65+Math.sin(tickT/25)*8;
+  state.dataDelay=Math.round(state.e1.latency);
+  updateAlertSystem();
+  updateMissionUI();
+  updateE1Status();
+  updatePhoneStatus();
+  applyModeGating();
+  if(tickT%5===0)updateDataSources();
+  // Battery charging: real backend overrides simulation when available
+  if(BatteryBackend.active&&BatteryBackend.lastSnapshot){
+    BatteryBackend.applyToState();
+  }else{
+    simulateBatteryCharging();
+  }
+  updateBatteryChargingUI();
+  if(document.getElementById('ws-battery')&&document.getElementById('ws-battery').classList.contains('active')){
+    renderBatSummary();
+    if(tickT%3===0)renderBatGrid();
+    renderBatValidation();
+  }
+}
+
+/* ===== Battery Backend Bridge (real data via SSE) ===== */
+var BatteryBackend=(function(){
+  var URL_BASE='http://127.0.0.1:8765';
+  var STREAM_URL=URL_BASE+'/api/stream';
+  var STATUS_URL=URL_BASE+'/api/status';
+  var PORTS_URL=URL_BASE+'/api/ports';
+  var SERIAL_CONNECT_URL=URL_BASE+'/api/serial/connect';
+  var SERIAL_DISCONNECT_URL=URL_BASE+'/api/serial/disconnect';
+  var SERIAL_REQUEST_URL=URL_BASE+'/api/serial/request';
+
+  var active=false, es=null, lastSnapshot=null, lastError=null;
+  var reconnectTimer=null, statusTimer=null;
+  var portList=[], selectedPort=null, serialConnected=false;
+
+  function setStatus(state,text,meta){
+    var dot=document.getElementById('bbbDot');
+    var t=document.getElementById('bbbText');
+    var m=document.getElementById('bbbMeta');
+    if(dot){dot.className='bbb-dot '+state;}
+    if(t){t.textContent=text;}
+    if(m){m.textContent=meta||'';}
+    var toggleBtn=document.getElementById('bbbToggleBtn');
+    if(toggleBtn){
+      toggleBtn.textContent=active?'已启用实时数据':'启用实时数据';
+      toggleBtn.classList.toggle('active',active);
+    }
+  }
+
+  function connectStream(){
+    if(es){try{es.close();}catch(e){}}
+    setStatus('connecting','正在连接后端...',URL_BASE);
+    try{
+      es=new EventSource(STREAM_URL);
+    }catch(e){
+      lastError=e.message;setStatus('offline','后端不可用','EventSource 失败: '+e.message);
+      scheduleReconnect();return;
+    }
+    es.onopen=function(){
+      setStatus('online','后端已连接','SSE 实时数据流已建立');
+      active=true;
+    };
+    es.onmessage=function(ev){
+      try{
+        var snap=JSON.parse(ev.data);
+        lastSnapshot=snap;
+        lastError=null;
+        applyToState();
+        updateBackendBar();
+      }catch(e){console.warn('parse err',e);}
+    };
+    es.onerror=function(){
+      lastError='SSE 连接中断';
+      setStatus('offline','后端连接中断','将自动重试...');
+      try{es.close();}catch(e){}
+      es=null;
+      scheduleReconnect();
+    };
+  }
+
+  function scheduleReconnect(){
+    if(reconnectTimer)return;
+    reconnectTimer=setTimeout(function(){
+      reconnectTimer=null;
+      if(active||es)return;
+      connectStream();
+    },3000);
+  }
+
+  function fetchOnce(){
+    try{
+      var x=new XMLHttpRequest();
+      x.open('GET',STATUS_URL,false);
+      x.timeout=2000;
+      x.send();
+      if(x.status===200){
+        lastSnapshot=JSON.parse(x.responseText);
+        active=true;
+        applyToState();
+        updateBackendBar();
+        return true;
+      }
+    }catch(e){lastError=e.message;}
+    return false;
+  }
+
+  function fetchPorts(){
+    try{
+      var x=new XMLHttpRequest();
+      x.open('GET',PORTS_URL,false);
+      x.timeout=2000;
+      x.send();
+      if(x.status===200){
+        var obj=JSON.parse(x.responseText);
+        portList=obj.ports||[];
+        renderPortSelect();
+      }
+    }catch(e){portList=[];}
+  }
+
+  function renderPortSelect(){
+    var sel=document.getElementById('bbbPortSel');
+    if(!sel)return;
+    var html='<option value="">-- 自动探测 --</option>';
+    portList.forEach(function(p){
+      html+='<option value="'+p.device+'"'+(selectedPort===p.device?' selected':'')+'>'+p.device+' · '+(p.description||'').substring(0,24)+'</option>';
+    });
+    sel.innerHTML=html;
+    sel.onchange=function(){selectedPort=sel.value;};
+  }
+
+  function toggleSerial(){
+    if(serialConnected){
+      var x=new XMLHttpRequest();x.open('POST',SERIAL_DISCONNECT_URL,true);
+      x.setRequestHeader('Content-Type','application/json');x.send('{}');
+      x.onload=function(){serialConnected=false;updateBackendBar();toast('已断开串口');};
+    }else{
+      var port=selectedPort||(portList[0]?portList[0].device:'');
+      if(!port){toast('未检测到可用串口','warn');return;}
+      var x=new XMLHttpRequest();x.open('POST',SERIAL_CONNECT_URL,true);
+      x.setRequestHeader('Content-Type','application/json');
+      x.send(JSON.stringify({port:port,baud:115200}));
+      x.onload=function(){
+        if(x.status===200){serialConnected=true;updateBackendBar();toast('已连接 '+port);}
+        else{toast('串口连接失败','err');}
+      };
+    }
+  }
+
+  function requestBattery(){
+    var x=new XMLHttpRequest();x.open('POST',SERIAL_REQUEST_URL,true);
+    x.setRequestHeader('Content-Type','application/json');
+    x.send(JSON.stringify({msgid:147}));
+    x.onload=function(){
+      if(x.status===200)toast('已请求 BATTERY_STATUS(147)');
+      else toast('请求失败','err');
+    };
+  }
+
+  function toggle(){
+    if(active){
+      active=false;
+      if(es){try{es.close();}catch(e){}es=null;}
+      setStatus('offline','实时数据已停用','使用前端模拟数据');
+      toast('已切换到模拟数据');
+    }else{
+      connectStream();
+    }
+  }
+
+  function applyToState(){
+    if(!lastSnapshot)return;
+    var snap=lastSnapshot;
+    var realBats=(snap.batteries||[]).filter(function(b){return b.source!=='sim';});
+    if(realBats.length>0){
+      var ports=[];
+      realBats.forEach(function(b,i){
+        var cap=b.capacity!=null?b.capacity:0;
+        var maxV=b.details&&b.details.designVoltage?(b.details.designVoltage/1000):12.6;
+        var nomCap=b.nominalCapacity||5000;
+        var port={
+          id:b.id,
+          name:b.name,
+          type:b.source.toUpperCase(),
+          connected:true,
+          batteryId:b.batteryId||b.id,
+          capacity:cap,
+          voltage:b.voltage||0,
+          current:b.current||0,
+          temperature:b.temperature||0,
+          cycles:b.cycles||0,
+          health:b.health||0,
+          charging:b.charging||false,
+          maxVoltage:maxV,
+          nominalCapacity:nomCap,
+          startTime:b.lastUpdate?b.lastUpdate*1000:Date.now(),
+          timeToFull:b.timeToFull||0,
+          history:[],
+          source:b.source,
+          valid:!!b.valid,
+          power:b.power||0,
+          powerOnline:b.powerOnline,
+          cellVoltages:b.cellVoltages,
+          details:b.details,
+          lastUpdate:b.lastUpdate
+        };
+        ports.push(port);
+        if(b.charging&&cap<100){
+          if(!state.charging.chartHistory[port.id])state.charging.chartHistory[port.id]=[];
+          state.charging.chartHistory[port.id].push({t:Date.now(),capacity:cap});
+          if(state.charging.chartHistory[port.id].length>300)state.charging.chartHistory[port.id].shift();
+          state.charging.chartEnabled[port.id]=true;
+        }
+      });
+      state.charging.ports=ports;
+    }
+    state.charging.backendSnapshot=snap;
+    renderBatGrid();
+    renderBatSummary();
+    renderBatValidation();
+  }
+
+  function updateBackendBar(){
+    if(!lastSnapshot){setStatus('offline','后端未连接','');return;}
+    var snap=lastSnapshot;
+    var b=snap.backend||{};
+    var s=snap.serial||{};
+    var w=snap.wmi||{};
+    serialConnected=!!(s.connected&&s.port);
+    var dotCls='online';
+    var txt='后端已连接';
+    var meta=[];
+    meta.push('真实源 '+b.realSourceCount);
+    if(w.available)meta.push('WMI:可用');
+    if(s.connected)meta.push('串口:'+(s.port||''));
+    if(s.batteryStatusSupported)meta.push('BATTERY_STATUS ✓');
+    else if(s.connected&&s.heartbeatCount>0)meta.push('飞控无电池遥测');
+    setStatus(dotCls,txt,meta.join(' · '));
+    var connBtn=document.getElementById('bbbConnBtn');
+    if(connBtn){connBtn.textContent=serialConnected?'断开串口':'连接串口';connBtn.classList.toggle('active',serialConnected);}
+  }
+
+  function init(){
+    fetchPorts();
+    connectStream();
+    statusTimer=setInterval(function(){
+      if(!active){fetchPorts();}
+    },5000);
+  }
+
+  return {
+    init:init, toggle:toggle, toggleSerial:toggleSerial, requestBattery:requestBattery,
+    get active(){return active;}, get lastSnapshot(){return lastSnapshot;},
+    get ports(){return portList;}, get serialConnected(){return serialConnected;}
+  };
+})();
+
+/* ===== Battery Charging Monitor ===== */
+function initBatteryCharging(){
+  var ch=state.charging;
+  if(ch.initialized)return;
+  ch.initialized=true;
+  // Initialize chart enabled map and history
+  ch.ports.forEach(function(p){
+    ch.chartEnabled[p.id]=p.connected;
+    if(!ch.chartHistory[p.id])ch.chartHistory[p.id]=[];
+  });
+  // Initial history seed
+  ch.ports.forEach(function(p){
+    if(p.connected){
+      for(var i=0;i<10;i++){
+        ch.chartHistory[p.id].push({t:Date.now()-(10-i)*1000,capacity:Math.max(0,p.capacity-(10-i)*0.1)});
+      }
+    }
+  });
+  renderBatConfigBody();
+  renderBatChartLegend();
+}
+function simulateBatteryCharging(){
+  var ch=state.charging;
+  ch.ports.forEach(function(p){
+    if(!p.connected){
+      p.capacity=0;p.voltage=0;p.current=0;p.temperature=0;p.charging=false;
+      p.timeToFull=0;return;
+    }
+    if(p.capacity>=100){
+      p.capacity=100;p.charging=false;p.current=0;
+      p.voltage=p.maxVoltage;p.timeToFull=0;
+      // Keep temperature stable when full
+      p.temperature=Math.max(25,p.temperature-0.1);
+      return;
+    }
+    // Charging: increment capacity based on current
+    p.charging=true;
+    // Simulate charging curve: faster at low capacity, slows near full
+    var chargeRate=p.capacity<80?0.15:p.capacity<95?0.08:0.03;
+    chargeRate+=Math.sin(tickT/7)*0.02;
+    p.capacity=Math.min(100,p.capacity+chargeRate);
+    // Voltage rises with capacity
+    p.voltage=10.5+(p.maxVoltage-10.5)*(p.capacity/100);
+    // Current decreases near full (CC-CV charging)
+    p.current=p.capacity<80?2.0+Math.sin(tickT/5)*0.3:p.capacity<95?1.0+Math.sin(tickT/5)*0.2:0.3;
+    // Temperature fluctuates
+    p.temperature=28+Math.sin(tickT/12)*4+(p.current/2.5)*6;
+    // Time to full estimate
+    if(p.current>0.1){
+      var remainingMah=p.nominalCapacity*(1-p.capacity/100);
+      var chargeCurrentMah=p.current*1000*0.85; // 85% efficiency
+      p.timeToFull=Math.round(remainingMah/chargeCurrentMah*60); // minutes
+    }else{
+      p.timeToFull=0;
+    }
+    // Record history
+    if(!ch.chartHistory[p.id])ch.chartHistory[p.id]=[];
+    ch.chartHistory[p.id].push({t:Date.now(),capacity:p.capacity});
+    if(ch.chartHistory[p.id].length>300)ch.chartHistory[p.id].shift();
+  });
+}
+function updateBatteryChargingUI(){
+  var ch=state.charging;
+  var list=document.getElementById('batChargeList');
+  if(!list)return;
+  var connected=ch.ports.filter(function(p){return p.connected;});
+  if(connected.length===0){
+    list.innerHTML='<div style="font-size:10px;color:var(--text-muted);padding:8px 0;text-align:center">未检测到充电电池</div>';
+    return;
+  }
+  var html='';
+  connected.forEach(function(p){
+    var src=p.source||'sim';
+    var srcTag='<span class="src-tag '+src+'">'+({wmi:'WMI',mavlink:'MAVLink',sim:'模拟'}[src]||src)+'</span>';
+    var statusCls=p.charging?'charging':p.capacity>=100?'full':(p.valid===false?'offline':'idle');
+    var statusText=p.charging?'充电中':p.capacity>=100?'已充满':(p.valid===false?'无数据':'待机');
+    var barCls=p.charging?'charging':p.capacity>=100?'full':'';
+    var capVal=p.capacity||0;
+    var vStr=p.voltage?p.voltage.toFixed(1)+'V':'—';
+    var iStr=p.current!=null?p.current.toFixed(1)+'A':'—';
+    var tStr=(p.temperature&&p.temperature>0)?Math.round(p.temperature)+'°C':'—';
+    html+='<div class="bat-port-item '+statusCls+'">';
+    html+='<div class="bat-port-head"><span class="bat-port-name">'+p.name+srcTag+'</span><span class="bat-port-status '+statusCls.toLowerCase()+'">'+statusText+'</span></div>';
+    html+='<div class="bat-cap-row"><div class="bat-cap-bar-wrap"><div class="bat-cap-bar-fill '+barCls+'" style="width:'+capVal+'%"></div></div><span class="bat-cap-pct">'+(isNaN(capVal)?'--':Math.round(capVal))+'%</span></div>';
+    html+='<div class="bat-port-detail"><span>V <span class="bpd-val">'+vStr+'</span></span><span>I <span class="bpd-val">'+iStr+'</span></span><span>T <span class="bpd-val" style="color:'+(p.temperature>45?'var(--danger)':p.temperature>40?'var(--warning)':'var(--text-secondary)')+'">'+tStr+'</span></span><span>ETA <span class="bpd-val">'+formatBatTime(p.timeToFull)+'</span></span></div>';
+    html+='</div>';
+  });
+  // Summary line
+  var totalPower=connected.reduce(function(s,p){return s+(p.voltage||0)*(p.current||0);},0);
+  var avgCap=connected.reduce(function(s,p){return s+(p.capacity||0);},0)/connected.length;
+  var chargingCount=connected.filter(function(p){return p.charging;}).length;
+  var realCount=connected.filter(function(p){return p.source!=='sim';}).length;
+  html+='<div class="bat-charge-summary"><span>充电中 '+chargingCount+' / '+connected.length+(realCount>0?' ('+realCount+' 真实)':'')+'</span><span>总功率 <span class="bcs-val">'+totalPower.toFixed(1)+'W</span></span><span>平均 <span class="bcs-val">'+Math.round(avgCap)+'%</span></span></div>';
+  list.innerHTML=html;
+}
+function renderBatteryWorkspace(){
+  renderBatSummary();
+  renderBatGrid();
+  renderBatChartLegend();
+  renderBatValidation();
+}
+function renderBatSummary(){
+  var ch=state.charging;
+  var connected=ch.ports.filter(function(p){return p.connected;});
+  var charging=connected.filter(function(p){return p.charging;});
+  var full=connected.filter(function(p){return p.capacity>=100;});
+  var totalPower=connected.reduce(function(s,p){return s+p.voltage*p.current;},0);
+  var avgCap=connected.length>0?connected.reduce(function(s,p){return s+p.capacity;},0)/connected.length:0;
+  var minEta=Infinity;
+  connected.forEach(function(p){if(p.charging&&p.timeToFull>0&&p.timeToFull<minEta)minEta=p.timeToFull;});
+  var set=function(id,val,cls){var el=document.getElementById(id);if(el){el.textContent=val;if(cls)el.className=cls;}};
+  set('batSumCharging',charging.length,'bat-summary-val '+(charging.length>0?'ok':''));
+  set('batSumChargingSub','共 '+connected.length+' 个端口');
+  set('batSumFull',full.length);
+  set('batSumFullSub',full.length>0?'可拔出':'无');
+  set('batSumPower',totalPower.toFixed(1)+' W');
+  set('batSumPowerSub','笔记本供电');
+  set('batSumAvgCap',connected.length>0?Math.round(avgCap)+'%':'--');
+  set('batSumAvgSub','所有已连接电池');
+  set('batSumEta',minEta!==Infinity?formatBatTime(minEta):'--');
+  set('batSumEtaSub',minEta!==Infinity?'剩余时间最短':'无充电中');
+}
+function renderBatGrid(){
+  var grid=document.getElementById('batGrid');
+  if(!grid)return;
+  var ch=state.charging;
+  var html='';
+  ch.ports.forEach(function(p){
+    var src=p.source||'sim';
+    var srcPill='<span class="bat-source-pill '+src+'">'+({wmi:'WMI',mavlink:'MAVLink',sim:'模拟'}[src]||src.toUpperCase())+'</span>';
+    var cardCls=p.connected?(p.charging?'charging':p.capacity>=100?'full':''):'offline';
+    var statusText=p.connected?(p.charging?'充电中':p.capacity>=100?'已充满':(p.valid===false?'链路无数据':'待机')):'未连接';
+    var statusCls=p.connected?(p.charging?'charging':p.capacity>=100?'full':'idle'):'offline';
+    var ringStroke=p.connected?(p.capacity>=100?'var(--accent-gold)':'var(--success)'):'var(--text-muted)';
+    var ringCls=p.connected?(p.capacity>=100?'full':''):'offline';
+    var circumference=2*Math.PI*32;
+    var capVal=p.capacity||0;
+    var dashOffset=circumference*(1-(isNaN(capVal)?0:capVal)/100);
+    var healthCls=p.health>=80?'ok':p.health>=60?'warn':p.health>0?'err':'';
+    var tempCls=p.temperature>45?'err':p.temperature>40?'warn':p.connected&&p.temperature>0?'ok':'';
+    var tempColor=p.temperature>45?'var(--danger)':p.temperature>40?'var(--warning)':'var(--success)';
+    html+='<div class="bat-card '+cardCls+'" data-source="'+src+'">';
+    html+='<div class="bat-card-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><rect x="2" y="7" width="16" height="10" rx="2"/><path d="M22 11v2"/></svg><span class="bat-card-title">'+p.name+'</span>'+srcPill+'</div>';
+    html+='<div class="bat-card-body">';
+    html+='<div class="bat-ring-wrap"><svg width="80" height="80"><circle class="bat-ring-bg" cx="40" cy="40" r="32"/><circle class="bat-ring-fg '+ringCls+'" cx="40" cy="40" r="32" stroke="'+ringStroke+'" stroke-dasharray="'+circumference+'" stroke-dashoffset="'+dashOffset+'"/></svg><span class="bat-ring-pct">'+(p.connected?(isNaN(capVal)?'--':Math.round(capVal)+'%'):'--')+'</span><span class="bat-ring-label">'+statusText+'</span></div>';
+    html+='<div class="bat-card-info">';
+    if(p.connected){
+      if(p.valid===false){
+        html+='<div class="bat-info-row" style="color:var(--text-muted);justify-content:center;padding:14px 0;font-size:10px;text-align:center;line-height:1.5">'+(p.details&&p.details.note?p.details.note:'此数据源暂无有效电池遥测')+'</div>';
+        if(p.details){
+          if(p.details.heartbeatCount!=null)html+='<div class="bat-info-row"><span class="bir-label">心跳帧</span><span class="bir-val pending">'+p.details.heartbeatCount+'</span></div>';
+          if(p.details.commandAckCount!=null)html+='<div class="bat-info-row"><span class="bir-label">命令应答</span><span class="bir-val pending">'+p.details.commandAckCount+'</span></div>';
+          if(p.details.batteryStatusSupported===false&&p.details.heartbeatCount>0)html+='<div class="bat-info-row"><span class="bir-label">电池遥测</span><span class="bir-val pending">固件未上报</span></div>';
+        }
+      }else{
+        html+='<div class="bat-info-row"><span class="bir-label">电池编号</span><span class="bir-val">'+(p.batteryId||'--')+'</span></div>';
+        html+='<div class="bat-info-row"><span class="bir-label">电压</span><span class="bir-val '+tempCls+'">'+(p.voltage?p.voltage.toFixed(2):'—')+' V</span></div>';
+        html+='<div class="bat-info-row"><span class="bir-label">电流</span><span class="bir-val '+tempCls+'">'+(p.current!=null?p.current.toFixed(2):'—')+' A</span></div>';
+        if(p.power!=null&&p.power>0)html+='<div class="bat-info-row"><span class="bir-label">充电功率</span><span class="bir-val ok">'+p.power.toFixed(2)+' W</span></div>';
+        if(p.cellVoltages&&p.cellVoltages.length>0)html+='<div class="bat-info-row"><span class="bir-label">电芯电压</span><span class="bir-val">'+p.cellVoltages.map(function(v){return v.toFixed(2);}).join(' / ')+' V</span></div>';
+        if(p.temperature!=null&&p.temperature>0)html+='<div class="bat-info-row"><span class="bir-label">温度</span><span class="bir-val '+tempCls+'" style="color:'+tempColor+'">'+Math.round(p.temperature)+' °C</span></div>';
+        else html+='<div class="bat-info-row"><span class="bir-label">温度</span><span class="bir-val pending">—</span></div>';
+        if(p.cycles>0)html+='<div class="bat-info-row"><span class="bir-label">循环次数</span><span class="bir-val">'+p.cycles+'</span></div>';
+        if(p.health>0)html+='<div class="bat-info-row"><span class="bir-label">健康度</span><span class="bir-val '+healthCls+'">'+p.health+'%</span></div>';
+        if(p.nominalCapacity>0){
+          var unit=p.nominalUnit||'mAh';
+          var display=unit==='mWh'?(p.nominalCapacity/1000).toFixed(1)+' Wh':(p.nominalCapacity/1000).toFixed(1)+' Ah';
+          html+='<div class="bat-info-row"><span class="bir-label">额定容量</span><span class="bir-val">'+display+'</span></div>';
+        }
+        if(p.powerOnline!=null)html+='<div class="bat-info-row"><span class="bir-label">电源接入</span><span class="bir-val '+(p.powerOnline?'ok':'err')+'">'+(p.powerOnline?'是':'否')+'</span></div>';
+        html+='<div class="bat-info-row"><span class="bir-label">剩余时间</span><span class="bir-val '+(p.charging?'ok':'')+'">'+(p.charging&&p.timeToFull?formatBatTime(p.timeToFull):'—')+'</span></div>';
+      }
+    }else{
+      html+='<div class="bat-info-row" style="color:var(--text-muted);justify-content:center;padding:20px 0">端口空闲 · 点击下方连接电池</div>';
+    }
+    html+='</div></div>';
+    html+='<div class="bat-card-foot">';
+    if(p.connected){
+      if(src==='sim'){
+        html+='<button onclick="disconnectBattery(\''+p.id+'\')" class="danger">断开</button>';
+        if(p.capacity<100)html+='<button onclick="toggleCharging(\''+p.id+'\')">'+(p.charging?'暂停充电':'恢复充电')+'</button>';
+      }
+      html+='<span class="bat-foot-status">'+(p.valid===false?'⚙ 等待遥测':p.charging?'⚡ 充电中 '+(p.current?p.current.toFixed(1):0)+'A':p.capacity>=100?'✓ 已充满':'⏸ 已暂停')+'</span>';
+    }else{
+      html+='<button onclick="connectBattery(\''+p.id+'\')" style="border-color:var(--success);color:var(--success)">连接电池</button>';
+      html+='<span class="bat-foot-status">未连接</span>';
+    }
+    html+='</div></div>';
+  });
+  grid.innerHTML=html;
+}
+function renderBatConfigBody(){
+  var body=document.getElementById('batConfigBody');
+  if(!body)return;
+  var ch=state.charging;
+  var html='';
+  ch.ports.forEach(function(p){
+    html+='<div class="bat-config-row">';
+    html+='<span class="bat-config-port">'+p.name+' ('+p.type+')</span>';
+    html+='<select class="bat-config-select" onchange="setPortBattery(\''+p.id+'\',this.value)">';
+    html+='<option value="none"'+(!p.connected?' selected':'')+'>-- 空闲 --</option>';
+    html+='<option value="BAT-A001"'+(p.batteryId==='BAT-A001'?' selected':'')+'>BAT-A001 (5000mAh · 45cyc)</option>';
+    html+='<option value="BAT-A002"'+(p.batteryId==='BAT-A002'?' selected':'')+'>BAT-A002 (5000mAh · 120cyc)</option>';
+    html+='<option value="BAT-B003"'+(p.batteryId==='BAT-B003'?' selected':'')+'>BAT-B003 (5200mAh · 200cyc)</option>';
+    html+='<option value="BAT-B004"'+(p.batteryId==='BAT-B004'?' selected':'')+'>BAT-B004 (4800mAh · 15cyc)</option>';
+    html+='<option value="BAT-C005"'+(p.batteryId==='BAT-C005'?' selected':'')+'>BAT-C005 (6000mAh · 300cyc)</option>';
+    html+='</select>';
+    html+='<span style="font-size:10px;color:var(--text-muted)">'+(p.connected?'已连接':'空闲')+'</span>';
+    html+='</div>';
+  });
+  body.innerHTML=html;
+}
+function connectBattery(portId){
+  var p=state.charging.ports.find(function(x){return x.id===portId;});
+  if(!p)return;
+  var usedBats=state.charging.ports.filter(function(x){return x.connected&&x.id!==portId;}).map(function(x){return x.batteryId;});
+  var availBats=['BAT-A001','BAT-A002','BAT-B003','BAT-B004','BAT-C005'].filter(function(b){return usedBats.indexOf(b)<0;});
+  if(availBats.length===0){toast('没有可用电池','warn');return;}
+  var batId=availBats[0];
+  var batData={'BAT-A001':{capacity:65,voltage:11.8,current:2.1,temperature:32,cycles:45,health:92,nominalCapacity:5000},'BAT-A002':{capacity:88,voltage:12.3,current:1.2,temperature:35,cycles:120,health:78,nominalCapacity:5000},'BAT-B003':{capacity:100,voltage:12.6,current:0,temperature:28,cycles:200,health:65,nominalCapacity:5200},'BAT-B004':{capacity:35,voltage:10.9,current:2.2,temperature:30,cycles:15,health:98,nominalCapacity:4800},'BAT-C005':{capacity:50,voltage:11.5,current:2.0,temperature:33,cycles:300,health:55,nominalCapacity:6000}}[batId];
+  p.connected=true;p.batteryId=batId;p.charging=batData.capacity<100;
+  p.capacity=batData.capacity;p.voltage=batData.voltage;p.current=batData.current;
+  p.temperature=batData.temperature;p.cycles=batData.cycles;p.health=batData.health;
+  p.nominalCapacity=batData.nominalCapacity;p.startTime=Date.now();
+  state.charging.chartEnabled[portId]=true;
+  if(!state.charging.chartHistory[portId])state.charging.chartHistory[portId]=[];
+  toast('已连接 '+batId+' 到 '+p.name);
+  renderBatConfigBody();renderBatGrid();
+}
+function disconnectBattery(portId){
+  var p=state.charging.ports.find(function(x){return x.id===portId;});
+  if(!p)return;
+  var bid=p.batteryId;
+  p.connected=false;p.batteryId=null;p.charging=false;
+  p.capacity=0;p.voltage=0;p.current=0;p.temperature=0;p.timeToFull=0;
+  state.charging.chartEnabled[portId]=false;
+  toast('已断开 '+bid+' 从 '+p.name);
+  renderBatConfigBody();renderBatGrid();
+}
+function toggleCharging(portId){
+  var p=state.charging.ports.find(function(x){return x.id===portId;});
+  if(!p||!p.connected)return;
+  p.charging=!p.charging;
+  if(!p.charging){p.current=0;p.timeToFull=0;}
+  toast(p.charging?'已恢复充电':'已暂停充电');
+  renderBatGrid();
+}
+function setPortBattery(portId,batId){
+  if(batId==='none'){disconnectBattery(portId);return;}
+  // Check if battery is already on another port
+  var existing=state.charging.ports.find(function(x){return x.batteryId===batId&&x.id!==portId;});
+  if(existing){toast('电池 '+batId+' 已在 '+existing.name+' 上','warn');renderBatConfigBody();return;}
+  var p=state.charging.ports.find(function(x){return x.id===portId;});
+  if(!p)return;
+  var batData={'BAT-A001':{capacity:65,voltage:11.8,current:2.1,temperature:32,cycles:45,health:92,nominalCapacity:5000},'BAT-A002':{capacity:88,voltage:12.3,current:1.2,temperature:35,cycles:120,health:78,nominalCapacity:5000},'BAT-B003':{capacity:100,voltage:12.6,current:0,temperature:28,cycles:200,health:65,nominalCapacity:5200},'BAT-B004':{capacity:35,voltage:10.9,current:2.2,temperature:30,cycles:15,health:98,nominalCapacity:4800},'BAT-C005':{capacity:50,voltage:11.5,current:2.0,temperature:33,cycles:300,health:55,nominalCapacity:6000}}[batId];
+  if(!batData)return;
+  p.connected=true;p.batteryId=batId;p.charging=batData.capacity<100;
+  p.capacity=batData.capacity;p.voltage=batData.voltage;p.current=batData.current;
+  p.temperature=batData.temperature;p.cycles=batData.cycles;p.health=batData.health;
+  p.nominalCapacity=batData.nominalCapacity;p.startTime=Date.now();
+  state.charging.chartEnabled[portId]=true;
+  if(!state.charging.chartHistory[portId])state.charging.chartHistory[portId]=[];
+  toast('已分配 '+batId+' 到 '+p.name);
+  renderBatGrid();
+}
+function formatBatTime(minutes){
+  if(minutes<=0||!isFinite(minutes))return'—';
+  if(minutes<60)return Math.round(minutes)+' 分';
+  var h=Math.floor(minutes/60),m=Math.round(minutes%60);
+  return h+'时'+(m<10?'0':'')+m+'分';
+}
+/* ===== Charging Validation Panel rendering ===== */
+function renderBatValidation(){
+  var snap=state.charging.backendSnapshot;
+  var section=document.getElementById('batValidationSection');
+  var body=document.getElementById('batValBody');
+  var statusEl=document.getElementById('batValStatus');
+  if(!section||!body)return;
+  if(!snap){
+    section.classList.remove('warn','err');
+    if(statusEl){statusEl.className='bat-validation-status pass';statusEl.textContent='模拟模式';}
+    body.innerHTML='<div class="bat-validation-empty">后端未连接 · 当前为前端模拟数据（异常检测仍在前端运行）</div>';
+    setVal('batValChecked','0');setVal('batValAnomalies','0');
+    setVal('batValErrors','0');setVal('batValWarnings','0');setVal('batValSources','模拟');
+    runFrontendAnomalyCheck();
+    return;
+  }
+  var val=snap.validation||{};
+  var anomalies=snap.anomalies||[];
+  var status=val.status||'pass';
+  section.classList.remove('warn','err');
+  if(status==='err')section.classList.add('err');
+  else if(status==='warn')section.classList.add('warn');
+  if(statusEl){statusEl.className='bat-validation-status '+status;statusEl.textContent=({pass:'通过',warn:'警告',err:'异常'}[status])||status;}
+  if(anomalies.length===0){
+    body.innerHTML='<div class="bat-validation-empty">✓ 所有已校验电池充电状态正常</div>';
+  }else{
+    var html='';
+    anomalies.forEach(function(a){
+      html+='<div class="bat-anomaly-item '+a.level+'"><span class="bat-anomaly-code">'+a.code+'</span><span class="bat-anomaly-msg">'+a.msg+'</span></div>';
+    });
+    body.innerHTML=html;
+  }
+  setVal('batValChecked',val.checkedBatteries||0);
+  setVal('batValAnomalies',val.totalAnomalies||0);
+  setVal('batValErrors',val.errors||0);
+  setVal('batValWarnings',val.warnings||0);
+  var srcs=(snap.batteries||[]).map(function(b){return b.source;}).filter(function(v,i,a){return a.indexOf(v)===i;});
+  setVal('batValSources',srcs.length>0?srcs.map(function(s){return {wmi:'WMI',mavlink:'MAVLink',sim:'模拟'}[s]||s;}).join('+'):'--');
+  syncBackendAnomaliesToAlerts(anomalies);
+}
+function setVal(id,v){var el=document.getElementById(id);if(el)el.textContent=v;}
+function runFrontendAnomalyCheck(){
+  state.charging.ports.forEach(function(p){
+    if(!p.connected||p.source==='sim')return;
+    var otA=alertLifecycles.find(a=>a.type==='bat_overtemp_'+p.id&&(a.status==='active'||a.status==='acknowledged'));
+    if(!otA&&p.temperature>45)createAlert('bat_overtemp_'+p.id,ALERT_RULES.bat_overtemp.msg+' ('+p.name+' · '+p.batteryId+' · '+Math.round(p.temperature)+'°C)',ALERT_RULES.bat_overtemp.level);
+    else if(otA&&p.temperature<42)recoverAlert(otA.id);
+  });
+}
+function syncBackendAnomaliesToAlerts(anomalies){
+  var seen={};
+  anomalies.forEach(function(a){
+    var key='backend_'+a.code;
+    seen[key]=true;
+    var ex=alertLifecycles.find(al=>al.type===key&&(al.status==='active'||al.status==='acknowledged'));
+    if(!ex)createAlert(key,'['+a.code+'] '+a.msg,a.level);
+  });
+  alertLifecycles.forEach(function(al){
+    if(al.type.indexOf('backend_')===0&&!seen[al.type]&&(al.status==='active'||al.status==='acknowledged')){
+      recoverAlert(al.id);
+    }
+  });
+}
+var _BAT_PALETTE=['#3b82f6','#22c55e','#f59e0b','#a78bfa','#ef4444','#06b6d4','#ec4899','#84cc16'];
+function batChartColors(){
+  var c={};
+  state.charging.ports.forEach(function(p,i){
+    if(p.source==='wmi')c[p.id]='#8b5cf6';
+    else if(p.source==='mavlink')c[p.id]='#3b82f6';
+    else c[p.id]=_BAT_PALETTE[i%_BAT_PALETTE.length];
+  });
+  return c;
+}
+function batChartNames(){
+  var n={};
+  state.charging.ports.forEach(function(p){n[p.id]=p.name;});
+  return n;
+}
+function initBatChart(){
+  var ch=state.charging;
+  var canvas=document.getElementById('batChartCanvas');
+  if(!canvas)return;
+  ch.chartCanvas=canvas;
+  ch.chartCtx=canvas.getContext('2d');
+  function resize(){var p=canvas.parentElement;canvas.width=p.offsetWidth;canvas.height=p.offsetHeight;}
+  resize();
+  new ResizeObserver(resize).observe(canvas.parentElement);
+  setInterval(drawBatChart,500);
+}
+function drawBatChart(){
+  var ch=state.charging;
+  if(!ch.chartCtx)return;
+  var ctx=ch.chartCtx;
+  var w=ch.chartCanvas.width,h=ch.chartCanvas.height;
+  ctx.clearRect(0,0,w,h);
+  var css=getComputedStyle(document.documentElement);
+  var gridColor=css.getPropertyValue('--border-default').trim()||'#21262d';
+  var labelColor=css.getPropertyValue('--text-muted').trim()||'#8b949e';
+  var L=40,R=w-12,T=8,B=h-20;
+  var now=Date.now(),windowMs=120000; // 2 min window
+  // Grid lines
+  ctx.strokeStyle=gridColor;ctx.lineWidth=1;
+  for(var pct=0;pct<=100;pct+=25){
+    var y=B-(pct/100)*(B-T);
+    ctx.beginPath();ctx.moveTo(L,y);ctx.lineTo(R,y);ctx.stroke();
+    ctx.fillStyle=labelColor;ctx.font='9px JetBrains Mono';ctx.fillText(pct+'%',4,y+3);
+  }
+  // Time axis labels
+  ctx.fillStyle=labelColor;ctx.font='9px JetBrains Mono';
+  ctx.fillText('-2min',L,h-4);ctx.fillText('now',R-24,h-4);
+  // Draw lines for each enabled port
+  var colors=batChartColors();
+  var portNames=batChartNames();
+  var anyData=false;
+  ch.ports.forEach(function(p){
+    if(!ch.chartEnabled[p.id])return;
+    var hist=ch.chartHistory[p.id];
+    if(!hist||hist.length<2)return;
+    var data=hist.filter(function(d){return d.t>now-windowMs;});
+    if(data.length<2)return;
+    anyData=true;
+    ctx.strokeStyle=colors[p.id]||'#3b82f6';ctx.lineWidth=1.5;ctx.beginPath();
+    data.forEach(function(d,i){
+      var x=L+(d.t-(now-windowMs))/windowMs*(R-L);
+      var y=B-(d.capacity/100)*(B-T);
+      if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+    // Current value dot
+    var last=data[data.length-1];
+    var lx=L+(last.t-(now-windowMs))/windowMs*(R-L);
+    var ly=B-(last.capacity/100)*(B-T);
+    ctx.fillStyle=colors[p.id]||'#3b82f6';
+    ctx.beginPath();ctx.arc(lx,ly,3,0,2*Math.PI);ctx.fill();
+  });
+  if(!anyData){
+    ctx.fillStyle=labelColor;ctx.font='11px JetBrains Mono';
+    ctx.fillText('暂无充电数据',w/2-40,h/2);
+  }
+  // Y axis label
+  ctx.fillStyle=labelColor;ctx.font='10px JetBrains Mono';
+  ctx.save();ctx.translate(12,h/2);ctx.rotate(-Math.PI/2);ctx.fillText('容量 (%)',-20,0);ctx.restore();
+}
+function renderBatChartLegend(){
+  var legend=document.getElementById('batChartLegend');
+  if(!legend)return;
+  var ch=state.charging;
+  var colors=batChartColors();
+  var html='';
+  ch.ports.forEach(function(p){
+    var enabled=ch.chartEnabled[p.id];
+    html+='<div class="bat-legend-item'+(enabled?'':' disabled')+'" onclick="toggleBatChartPort(\''+p.id+'\')">';
+    html+='<span class="bat-legend-dot" style="background:'+colors[p.id]+'"></span>';
+    html+='<span>'+p.name+(p.connected?' · '+p.batteryId:' (空闲)')+'</span>';
+    html+='</div>';
+  });
+  legend.innerHTML=html;
+}
+function toggleBatChartPort(portId){
+  state.charging.chartEnabled[portId]=!state.charging.chartEnabled[portId];
+  renderBatChartLegend();
+}
+
+/* ===== Init ===== */
+waypoints=[
+  {seq:0,lat:32.0612,lon:118.793,alt:80,spd:5,hold:0,act:'CRUISE',pri:3},
+  {seq:1,lat:32.0628,lon:118.7955,alt:100,spd:5,hold:0,act:'CRUISE',pri:3},
+  {seq:2,lat:32.0635,lon:118.7988,alt:100,spd:4,hold:5,act:'TAKEPHOTO',pri:2},
+  {seq:3,lat:32.0620,lon:118.8012,alt:120,spd:5,hold:0,act:'CRUISE',pri:3},
+  {seq:4,lat:32.0605,lon:118.7990,alt:100,spd:4,hold:5,act:'TAKEPHOTO',pri:2},
+  {seq:5,lat:32.0612,lon:118.7960,alt:80,spd:5,hold:0,act:'LOITER',pri:3}
+];
+renderPlan();
+state.missionUploaded=true;
+applyModeGating();
+updateSrcTags();
+updateE1Status();
+updatePhoneStatus();
+updateDataSources();
+initBatteryCharging();
+setTimeout(function(){try{BatteryBackend.init();}catch(e){console.warn('BatteryBackend init failed',e);}},800);
+state.tickTimer=setInterval(tick,state.sampleInterval*1000);
+setInterval(function(){var el=document.getElementById('sysClock');if(el)el.textContent=new Date().toLocaleTimeString('zh-CN',{hour12:false});},1000);
+document.addEventListener('keydown',function(e){
+  if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='TEXTAREA')return;
+  if(e.ctrlKey||e.metaKey){var k=e.key.toLowerCase();if(k==='s'){e.preventDefault();saveMissionXml();}}
+  else{
+    if(e.key==='1')switchWorkspace('mission');
+    else if(e.key==='2')switchWorkspace('data');
+    else if(e.key==='3')switchWorkspace('settings');
+    else if(e.key==='4')switchWorkspace('algorithm');
+    else if(e.key==='5')switchWorkspace('battery');
+  }
+});
+
+/* ===== AirspaceService ===== */
+var AirspaceService = (function(){
+  var mapOverlays = []; // AMap polygon/polyline objects on mainMap
+  var airspaceVisible = true;
+
+  // Point-in-polygon ray casting
+  function pointInPolygon(pt, poly){
+    var x=pt[0],y=pt[1],inside=false;
+    for(var i=0,j=poly.length-1;i<poly.length;j=i++){
+      var xi=poly[i][0],yi=poly[i][1],xj=poly[j][0],yj=poly[j][1];
+      var intersect=((yi>y)!=(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi);
+      if(intersect)inside=!inside;
+    }
+    return inside;
+  }
+
+  // Segment-polygon intersection (check if segment crosses any edge)
+  function segCrossPoly(p1,p2,poly){
+    for(var i=0,j=poly.length-1;i<poly.length;j=i++){
+      if(segIntersect(p1,p2,poly[i],poly[j]))return true;
+    }
+    return pointInPolygon(p1,poly)||pointInPolygon(p2,poly);
+  }
+  function segIntersect(p1,p2,p3,p4){
+    function ccw(a,b,c){return(c[1]-a[1])*(b[0]-a[0])-(b[1]-a[1])*(c[0]-a[0]);}
+    var d1=ccw(p3,p4,p1),d2=ccw(p3,p4,p2),d3=ccw(p1,p2,p3),d4=ccw(p1,p2,p4);
+    return ((d1>0&&d2<0)||(d1<0&&d2>0))&&((d3>0&&d4<0)||(d3<0&&d4>0));
+  }
+
+  // Get all active zones (filtered by layer toggle)
+  function getActiveZones(){
+    var zones=[];
+    state.airspace.packages.forEach(function(pkg){
+      pkg.zones.forEach(function(z){
+        var layerMap={nofly:'nofly',restriction:'restriction',temporary:'temporary',custom:'custom'};
+        if(state.airspace.layers[z.type]){
+          zones.push({zone:z,pkg:pkg});
+        }
+      });
+    });
+    return zones;
+  }
+
+  // Check if point is within data coverage area
+  function isPointInCoverage(lat,lon){
+    var pt=[lon,lat];
+    var activeZones=getActiveZones();
+    if(activeZones.length===0)return false;
+    // Check if point is near any zone (within bounding box + margin)
+    var found=false;
+    activeZones.forEach(function(item){
+      var z=item.zone;
+      var bounds=getBounds(z.coords);
+      var margin=0.01; // ~1km margin
+      if(lon>=bounds.minLon-margin&&lon<=bounds.maxLon+margin&&
+         lat>=bounds.minLat-margin&&lat<=bounds.maxLat+margin){
+        found=true;
+      }
+    });
+    return found;
+  }
+
+  function getBounds(coords){
+    var minLat=Infinity,maxLat=-Infinity,minLon=Infinity,maxLon=-Infinity;
+    coords.forEach(function(c){
+      if(c[1]<minLat)minLat=c[1];if(c[1]>maxLat)maxLat=c[1];
+      if(c[0]<minLon)minLon=c[0];if(c[0]>maxLon)maxLon=c[0];
+    });
+    return{minLat:minLat,maxLat:maxLat,minLon:minLon,maxLon:maxLon};
+  }
+
+  // Check data expiry
+  function checkExpiry(){
+    var expired=[];
+    state.airspace.packages.forEach(function(pkg){
+      if(pkg.expiresAt){
+        var exp=new Date(pkg.expiresAt);
+        if(exp.getTime()<Date.now())expired.push(pkg.name);
+      }
+    });
+    return expired;
+  }
+
+  // Render airspace polygons on map
+  function renderLayers(){
+    if(!mainMap)return;
+    removeLayers();
+    if(!airspaceVisible)return;
+    var activeZones=getActiveZones();
+    var styleMap={
+      nofly:{fillColor:'#ef4444',fillOpacity:0.2,strokeColor:'#ef4444',strokeWeight:2,strokeStyle:'solid',strokeOpacity:0.8},
+      restriction:{fillColor:'#f59e0b',fillOpacity:0.1,strokeColor:'#f59e0b',strokeWeight:1.5,strokeStyle:'dashed',strokeOpacity:0.7},
+      temporary:{fillColor:'#a78bfa',fillOpacity:0.12,strokeColor:'#a78bfa',strokeWeight:1.5,strokeStyle:'dashed',strokeOpacity:0.7},
+      custom:{fillColor:'#3b82f6',fillOpacity:0.08,strokeColor:'#3b82f6',strokeWeight:1.5,strokeStyle:'solid',strokeOpacity:0.6}
+    };
+    activeZones.forEach(function(item){
+      var z=item.zone;var s=styleMap[z.type]||styleMap.restriction;
+      var polygon=new AMap.Polygon({
+        path:z.coords,fillColor:s.fillColor,fillOpacity:s.fillOpacity,
+        strokeColor:s.strokeColor,strokeWeight:s.strokeWeight,
+        strokeStyle:s.strokeStyle,strokeOpacity:s.strokeOpacity
+      });
+      polygon.setMap(mainMap);
+      polygon.on('click',function(){
+        if(mainInfoWindow){
+          mainInfoWindow.setContent('<div style="min-width:140px"><div style="font-weight:600;margin-bottom:4px;color:'+(z.type==='nofly'?'var(--danger)':'var(--warning)')+'">'+z.name+'</div><div>类型: '+{nofly:'禁飞区',restriction:'限飞区',temporary:'临时限制区',custom:'自定义围栏'}[z.type]+'</div>'+(z.maxAlt?'<div>高度限制: '+z.maxAlt+'m</div>':'')+(z.timeRange?'<div>时段: '+z.timeRange+'</div>':'')+'</div>');
+          mainInfoWindow.open(mainMap,polygon.getBounds().getCenter());
+        }
+      });
+      mapOverlays.push(polygon);
+    });
+    // Highlight crossing segments if last check found violations
+    if(state.airspace.lastCheckResult==='block'&&state.airspace._violatingSegs){
+      state.airspace._violatingSegs.forEach(function(seg){
+        var hl=new AMap.Polyline({
+          path:[[seg[0][1],seg[0][0]],[seg[1][1],seg[1][0]]],
+          strokeColor:'#ef4444',strokeWeight:4,strokeOpacity:0.9,strokeStyle:'solid'
+        });
+        hl.setMap(mainMap);
+        mapOverlays.push(hl);
+      });
+    }
+  }
+
+  function removeLayers(){
+    mapOverlays.forEach(function(o){o.setMap(null);});
+    mapOverlays=[];
+  }
+
+  // Main validation: four checks
+  function validateMission(){
+    if(waypoints.length===0){toast('无航点可校验','warn');updateAirspaceStatus('idle','无航点');return;}
+    var activeZones=getActiveZones();
+    if(activeZones.length===0){
+      updateAirspaceStatus('unknown','未导入空域数据，无法判定');
+      toast('未导入空域数据包，无法进行空域校验','warn');
+      return;
+    }
+    // Check data expiry
+    var expired=checkExpiry();
+    if(expired.length>0){
+      updateAirspaceStatus('warn','空域数据可能过期: '+expired.join(', '));
+      toast('空域数据已过期: '+expired.join(', '),'warn');
+      return;
+    }
+    var violations=[];
+    var violatingSegs=[];
+    var wpInNoFly=[];
+    var segCrossNoFly=[];
+    var altExceed=[];
+    var timeConflict=[];
+
+    // Check 1: waypoint in no-fly zone
+    waypoints.forEach(function(wp){
+      var pt=[wp.lon,wp.lat];
+      activeZones.forEach(function(item){
+        var z=item.zone;
+        if(z.type==='nofly'&&pointInPolygon(pt,z.coords)){
+          wpInNoFly.push(wp.seq+1);
+        }
+        // Check 3: altitude exceeds zone limit
+        if(z.maxAlt&&wp.alt>z.maxAlt){
+          altExceed.push(wp.seq+1+' ('+wp.alt+'m > '+z.maxAlt+'m)');
+        }
+      });
+    });
+
+    // Check 2: segment crosses no-fly zone
+    for(var i=0;i<waypoints.length-1;i++){
+      var p1=[waypoints[i].lon,waypoints[i].lat];
+      var p2=[waypoints[i+1].lon,waypoints[i+1].lat];
+      activeZones.forEach(function(item){
+        var z=item.zone;
+        if(z.type==='nofly'&&segCrossPoly(p1,p2,z.coords)){
+          segCrossNoFly.push((i+1)+'-'+(i+2));
+          violatingSegs.push([p1,p2]);
+        }
+      });
+    }
+
+    // Check 4: temporary restriction time window
+    var now=new Date();
+    activeZones.forEach(function(item){
+      var z=item.zone;
+      if(z.type==='temporary'&&z.timeStart&&z.timeEnd){
+        var ts=new Date(z.timeStart).getTime();
+        var te=new Date(z.timeEnd).getTime();
+        if(now.getTime()>=ts&&now.getTime()<=te){
+          // Check if any waypoint is inside this temporary zone
+          waypoints.forEach(function(wp){
+            if(pointInPolygon([wp.lon,wp.lat],z.coords)){
+              timeConflict.push(z.name+' ('+wp.seq+1+'号航点)');
+            }
+          });
+        }
+      }
+    });
+
+    // Compile result
+    if(wpInNoFly.length>0||segCrossNoFly.length>0){
+      var msgs=[];
+      if(wpInNoFly.length>0)msgs.push('航点 '+wpInNoFly.join(',')+' 落入禁飞区');
+      if(segCrossNoFly.length>0)msgs.push('航段 '+segCrossNoFly.join(',')+' 穿越禁飞区');
+      state.airspace._violatingSegs=violatingSegs;
+      updateAirspaceStatus('block',msgs.join('; '));
+      toast('阻断: '+msgs.join('; '),'err');
+    }else if(altExceed.length>0){
+      updateAirspaceStatus('warn','高度超限: '+altExceed.join('; '));
+      toast('警告: 高度超限 '+altExceed.join('; '),'warn');
+    }else if(timeConflict.length>0){
+      updateAirspaceStatus('warn','临时限制时段冲突: '+timeConflict.join('; '));
+      toast('警告: 临时限制时段冲突','warn');
+    }else{
+      // Check coverage
+      var allCovered=waypoints.every(function(wp){return isPointInCoverage(wp.lat,wp.lon);});
+      if(!allCovered){
+        updateAirspaceStatus('unknown','部分航点不在已下载空域数据范围内');
+        toast('部分航点不在空域数据覆盖范围内','warn');
+      }else{
+        state.airspace._violatingSegs=null;
+        updateAirspaceStatus('pass','未发现空域冲突');
+        toast('空域校验通过: 未发现冲突');
+      }
+    }
+    renderLayers();
+  }
+
+  function updateAirspaceStatus(result,msg){
+    state.airspace.lastCheckResult=result;
+    state.airspace.lastCheckMsg=msg;
+    var el=document.getElementById('moAirspaceStatus');
+    var detail=document.getElementById('moAirspaceDetail');
+    var msgEl=document.getElementById('moAirspaceMsg');
+    var srcEl=document.getElementById('moAirspaceSrc');
+    if(el){
+      el.className='aspace-status '+result;
+      var labels={pass:'通过',warn:'警告',block:'阻断',unknown:'未知',idle:'未校验'};
+      el.textContent=labels[result]||result;
+    }
+    if(srcEl)srcEl.style.display=result!=='idle'?'inline-block':'none';
+    if(detail&&msgEl){
+      if(msg&&result!=='idle'&&result!=='pass'){
+        detail.style.display='flex';
+        msgEl.textContent=msg;
+      }else{
+        detail.style.display='none';
+      }
+    }
+  }
+
+  // Update package list UI in settings
+  function updatePkgListUI(){
+    var el=document.getElementById('aspacePkgList');
+    if(!el)return;
+    if(state.airspace.packages.length===0){
+      el.innerHTML='<div style="font-size:11px;color:var(--text-muted);padding:8px 0">暂无数据包，点击上方导入</div>';
+      return;
+    }
+    var html='';
+    state.airspace.packages.forEach(function(pkg){
+      var isExpired=pkg.expiresAt&&new Date(pkg.expiresAt).getTime()<Date.now();
+      html+='<div class="aspace-pkg-card"><div class="aspace-pkg-name">';
+      html+='<span class="conn-dot '+(isExpired?'warn':'on')+'"></span> '+pkg.name;
+      html+='<span style="margin-left:auto;cursor:pointer;color:var(--danger);font-size:10px" onclick="AirspaceService.removePackage(\''+pkg.id+'\')"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M1 1L9 9M9 1L1 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>';
+      html+='</div><div class="aspace-pkg-rows">';
+      html+='<div class="aspace-pkg-row"><span class="apr-label">覆盖范围</span><span class="apr-val">'+pkg.coverage+'</span></div>';
+      html+='<div class="aspace-pkg-row"><span class="apr-label">数据版本</span><span class="apr-val">'+pkg.version+'</span></div>';
+      html+='<div class="aspace-pkg-row"><span class="apr-label">更新时间</span><span class="apr-val">'+pkg.updatedAt+'</span></div>';
+      if(pkg.expiresAt){
+        html+='<div class="aspace-pkg-row"><span class="apr-label">有效期</span><span class="apr-val '+(isExpired?'warn':'ok')+'">'+pkg.expiresAt+(isExpired?' (已过期)':'')+'</span></div>';
+      }
+      html+='<div class="aspace-pkg-row"><span class="apr-label">区域数</span><span class="apr-val">'+pkg.zones.length+'</span></div>';
+      html+='</div></div>';
+    });
+    el.innerHTML=html;
+  }
+
+  return {
+    pointInPolygon:pointInPolygon,
+    segCrossPoly:segCrossPoly,
+    getActiveZones:getActiveZones,
+    renderLayers:renderLayers,
+    removeLayers:removeLayers,
+    validateMission:validateMission,
+    updatePkgListUI:updatePkgListUI,
+    updateAirspaceStatus:updateAirspaceStatus,
+    setVisibility:function(v){airspaceVisible=v;if(v)renderLayers();else removeLayers();},
+    removePackage:function(id){
+      state.airspace.packages=state.airspace.packages.filter(function(p){return p.id!==id;});
+      updatePkgListUI();renderLayers();
+      toast('已删除空域数据包');
+    },
+    loadDemo:function(){
+      var demoPkg={
+        id:'demo-nj-xl-'+Date.now(),
+        name:'南京仙林空域数据包',
+        coverage:'南京市栖霞区仙林片区',
+        version:'2026.09 v1.0',
+        updatedAt:'2026-09-01',
+        expiresAt:'2026-12-31',
+        zones:[
+          // No-fly zone: airport approach
+          {name:'禄口机场进近区',type:'nofly',maxAlt:0,
+           coords:[[118.860,31.740],[118.920,31.740],[118.920,31.680],[118.860,31.680]]},
+          // No-fly zone: military area (near demo waypoints)
+          {name:'军事管制区A',type:'nofly',maxAlt:0,
+           coords:[[118.797,32.063],[118.802,32.063],[118.802,32.058],[118.797,32.058]]},
+          // Restriction zone
+          {name:'栖霞限飞区',type:'restriction',maxAlt:120,
+           coords:[[118.780,32.070],[118.810,32.070],[118.810,32.045],[118.780,32.045]]},
+          // Temporary restriction
+          {name:'仙林临时管制区',type:'temporary',maxAlt:150,
+           timeStart:new Date(Date.now()-86400000).toISOString(),
+           timeEnd:new Date(Date.now()+86400000).toISOString(),
+           timeRange:'近日临时管制',
+           coords:[[118.785,32.065],[118.800,32.065],[118.800,32.055],[118.785,32.055]]},
+          // Custom fence (geofence)
+          {name:'用户测试围栏',type:'custom',maxAlt:200,
+           coords:[[118.785,32.065],[118.800,32.065],[118.800,32.050],[118.785,32.050]]}
+        ]
+      };
+      // Replace if demo already exists
+      state.airspace.packages=state.airspace.packages.filter(function(p){return p.id.indexOf('demo-nj-xl')===-1;});
+      state.airspace.packages.push(demoPkg);
+      updatePkgListUI();
+      renderLayers();
+      toast('已加载示例空域数据包: 南京仙林');
+    },
+    clearAll:function(){
+      state.airspace.packages=[];
+      state.airspace._violatingSegs=null;
+      updatePkgListUI();
+      removeLayers();
+      updateAirspaceStatus('idle','无航点');
+      toast('已清空全部空域数据');
+    },
+    importFromFile:function(file){
+      var reader=new FileReader();
+      reader.onload=function(e){
+        try{
+          var data=JSON.parse(e.target.result);
+          var zones=[];
+          // Parse GeoJSON FeatureCollection
+          if(data.type==='FeatureCollection'&&Array.isArray(data.features)){
+            data.features.forEach(function(f){
+              if(f.geometry&&f.geometry.type==='Polygon'&&f.geometry.coordinates[0]){
+                zones.push({
+                  name:f.properties&&f.properties.name?f.properties.name:'未命名区域',
+                  type:f.properties&&f.properties.type?f.properties.type:(f.properties&&f.properties.zoneType?f.properties.zoneType:'restriction'),
+                  maxAlt:f.properties&&f.properties.maxAlt?f.properties.maxAlt:null,
+                  coords:f.geometry.coordinates[0].map(function(c){return[c[0],c[1]];})
+                });
+              }
+            });
+          }else if(Array.isArray(data.zones)){
+            // Direct JSON format
+            zones=data.zones.map(function(z){
+              return{name:z.name||'未命名',type:z.type||'restriction',maxAlt:z.maxAlt||null,
+                coords:z.coords||z.polygon,timeStart:z.timeStart,timeEnd:z.timeEnd,
+                timeRange:z.timeRange};
+            });
+          }
+          if(zones.length===0){toast('未解析到有效区域数据','warn');return;}
+          var pkg={
+            id:'pkg-'+Date.now(),
+            name:file.name.replace(/\.(geojson|json)$/i,''),
+            coverage:data.coverage||data.properties&&data.properties.coverage||'自定义区域',
+            version:data.version||'1.0',
+            updatedAt:data.updatedAt||new Date().toISOString().slice(0,10),
+            expiresAt:data.expiresAt||null,
+            zones:zones
+          };
+          state.airspace.packages.push(pkg);
+          updatePkgListUI();
+          renderLayers();
+          toast('已导入空域数据包: '+pkg.name+' ('+zones.length+' 区域)');
+        }catch(err){
+          toast('解析失败: '+err.message,'err');
+        }
+      };
+      reader.readAsText(file);
+    }
+  };
+})();
+
+/* Airspace UI handlers */
+function importAirspacePkg(input){
+  var file=input.files[0];if(!file)return;
+  AirspaceService.importFromFile(file);
+  input.value='';
+}
+function toggleAirspaceLayer(type,el){
+  state.airspace.layers[type]=!state.airspace.layers[type];
+  el.classList.toggle('active',state.airspace.layers[type]);
+  AirspaceService.renderLayers();
+}
+function toggleAirspaceOnMap(){
+  var btn=document.getElementById('aspaceToggleBtn');
+  var isVisible=btn.classList.contains('active');
+  if(isVisible){btn.classList.remove('active');AirspaceService.setVisibility(false);toast('空域图层已隐藏');}
+  else{btn.classList.add('active');AirspaceService.setVisibility(true);toast('空域图层已显示');}
+}
+function loadDemoAirspace(){AirspaceService.loadDemo();}
+function clearAllAirspace(){AirspaceService.clearAll();}
+</script>
+</body></html>

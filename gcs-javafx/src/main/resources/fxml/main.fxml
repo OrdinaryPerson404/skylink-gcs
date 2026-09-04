@@ -41,6 +41,7 @@
         <MenuItem text="数据与日志" onAction="#onGoDataTab"/>
         <MenuItem text="系统设置" onAction="#onGoSettingsTab"/>
         <MenuItem text="算法分析" onAction="#onGoAlgoTab"/>
+        <MenuItem text="电池充电" onAction="#onGoChargingTab"/>
         <SeparatorMenuItem/>
         <MenuItem text="切换主题" onAction="#onToggleTheme"/>
       </Menu>
@@ -102,6 +103,12 @@
                     <HBox styleClass="dev-row"><Label text="控制来源" styleClass="dev-label"/><Region HBox.hgrow="ALWAYS"/><Label fx:id="e1CtrlSrcVal" text="--" styleClass="dev-val"/><Label text="E1" styleClass="src-tag,e1"/></HBox>
                     <HBox styleClass="dev-row"><Label text="心跳" styleClass="dev-label"/><Region HBox.hgrow="ALWAYS"/><Label fx:id="e1HeartbeatVal" text="--" styleClass="dev-val"/><Label text="E1" styleClass="src-tag,e1"/></HBox>
                     <HBox styleClass="dev-row"><Label text="链路质量" styleClass="dev-label"/><Region HBox.hgrow="ALWAYS"/><Label fx:id="e1LinkQualityVal" text="--" styleClass="dev-val"/><Label text="E1" styleClass="src-tag,e1"/></HBox>
+                    <HBox styleClass="dev-row" alignment="CENTER_LEFT">
+                      <Button text="TCP 连接（WiFi）" onAction="#onConnectTcp" styleClass="mo-btn" prefWidth="150"/>
+                      <Region HBox.hgrow="ALWAYS"/>
+                      <Label text="192.168.4.1" styleClass="dev-val,off"/>
+                      <Label text="E1" styleClass="src-tag,e1"/>
+                    </HBox>
                   </VBox>
                 </VBox>
 
@@ -122,6 +129,19 @@
                   </VBox>
                 </VBox>
 
+                <!-- Attitude Indicator -->
+                <VBox fx:id="attitudeBox" styleClass="lp-section">
+                  <HBox styleClass="lp-section-head" alignment="CENTER_LEFT">
+                    <Label text="姿态仪表" styleClass="lp-title"/>
+                    <Label text="[E1]" styleClass="src-tag,e1"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Label fx:id="attitudeUnavailableLabel" text="姿态数据未接入" styleClass="dev-val,off,lp-tip"/>
+                  </HBox>
+                  <VBox styleClass="lp-section-body" alignment="CENTER">
+                    <StackPane fx:id="attitudeHost" minHeight="240" prefHeight="260" maxHeight="280" alignment="CENTER"/>
+                  </VBox>
+                </VBox>
+
                 <!-- UAV Status Grid - Card Style -->
                 <VBox styleClass="lp-section">
                   <HBox styleClass="lp-section-head" alignment="CENTER_LEFT">
@@ -129,6 +149,23 @@
                   </HBox>
                   <VBox styleClass="lp-section-body">
                     <GridPane fx:id="droneStatusGrid" styleClass="uav-status-grid" hgap="1" vgap="1"/>
+                  </VBox>
+                </VBox>
+
+                <!-- Battery Detail + Recording + WiFi Banner -->
+                <VBox styleClass="lp-section">
+                  <HBox styleClass="lp-section-head" alignment="CENTER_LEFT">
+                    <Label text="电池 / 录制 / 网络" styleClass="lp-title"/>
+                  </HBox>
+                  <VBox styleClass="lp-section-body" spacing="6">
+                    <HBox alignment="CENTER_LEFT" spacing="8">
+                      <Button text="读取电池参数" onAction="#onRequestBattery" styleClass="mo-btn">
+                        <graphic><SVGPath content="M18 7h-2V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2zM12 5h4v2h-4zM7 9h10v3H7z" styleClass="svg-line,svg-12"/></graphic>
+                      </Button>
+                      <ToggleButton fx:id="btnRecordTelemetry" text="开始录制" onAction="#onToggleRecord" styleClass="mo-btn"/>
+                    </HBox>
+                    <Label fx:id="recordingStatusLabel" text="录制未开始" styleClass="dev-val"/>
+                    <Label fx:id="networkBannerLabel" visible="false" managed="false" text="" styleClass="dev-conn-banner" wrapText="true"/>
                   </VBox>
                 </VBox>
 
@@ -385,6 +422,7 @@
           </ToggleButton>
         </HBox>
         <StackPane VBox.vgrow="ALWAYS">
+        <!-- 波形视图 -->
         <VBox fx:id="waveformContent" spacing="0">
           <HBox styleClass="wave-toolbar" spacing="8" alignment="CENTER_LEFT">
             <ToggleButton text="5s" selected="true" styleClass="wave-tr-btn" onAction="#onTimeRange5s">
@@ -501,7 +539,7 @@
                   <Region HBox.hgrow="ALWAYS"/>
                   <Button text="导出 CSV" styleClass="fl-export-btn" onAction="#onExportFlightCsv"/>
                 </HBox>
-                <StackPane VBox.vgrow="ALWAYS" styleClass="fl-map-container">
+                <StackPane fx:id="flMapContainer" VBox.vgrow="ALWAYS" styleClass="fl-map-container">
                   <Canvas fx:id="flMapCanvas" styleClass="fl-map"/>
                 </StackPane>
                 <HBox styleClass="fl-stats-bar" spacing="20" alignment="CENTER">
@@ -543,7 +581,7 @@
       <graphic><SVGPath content="M12 9a3 3 0 1 0 0 6a3 3 0 1 0 0-6M12 1v3M12 20v3M1 12h3M20 12h3M4.5 4.5l2 2M17.5 17.5l2 2M4.5 19.5l2-2M17.5 6.5l2-2" styleClass="svg-line,svg-14"/></graphic>
       <text>系统设置</text>
       <ScrollPane fitToWidth="true">
-        <VBox styleClass="settings-container" spacing="12" maxWidth="600">
+        <VBox styleClass="settings-container" spacing="12">
           <VBox styleClass="settings-section">
             <Label text="运行模式" styleClass="settings-title"/>
             <Label text="选择当前运行模式，不同模式下功能可用性不同" styleClass="settings-subtitle"/>
@@ -574,9 +612,9 @@
             <Label text="手机传感器配置（手机辅助模式生效）" styleClass="settings-subtitle"/>
             <VBox spacing="8">
               <HBox spacing="8">
-                <ToggleButton fx:id="phoneGpsToggle" text="GPS" selected="true"/>
-                <ToggleButton fx:id="phoneCompassToggle" text="罗盘" selected="true"/>
-                <ToggleButton fx:id="phoneBaroToggle" text="气压计" selected="false"/>
+                <ToggleButton fx:id="phoneGpsToggle" text="GPS" selected="true" styleClass="aspace-layer-chip"/>
+                <ToggleButton fx:id="phoneCompassToggle" text="罗盘" selected="true" styleClass="aspace-layer-chip"/>
+                <ToggleButton fx:id="phoneBaroToggle" text="气压计" selected="false" styleClass="aspace-layer-chip"/>
               </HBox>
               <Label text="手机 GPS 作为定位数据来源，精度通常 3-10m" styleClass="settings-hint"/>
             </VBox>
@@ -719,12 +757,12 @@
       </ScrollPane>
     </Tab>
 
-    <!-- ===== Tab 4: 算法分析 - Enhanced ===== -->
+    <!-- ===== Tab 4: 算法分析 - 对齐 HTML 原型双列网格 ===== -->
     <Tab fx:id="algoTab" closable="false">
       <graphic><SVGPath content="M13 2L3 14h7l-1 8 10-12h-7z" styleClass="svg-line,svg-14"/></graphic>
       <text>算法分析</text>
-      <FlowPane fx:id="algoFlow" hgap="16" vgap="16" alignment="TOP_CENTER" prefWrapLength="1000" style="-fx-padding: 20px;">
-        <VBox styleClass="algo-card" prefWidth="480" maxWidth="500">
+      <HBox fx:id="algoFlow" styleClass="algo-grid" alignment="TOP_LEFT">
+        <VBox styleClass="algo-card" HBox.hgrow="ALWAYS" minWidth="380" maxWidth="Infinity">
           <HBox styleClass="algo-card-head" alignment="CENTER_LEFT">
             <Label text="路径优化分析" styleClass="algo-title"/>
             <Region HBox.hgrow="ALWAYS"/>
@@ -747,30 +785,33 @@
             <Button text="执行路径优化" onAction="#onOptimizePath" styleClass="mo-btn,primary"><graphic><SVGPath content="M13 2L3 14h7l-1 8 10-12h-7z" styleClass="svg-fill,svg-12"/></graphic></Button>
           </VBox>
         </VBox>
-        <VBox styleClass="algo-card" prefWidth="480" maxWidth="500">
+        <VBox styleClass="algo-card" HBox.hgrow="ALWAYS" minWidth="380" maxWidth="Infinity">
           <HBox styleClass="algo-card-head" alignment="CENTER_LEFT">
             <Label text="续航预测" styleClass="algo-title"/>
             <Region HBox.hgrow="ALWAYS"/>
             <Label text="线性回归模型" styleClass="algo-sub"/>
-            <Label text="API" styleClass="src-tag,api" style="-fx-font-size: 9px; -fx-font-weight: bold; -fx-padding: 1 6; -fx-background-radius: 3; -fx-background-color: #f59e0b; -fx-text-fill: #1a1a1a; -fx-margin: 0 0 0 6;"/>
           </HBox>
           <VBox styleClass="algo-card-body" spacing="10">
             <HBox styleClass="algo-input-row" alignment="CENTER_LEFT">
               <Label text="飞行距离" styleClass="algo-input-label"/>
-              <TextField fx:id="distInput" text="5.0" maxWidth="120"/>
+              <TextField fx:id="distInput" text="0.00" editable="false" maxWidth="120" styleClass="algo-readonly"/>
               <Label text="km" style="-fx-font-size: 11px; -fx-text-fill: #8b949e;"/>
             </HBox>
             <HBox styleClass="algo-input-row" alignment="CENTER_LEFT">
               <Label text="载重" styleClass="algo-input-label"/>
-              <TextField fx:id="loadInput" text="1.0" maxWidth="120"/>
+              <TextField fx:id="loadInput" text="0.5" maxWidth="120"/>
               <Label text="kg" style="-fx-font-size: 11px; -fx-text-fill: #8b949e;"/>
             </HBox>
             <HBox styleClass="algo-input-row" alignment="CENTER_LEFT">
               <Label text="风速" styleClass="algo-input-label"/>
-              <TextField fx:id="windInput" text="3.0" maxWidth="100"/>
+              <TextField fx:id="windInput" text="3" maxWidth="100"/>
               <Label text="m/s" style="-fx-font-size: 11px; -fx-text-fill: #8b949e;"/>
               <Region HBox.hgrow="ALWAYS"/>
-              <Button text="获取 API 风速" onAction="#onFetchWindApi" styleClass="algo-api-btn"/>
+              <Button text="获取" onAction="#onFetchWindApi" styleClass="algo-api-btn"/>
+            </HBox>
+            <HBox styleClass="algo-input-row" alignment="CENTER_LEFT" spacing="6">
+              <Label fx:id="windInfoLabel" text="点击「获取」拉取实时气象风速（Open-Meteo）" styleClass="wind-info"/>
+              <Label text="API" styleClass="src-tag,api"/>
             </HBox>
             <HBox styleClass="algo-compare" spacing="12">
               <VBox styleClass="algo-compare-item" HBox.hgrow="ALWAYS" alignment="CENTER">
@@ -785,7 +826,86 @@
             <Button text="预测续航" onAction="#onPredictBattery" styleClass="mo-btn,primary"><graphic><SVGPath content="M2 7h16v10H2zM6 7V4h8v3" styleClass="svg-line,svg-12"/></graphic></Button>
           </VBox>
         </VBox>
-      </FlowPane>
+      </HBox>
+    </Tab>
+
+    <!-- ===== Workspace 5: 电池充电监控 ===== -->
+    <Tab fx:id="chargingTab" closable="false">
+      <graphic><SVGPath content="M2 7h16v10H2zM6 10v4M10 10v4M14 10v4M22 11v2" styleClass="svg-line,svg-14"/></graphic>
+      <text>电池充电</text>
+      <ScrollPane fitToWidth="true" fitToHeight="true">
+        <VBox styleClass="charging-ws" spacing="16">
+          <padding><javafx.geometry.Insets top="20" right="20" bottom="20" left="20"/></padding>
+
+          <!-- 后端状态条 -->
+          <HBox styleClass="bat-backend-bar" alignment="CENTER_LEFT" spacing="10">
+            <Region fx:id="bbbDot" styleClass="bbb-dot,offline"/>
+            <Label fx:id="bbbText" text="电池监控未启动" styleClass="bbb-status"/>
+            <Label fx:id="bbbMeta" text="系统电池(WMI) + 无人机电池(MAVLink)" styleClass="bbb-meta"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button fx:id="bbbReqBtn" text="请求电池遥测" onAction="#onChargingRequestBattery" styleClass="bbb-btn"/>
+            <Button fx:id="bbbRefreshBtn" text="立即刷新" onAction="#onChargingRefresh" styleClass="bbb-btn"/>
+          </HBox>
+
+          <!-- 摘要卡片行 -->
+          <HBox styleClass="bat-summary-row" spacing="16">
+            <VBox styleClass="bat-summary-card" HBox.hgrow="ALWAYS">
+              <Label text="充电中电池" styleClass="bat-summary-label"/>
+              <Label fx:id="chgSumCharging" text="0" styleClass="bat-summary-val,ok"/>
+              <Label fx:id="chgSumChargingSub" text="共 0 个数据源" styleClass="bat-summary-sub"/>
+            </VBox>
+            <VBox styleClass="bat-summary-card" HBox.hgrow="ALWAYS">
+              <Label text="已充满" styleClass="bat-summary-label"/>
+              <Label fx:id="chgSumFull" text="0" styleClass="bat-summary-val"/>
+              <Label fx:id="chgSumFullSub" text="可拔出" styleClass="bat-summary-sub"/>
+            </VBox>
+            <VBox styleClass="bat-summary-card" HBox.hgrow="ALWAYS">
+              <Label text="总充电功率" styleClass="bat-summary-label"/>
+              <Label fx:id="chgSumPower" text="0.0 W" styleClass="bat-summary-val"/>
+              <Label fx:id="chgSumPowerSub" text="系统供电" styleClass="bat-summary-sub"/>
+            </VBox>
+            <VBox styleClass="bat-summary-card" HBox.hgrow="ALWAYS">
+              <Label text="平均容量" styleClass="bat-summary-label"/>
+              <Label fx:id="chgSumAvgCap" text="--%" styleClass="bat-summary-val"/>
+              <Label fx:id="chgSumAvgSub" text="所有已连接电池" styleClass="bat-summary-sub"/>
+            </VBox>
+            <VBox styleClass="bat-summary-card" HBox.hgrow="ALWAYS">
+              <Label text="最快充满" styleClass="bat-summary-label"/>
+              <Label fx:id="chgSumEta" text="--" styleClass="bat-summary-val"/>
+              <Label fx:id="chgSumEtaSub" text="剩余时间最短" styleClass="bat-summary-sub"/>
+            </VBox>
+          </HBox>
+
+          <!-- 充电状态验证面板 -->
+          <VBox fx:id="chgValidationBox" styleClass="bat-validation-section">
+            <HBox styleClass="bat-validation-head" alignment="CENTER_LEFT" spacing="8">
+              <SVGPath content="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" styleClass="svg-line,svg-14"/>
+              <Label text="充电状态验证" styleClass="bat-validation-title"/>
+              <Label fx:id="chgValStatus" text="等待数据" styleClass="bat-validation-status,pass"/>
+            </HBox>
+            <VBox fx:id="chgValBody" styleClass="bat-validation-body">
+              <Label text="等待电池监控数据..." styleClass="bat-validation-empty"/>
+            </VBox>
+            <HBox styleClass="bat-validation-stats" spacing="14">
+              <Label text="已校验 0"/><Label fx:id="chgValChecked" text="0" styleClass="mono"/>
+              <Label text="异常 0"/><Label fx:id="chgValAnomalies" text="0" styleClass="mono"/>
+              <Label text="错误 0"/><Label fx:id="chgValErrors" text="0" styleClass="mono"/>
+              <Label text="警告 0"/><Label fx:id="chgValWarnings" text="0" styleClass="mono"/>
+              <Region HBox.hgrow="ALWAYS"/>
+              <Label text="数据源"/><Label fx:id="chgValSources" text="--" styleClass="mono"/>
+            </HBox>
+          </VBox>
+
+          <!-- 电池卡片网格（运行时动态填充） -->
+          <VBox fx:id="chgGridHost" styleClass="bat-grid-host" spacing="12"/>
+
+          <!-- 说明 -->
+          <VBox styleClass="bat-config-hint-box">
+            <Label text="数据源说明" styleClass="bat-config-hint-title"/>
+            <Label wrapText="true" styleClass="bat-config-hint-text" text="系统电池经 Windows WMI (root/wmi:BatteryStatus) 实时读取电压/容量/充电速率/电源接入状态；无人机电池经串口 MAVLink v2 主动请求 BATTERY_STATUS(147)/SYS_STATUS(1)（若飞控固件支持）。充电验证器对充电过程做过压/欠压/过温/充电停滞/电流异常/电压-容量失配等一致性校验，异常自动告警。"/>
+          </VBox>
+        </VBox>
+      </ScrollPane>
     </Tab>
   </TabPane>
 </VBox>

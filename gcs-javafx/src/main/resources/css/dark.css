@@ -39,10 +39,10 @@
 .svg-14 { -fx-scale-x: 0.58; -fx-scale-y: 0.58; }
 .svg-warn { -fx-stroke: -fx-warning; }
 .mo-btn:hover .svg-line, .mo-btn:hover .svg-fill { -fx-stroke: -fx-text-color; -fx-fill: -fx-text-color; }
-.mo-btn:primary .svg-line { -fx-stroke: white; }
-.mo-btn:primary .svg-fill { -fx-fill: white; }
-.mo-btn:danger .svg-line { -fx-stroke: -fx-danger; }
-.mo-btn:gated .svg-line, .mo-btn:gated .svg-fill { -fx-stroke: -fx-text-muted; -fx-fill: -fx-text-muted; }
+.mo-btn.primary .svg-line { -fx-stroke: white; }
+.mo-btn.primary .svg-fill { -fx-fill: white; }
+.mo-btn.danger .svg-line { -fx-stroke: -fx-danger; }
+.mo-btn.gated .svg-line, .mo-btn.gated .svg-fill { -fx-stroke: -fx-text-muted; -fx-fill: -fx-text-muted; }
 .map-tool-btn .svg-line, .map-tool-btn .svg-fill { -fx-stroke: -fx-text-secondary; -fx-fill: -fx-text-secondary; }
 .map-tool-btn:hover .svg-line, .map-tool-btn:hover .svg-fill { -fx-stroke: -fx-text-color; -fx-fill: -fx-text-color; }
 .safe-banner-text .svg-line { -fx-stroke: -fx-warning; }
@@ -96,34 +96,35 @@
 
 /* Device status (E1 / Phone) */
 .dev-conn-banner { -fx-padding: 4 8; -fx-border-radius: 4; -fx-font-size: 10px; -fx-font-weight: bold; }
-.dev-conn-banner:online { -fx-background-color: #22c55e15; -fx-text-fill: -fx-success; }
-.dev-conn-banner:offline { -fx-background-color: #ef44440d; -fx-text-fill: -fx-danger; }
+.dev-conn-banner.online { -fx-background-color: #22c55e15; -fx-text-fill: -fx-success; }
+.dev-conn-banner.offline { -fx-background-color: #ef44440d; -fx-text-fill: -fx-danger; }
+.dev-conn-banner.standby { -fx-background-color: #f59e0b0d; -fx-text-fill: -fx-warning; }
 .dev-row { -fx-padding: 2 0; }
 .dev-label { -fx-font-size: 10px; -fx-text-fill: -fx-text-muted; }
 .dev-val { -fx-font-family: "JetBrains Mono", monospace; -fx-font-size: 11px; -fx-font-weight: 600; -fx-text-fill: -fx-text-secondary; }
-.dev-val:ok { -fx-text-fill: -fx-success; }
-.dev-val:warn { -fx-text-fill: -fx-warning; }
-.dev-val:err { -fx-text-fill: -fx-danger; }
-.dev-val:off { -fx-text-fill: -fx-text-muted; }
+.dev-val.ok { -fx-text-fill: -fx-success; }
+.dev-val.warn { -fx-text-fill: -fx-warning; }
+.dev-val.err { -fx-text-fill: -fx-danger; }
+.dev-val.off { -fx-text-fill: -fx-text-muted; }
 
 /* ===== UAV Status Grid - Card Style (H-02) ===== */
 .uav-status-grid { -fx-background-color: -fx-border-default; -fx-border-color: -fx-border-default; -fx-border-width: 1; -fx-border-radius: 4; -fx-hgap: 1; -fx-vgap: 1; }
 .us-cell { -fx-background-color: -fx-bg-panel; -fx-padding: 6 8; -fx-spacing: 2; }
 .us-label { -fx-font-size: 9px; -fx-text-fill: -fx-text-muted; }
 .us-val { -fx-font-family: "JetBrains Mono", monospace; -fx-font-size: 12px; -fx-font-weight: 600; -fx-text-fill: -fx-text-color; }
-.us-val:ok { -fx-text-fill: -fx-success; }
-.us-val:warn { -fx-text-fill: -fx-warning; }
-.us-val:err { -fx-text-fill: -fx-danger; }
-.us-val:info { -fx-text-fill: -fx-primary; }
-.us-val:off { -fx-text-fill: -fx-text-muted; }
-.us-val:disabled { -fx-text-fill: -fx-text-muted; -fx-font-style: italic; -fx-font-weight: normal; }
+.us-val.ok { -fx-text-fill: -fx-success; }
+.us-val.warn { -fx-text-fill: -fx-warning; }
+.us-val.err { -fx-text-fill: -fx-danger; }
+.us-val.info { -fx-text-fill: -fx-primary; }
+.us-val.off { -fx-text-fill: -fx-text-muted; }
+.us-val.disabled { -fx-text-fill: -fx-text-muted; -fx-font-style: italic; -fx-font-weight: normal; }
 
 /* ===== Data Source Tags (H-03) ===== */
 .src-tag { -fx-font-size: 8px; -fx-font-weight: bold; -fx-padding: 0 4; -fx-background-radius: 2; -fx-text-fill: white; }
-.src-tag:e1 { -fx-background-color: -fx-src-e1; }
-.src-tag:phone { -fx-background-color: -fx-src-phone; }
-.src-tag:system { -fx-background-color: -fx-src-system; }
-.src-tag:api { -fx-background-color: -fx-src-api; -fx-text-fill: #1a1a1a; }
+.src-tag.e1 { -fx-background-color: -fx-src-e1; }
+.src-tag.phone { -fx-background-color: -fx-src-phone; }
+.src-tag.system { -fx-background-color: -fx-src-system; }
+.src-tag.api { -fx-background-color: -fx-src-api; -fx-text-fill: #1a1a1a; }
 
 /* ===== Waypoint List - Enhanced (H-04) ===== */
 .wp-count { -fx-font-size: 10px; -fx-text-fill: -fx-text-muted; -fx-font-weight: normal; }
@@ -146,24 +147,24 @@
 
 /* Upload status badge */
 .upload-status { -fx-font-size: 10px; -fx-font-weight: 700; -fx-padding: 2 8; -fx-background-radius: 3; }
-.upload-status:dirty { -fx-background-color: #f59e0b26; -fx-text-fill: -fx-warning; }
-.upload-status:synced { -fx-background-color: #22c55e1a; -fx-text-fill: -fx-success; }
+.upload-status.dirty { -fx-background-color: #f59e0b26; -fx-text-fill: -fx-warning; }
+.upload-status.synced { -fx-background-color: #22c55e1a; -fx-text-fill: -fx-success; }
 
 /* Airspace status badge */
 .aspace-status { -fx-font-size: 10px; -fx-font-weight: bold; -fx-padding: 2 8; -fx-background-radius: 3; }
-.aspace-status:pass { -fx-background-color: #22c55e1a; -fx-text-fill: -fx-success; }
-.aspace-status:warn { -fx-background-color: #f59e0b1f; -fx-text-fill: -fx-warning; }
-.aspace-status:block { -fx-background-color: #ef44440d; -fx-text-fill: -fx-danger; }
-.aspace-status:unknown { -fx-background-color: -fx-bg-hover; -fx-text-fill: -fx-text-muted; }
-.aspace-status:idle { -fx-background-color: -fx-bg-hover; -fx-text-fill: -fx-text-muted; }
+.aspace-status.pass { -fx-background-color: #22c55e1a; -fx-text-fill: -fx-success; }
+.aspace-status.warn { -fx-background-color: #f59e0b1f; -fx-text-fill: -fx-warning; }
+.aspace-status.block { -fx-background-color: #ef44440d; -fx-text-fill: -fx-danger; }
+.aspace-status.unknown { -fx-background-color: -fx-bg-hover; -fx-text-fill: -fx-text-muted; }
+.aspace-status.idle { -fx-background-color: -fx-bg-hover; -fx-text-fill: -fx-text-muted; }
 
 /* Mission Ops */
 .mo-btn { -fx-background-color: -fx-bg-panel; -fx-text-fill: -fx-text-secondary; -fx-font-size: 11px; -fx-border-color: -fx-border-default; -fx-border-radius: 4; -fx-padding: 5 10; -fx-alignment: CENTER_LEFT; }
 .mo-btn:hover { -fx-background-color: -fx-bg-hover; -fx-text-fill: -fx-text-color; -fx-border-color: -fx-border-hover; }
-.mo-btn:primary { -fx-background-color: -fx-primary; -fx-text-fill: white; -fx-border-color: -fx-primary; }
-.mo-btn:primary:hover { -fx-background-color: -fx-accent-blue; }
-.mo-btn:danger { -fx-text-fill: -fx-danger; }
-.mo-btn:gated { -fx-background-color: -fx-bg-panel; -fx-text-fill: -fx-text-muted; }
+.mo-btn.primary { -fx-background-color: -fx-primary; -fx-text-fill: white; -fx-border-color: -fx-primary; }
+.mo-btn.primary:hover { -fx-background-color: -fx-accent-blue; }
+.mo-btn.danger { -fx-text-fill: -fx-danger; }
+.mo-btn.gated { -fx-background-color: -fx-bg-panel; -fx-text-fill: -fx-text-muted; }
 .mo-btn:disabled { -fx-opacity: 0.4; }
 
 .gated-section { -fx-border-color: -fx-border-default; -fx-border-width: 1 0 0 0; -fx-padding: 4 0 0 0; -fx-spacing: 4; }
@@ -178,10 +179,10 @@
 .ctrl-grid { -fx-hgap: 6; -fx-vgap: 6; }
 .ctrl-btn { -fx-background-color: -fx-bg-panel; -fx-text-fill: -fx-text-secondary; -fx-border-color: -fx-border-default; -fx-border-radius: 4; -fx-padding: 6 10; -fx-font-size: 11px; }
 .ctrl-btn:hover { -fx-background-color: -fx-bg-hover; -fx-text-fill: -fx-text-color; }
-.ctrl-btn:arm { -fx-border-color: -fx-warning; -fx-text-fill: -fx-warning; }
-.ctrl-btn:arm:hover { -fx-background-color: -fx-warning; -fx-text-fill: #1a1a1a; }
-.ctrl-btn:disarm { -fx-border-color: -fx-danger; -fx-text-fill: -fx-danger; }
-.ctrl-btn:disarm:hover { -fx-background-color: -fx-danger; -fx-text-fill: white; }
+.ctrl-btn.arm { -fx-border-color: -fx-warning; -fx-text-fill: -fx-warning; }
+.ctrl-btn.arm:hover { -fx-background-color: -fx-warning; -fx-text-fill: #1a1a1a; }
+.ctrl-btn.disarm { -fx-border-color: -fx-danger; -fx-text-fill: -fx-danger; }
+.ctrl-btn.disarm:hover { -fx-background-color: -fx-danger; -fx-text-fill: white; }
 .ctrl-btn:disabled { -fx-opacity: 0.3; }
 .ctrl-status { -fx-font-size: 10px; -fx-text-fill: -fx-text-muted; -fx-alignment: center; }
 
@@ -190,8 +191,8 @@
 .safe-banner-text { -fx-text-fill: -fx-warning; -fx-font-size: 11px; }
 .safe-action { -fx-border-color: -fx-warning; -fx-text-fill: -fx-warning; -fx-font-size: 10px; -fx-font-weight: bold; -fx-background-radius: 4; -fx-padding: 3 10; }
 .safe-action:hover { -fx-background-color: -fx-warning; -fx-text-fill: #1a1a1a; }
-.safe-action:danger { -fx-border-color: -fx-danger; -fx-text-fill: -fx-danger; }
-.safe-action:danger:hover { -fx-background-color: -fx-danger; -fx-text-fill: white; }
+.safe-action.danger { -fx-border-color: -fx-danger; -fx-text-fill: -fx-danger; }
+.safe-action.danger:hover { -fx-background-color: -fx-danger; -fx-text-fill: white; }
 
 /* ===== Map Area - Enhanced (H-01) ===== */
 .map-container { -fx-background-color: #0d1117; }
@@ -223,9 +224,9 @@
 /* Drone HUD Card (top-center) */
 .drone-hud { -fx-background-color: -fx-bg-panel; -fx-border-color: -fx-border-hover; -fx-border-width: 1; -fx-border-radius: 6; -fx-padding: 8 16; -fx-effect: dropshadow(gaussian, #00000040, 12, 0, 0, 4); }
 .hud-val { -fx-font-family: "JetBrains Mono", monospace; -fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: -fx-text-color; }
-.hud-val:hud-ok { -fx-text-fill: -fx-success; }
-.hud-val:hud-warn { -fx-text-fill: -fx-warning; }
-.hud-val:hud-err { -fx-text-fill: -fx-danger; }
+.hud-val.hud-ok { -fx-text-fill: -fx-success; }
+.hud-val.hud-warn { -fx-text-fill: -fx-warning; }
+.hud-val.hud-err { -fx-text-fill: -fx-danger; }
 .hud-label { -fx-font-size: 9px; -fx-text-fill: -fx-text-muted; }
 
 /* Data source drawer */
@@ -237,17 +238,17 @@
 .ds-source-row { -fx-padding: 1 0; }
 .dsr-label { -fx-font-size: 10px; -fx-text-fill: -fx-text-muted; }
 .dsr-val { -fx-font-family: "JetBrains Mono", monospace; -fx-font-size: 10px; -fx-text-fill: -fx-text-secondary; }
-.dsr-val:ok { -fx-text-fill: -fx-success; }
-.dsr-val:err { -fx-text-fill: -fx-danger; }
+.dsr-val.ok { -fx-text-fill: -fx-success; }
+.dsr-val.err { -fx-text-fill: -fx-danger; }
 
 /* ===== Status Bar - Enhanced (H-14) ===== */
 .status-bar { -fx-background-color: -fx-bg-base; -fx-border-color: -fx-border-default; -fx-border-width: 1 0 0 0; -fx-padding: 0 12; -fx-pref-height: 28; -fx-spacing: 0; }
 .sb-item { -fx-padding: 0 12; -fx-border-color: -fx-border-default; -fx-border-width: 0 1 0 0; -fx-spacing: 5; -fx-alignment: CENTER; }
 .sb-label { -fx-font-size: 9px; -fx-text-fill: -fx-text-muted; }
 .sb-val { -fx-font-family: "JetBrains Mono", monospace; -fx-font-size: 11px; -fx-font-weight: 600; -fx-text-fill: -fx-text-secondary; }
-.sb-val:ok { -fx-text-fill: -fx-success; }
-.sb-val:warn { -fx-text-fill: -fx-warning; }
-.sb-val:err { -fx-text-fill: -fx-danger; }
+.sb-val.ok { -fx-text-fill: -fx-success; }
+.sb-val.warn { -fx-text-fill: -fx-warning; }
+.sb-val.err { -fx-text-fill: -fx-danger; }
 .sb-spacer { -fx-pref-width: 9999; }
 
 /* Sensor Chart */
@@ -257,7 +258,7 @@
 
 /* Settings */
 .settings-container { -fx-padding: 20; -fx-background-color: -fx-bg-base; -fx-spacing: 12; }
-.settings-section { -fx-background-color: -fx-bg-panel; -fx-border-color: -fx-border-default; -fx-border-width: 1; -fx-border-radius: 4; -fx-padding: 12; -fx-spacing: 8; -fx-max-width: 600; }
+.settings-section { -fx-background-color: -fx-bg-panel; -fx-border-color: -fx-border-default; -fx-border-width: 1; -fx-border-radius: 4; -fx-padding: 12; -fx-spacing: 8; }
 .settings-title { -fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: -fx-text-color; }
 .settings-subtitle { -fx-font-size: 11px; -fx-text-fill: -fx-info; }
 .settings-field { -fx-spacing: 4; }
@@ -286,8 +287,8 @@
 .aspace-pkg-row { -fx-padding: 1 0; }
 .apr-label { -fx-font-size: 10px; -fx-text-fill: -fx-text-muted; }
 .apr-val { -fx-font-family: "JetBrains Mono", monospace; -fx-font-size: 10px; -fx-text-fill: -fx-text-secondary; }
-.apr-val:warn { -fx-text-fill: -fx-warning; }
-.apr-val:ok { -fx-text-fill: -fx-success; }
+.apr-val.warn { -fx-text-fill: -fx-warning; }
+.apr-val.ok { -fx-text-fill: -fx-success; }
 
 /* ===== Algorithm Cards - Enhanced (H-16) ===== */
 .algo-card { -fx-background-color: -fx-bg-panel; -fx-border-color: -fx-border-default; -fx-border-width: 1; -fx-border-radius: 6; -fx-padding: 0; -fx-spacing: 0; }
@@ -297,8 +298,8 @@
 .algo-sub { -fx-font-size: 10px; -fx-text-fill: -fx-text-muted; }
 .algo-stat-row { -fx-padding: 4 0; -fx-font-size: 12px; -fx-text-fill: -fx-info; }
 .algo-stat-row .algo-stat-val { -fx-font-family: "JetBrains Mono", monospace; -fx-text-fill: -fx-text-color; }
-.algo-stat-row .algo-stat-val:improved { -fx-text-fill: -fx-success; }
-.algo-stat-row .algo-stat-val:worse { -fx-text-fill: -fx-danger; }
+.algo-stat-row .algo-stat-val.improved { -fx-text-fill: -fx-success; }
+.algo-stat-row .algo-stat-val.worse { -fx-text-fill: -fx-danger; }
 .algo-input-row { -fx-spacing: 8; }
 .algo-input-label { -fx-font-size: 11px; -fx-text-fill: -fx-info; -fx-pref-width: 80; }
 .algo-api-btn { -fx-font-size: 10px; -fx-background-color: -fx-bg-color; -fx-text-fill: -fx-src-api; -fx-border-color: -fx-src-api; -fx-border-radius: 4; -fx-padding: 3 8; }
@@ -309,17 +310,49 @@
 .algo-compare-item { -fx-border-color: -fx-border-default; -fx-border-width: 1; -fx-border-radius: 4; -fx-padding: 8 10; -fx-alignment: CENTER; -fx-spacing: 4; }
 .algo-compare-label { -fx-font-size: 10px; -fx-text-fill: -fx-text-muted; }
 .algo-compare-val { -fx-font-family: "JetBrains Mono", monospace; -fx-font-size: 16px; -fx-font-weight: bold; }
-.algo-compare-val:original { -fx-text-fill: -fx-warning; }
-.algo-compare-val:optimized { -fx-text-fill: -fx-success; }
+.algo-compare-val.original { -fx-text-fill: -fx-warning; }
+.algo-compare-val.optimized { -fx-text-fill: -fx-success; }
 
 /* Disclaimer */
 .disclaimer { -fx-text-fill: -fx-text-muted; -fx-font-size: 10px; -fx-border-color: -fx-border-default; -fx-border-style: dashed; -fx-border-width: 1; -fx-padding: 8; -fx-border-radius: 4; -fx-line-spacing: 1.5; }
+
+/* ===== Global surface backgrounds (kill modena white residue) ===== */
+.tab-pane, .tab-pane > .tab-content-area, .tab-content-area { -fx-background-color: -fx-bg-base; }
+.scroll-pane, .scroll-pane .viewport, .scroll-pane .content { -fx-background-color: -fx-bg-base; }
+.split-pane, .split-pane .content { -fx-background-color: -fx-bg-base; }
+.list-view { -fx-background-color: -fx-bg-panel; -fx-border-color: -fx-border-default; }
+.combo-box-popup .list-view { -fx-background-color: -fx-bg-panel; -fx-border-color: -fx-border-default; }
+.combo-box-popup .list-view .list-cell { -fx-background-color: -fx-bg-panel; -fx-text-fill: -fx-text-secondary; -fx-padding: 5 10; }
+.combo-box-popup .list-view .list-cell:hover, .combo-box-popup .list-view .list-cell:filled:selected { -fx-background-color: -fx-bg-hover; -fx-text-fill: -fx-primary; }
+.date-picker-popup { -fx-background-color: -fx-bg-panel; -fx-border-color: -fx-border-default; }
+.date-picker-popup .month-year-pane { -fx-background-color: -fx-bg-panel; }
+.date-picker-popup .spinner-label { -fx-text-fill: -fx-text-color; }
+.date-picker-popup .date-cell { -fx-background-color: -fx-bg-panel; -fx-text-fill: -fx-text-secondary; }
+.date-picker-popup .date-cell:hover { -fx-background-color: -fx-bg-hover; }
+.date-picker-popup .date-cell:selected { -fx-background-color: -fx-primary; -fx-text-fill: white; }
+.tooltip { -fx-background-color: -fx-bg-panel; -fx-text-fill: -fx-text-color; -fx-border-color: -fx-border-default; -fx-font-size: 11px; }
+.menu-item:focused, .menu-item:hover { -fx-background-color: -fx-bg-hover; }
+.slider .track { -fx-background-color: -fx-bg-bar; -fx-border-color: -fx-border-default; -fx-background-radius: 2; }
+.slider .thumb { -fx-background-color: -fx-primary; -fx-border-color: -fx-accent-light-blue; }
+.slider .axis { -fx-tick-label-fill: -fx-text-muted; }
+.check-box { -fx-text-fill: -fx-text-secondary; }
+.spinner .text-field { -fx-background-color: -fx-bg-base; -fx-text-fill: -fx-text-color; }
+
+/* Algorithm analysis grid (matches HTML .algo-grid) */
+.algo-grid { -fx-background-color: -fx-bg-base; -fx-padding: 20; -fx-spacing: 16; }
+.algo-grid .algo-card { -fx-min-width: 360; }
+.text-field.algo-readonly { -fx-text-fill: -fx-primary; -fx-font-weight: bold; }
+.wind-info { -fx-font-size: 10px; -fx-text-fill: -fx-text-muted; }
+
+/* Flight log map */
+.fl-map-container { -fx-background-color: -fx-bg-base; }
 
 /* Scroll Bar */
 .scroll-bar { -fx-background-color: -fx-bg-base; }
 .scroll-bar .thumb { -fx-background-color: -fx-border-hover; -fx-background-radius: 3; }
 .scroll-bar:vertical { -fx-pref-width: 6; }
 .scroll-bar:horizontal { -fx-pref-height: 6; }
+.scroll-pane .corner { -fx-background-color: -fx-bg-base; }
 
 /* SplitPane divider */
 .split-pane > .split-pane-divider { -fx-background-color: -fx-border-default; -fx-padding: 0 1 0 0; }
@@ -342,10 +375,10 @@
 
 /* Toast notifications */
 .toast { -fx-background-radius: 4; -fx-padding: 10 16; -fx-font-size: 12px; -fx-effect: dropshadow(gaussian, #00000040, 12, 0, 0, 4); }
-.toast:success { -fx-background-color: #22c55e14; -fx-border-color: #22c55e40; -fx-border-width: 1; -fx-text-fill: -fx-success; }
-.toast:warn { -fx-background-color: #f59e0b1f; -fx-border-color: #f59e0b59; -fx-border-width: 1; -fx-text-fill: -fx-warning; }
-.toast:error { -fx-background-color: #ef44440d; -fx-border-color: #ef444440; -fx-border-width: 1; -fx-text-fill: -fx-danger; }
-.toast:info { -fx-background-color: #3b82f614; -fx-border-color: #3b82f640; -fx-border-width: 1; -fx-text-fill: -fx-primary; }
+.toast.success { -fx-background-color: #22c55e14; -fx-border-color: #22c55e40; -fx-border-width: 1; -fx-text-fill: -fx-success; }
+.toast.warn { -fx-background-color: #f59e0b1f; -fx-border-color: #f59e0b59; -fx-border-width: 1; -fx-text-fill: -fx-warning; }
+.toast.error { -fx-background-color: #ef44440d; -fx-border-color: #ef444440; -fx-border-width: 1; -fx-text-fill: -fx-danger; }
+.toast.info { -fx-background-color: #3b82f614; -fx-border-color: #3b82f640; -fx-border-width: 1; -fx-text-fill: -fx-primary; }
 
 /* Flight log list - data page */
 .flight-list { -fx-background-color: -fx-bg-panel; -fx-border-color: -fx-border-default; -fx-border-width: 0 1 0 0; -fx-pref-width: 260; }
@@ -375,7 +408,7 @@
 .wave-sidebar { -fx-background-color: -fx-bg-panel; -fx-border-color: -fx-border-default; -fx-border-width: 0 0 0 1; -fx-pref-width: 160; -fx-padding: 0 0 8 0; }
 .wave-channel { -fx-background-radius: 4; -fx-padding: 3 12; -fx-font-size: 11px; -fx-text-fill: -fx-text-secondary; -fx-cursor: hand; -fx-spacing: 6; }
 .wave-channel:hover { -fx-background-color: -fx-bg-hover; }
-.wave-channel:enabled .ch-dot { -fx-opacity: 1.0; }
+.wave-channel.enabled .ch-dot { -fx-opacity: 1.0; }
 .wave-group-label { -fx-text-fill: -fx-text-muted; -fx-font-size: 9px; -fx-font-weight: bold; -fx-padding: 6 12 2 12; }
 .ch-dot { -fx-min-width: 8; -fx-min-height: 8; -fx-background-radius: 4; -fx-opacity: 0.3; }
 .ch-name { -fx-text-fill: -fx-text-secondary; -fx-font-size: 11px; }
@@ -445,3 +478,71 @@
 .compact-mode .algo-card { -fx-pref-width: -1; -fx-max-width: Infinity; }
 .compact-mode .wave-toolbar { -fx-padding: 4 8; -fx-spacing: 4; }
 .compact-mode .wave-tr-btn { -fx-padding: 2 6; -fx-font-size: 10px; }
+
+/* ===== Battery Charging Workspace ===== */
+.charging-ws { -fx-background-color: -fx-bg-color; }
+.bat-backend-bar { -fx-background-color: -fx-bg-panel; -fx-border-color: -fx-border-default; -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 10 14; -fx-spacing: 10; }
+.bbb-dot { -fx-pref-width: 8; -fx-pref-height: 8; -fx-background-radius: 4; -fx-background-color: -fx-text-muted; }
+.bbb-dot.online { -fx-background-color: -fx-success; }
+.bbb-dot.offline { -fx-background-color: -fx-danger; }
+.bbb-dot.connecting { -fx-background-color: -fx-warning; }
+.bbb-status { -fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: -fx-text-secondary; }
+.bbb-meta { -fx-font-size: 10px; -fx-text-fill: -fx-text-muted; }
+.bbb-btn { -fx-background-color: -fx-bg-panel; -fx-border-color: -fx-border-default; -fx-border-width: 1; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 4 10; -fx-font-size: 10px; -fx-text-fill: -fx-text-secondary; }
+.bbb-btn:hover { -fx-background-color: -fx-bg-hover; -fx-text-fill: -fx-text-color; -fx-border-color: -fx-primary; }
+
+.bat-summary-row { -fx-spacing: 16; }
+.bat-summary-card { -fx-background-color: -fx-bg-panel; -fx-border-color: -fx-border-default; -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 14 20; -fx-spacing: 4; }
+.bat-summary-label { -fx-font-size: 10px; -fx-text-fill: -fx-text-muted; }
+.bat-summary-val { -fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: -fx-text-color; -fx-font-family: 'JetBrains Mono', monospace; }
+.bat-summary-val.ok { -fx-text-fill: -fx-success; }
+.bat-summary-sub { -fx-font-size: 10px; -fx-text-fill: -fx-text-muted; }
+
+.bat-validation-section { -fx-background-color: -fx-bg-panel; -fx-border-color: -fx-border-default; -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6; -fx-spacing: 0; }
+.bat-validation-section.err { -fx-border-color: -fx-danger; }
+.bat-validation-section.warn { -fx-border-color: -fx-warning; }
+.bat-validation-head { -fx-border-color: -fx-border-default; -fx-border-width: 0 0 1 0; -fx-padding: 10 14; -fx-spacing: 8; -fx-alignment: CENTER_LEFT; }
+.bat-validation-title { -fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: -fx-text-color; }
+.bat-validation-status { -fx-font-size: 10px; -fx-font-weight: bold; -fx-padding: 2 8; -fx-background-radius: 3; -fx-text-fill: -fx-success; -fx-background-color: derive(-fx-success, 80%); }
+.bat-validation-status.warn { -fx-text-fill: -fx-warning; -fx-background-color: derive(-fx-warning, 80%); }
+.bat-validation-status.err { -fx-text-fill: -fx-danger; -fx-background-color: derive(-fx-danger, 80%); }
+.bat-validation-body { -fx-padding: 10 14; -fx-spacing: 6; -fx-max-height: 220; }
+.bat-validation-empty { -fx-font-size: 11px; -fx-text-fill: -fx-text-muted; -fx-alignment: CENTER; -fx-padding: 12 0; }
+.bat-validation-stats { -fx-border-color: -fx-border-default; -fx-border-width: 1 0 0 0; -fx-padding: 8 14; -fx-spacing: 14; -fx-alignment: CENTER_LEFT; -fx-font-size: 10px; -fx-text-fill: -fx-text-muted; }
+.bat-validation-stats .mono { -fx-text-fill: -fx-text-secondary; -fx-font-weight: bold; }
+
+.bat-anomaly-item { -fx-padding: 6 8; -fx-background-radius: 4; -fx-spacing: 8; -fx-alignment: CENTER_LEFT; }
+.bat-anomaly-item.err { -fx-background-color: derive(-fx-danger, 85%); -fx-border-color: -fx-danger; -fx-border-width: 0 0 0 3; }
+.bat-anomaly-item.warn { -fx-background-color: derive(-fx-warning, 85%); -fx-border-color: -fx-warning; -fx-border-width: 0 0 0 3; }
+.bat-anomaly-code { -fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 9px; -fx-text-fill: -fx-text-muted; }
+.bat-anomaly-msg { -fx-font-size: 11px; -fx-text-fill: -fx-text-secondary; -fx-wrap-text: true; }
+
+.bat-grid-host { -fx-spacing: 12; }
+.bat-card { -fx-background-color: -fx-bg-panel; -fx-border-color: -fx-border-default; -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6; -fx-spacing: 0; }
+.bat-card.charging { -fx-border-color: -fx-success; }
+.bat-card.full { -fx-border-color: -fx-accent-gold; }
+.bat-card.wmi { -fx-border-width: 0 0 0 3; -fx-border-color: transparent transparent transparent #8b5cf6; }
+.bat-card.mavlink { -fx-border-width: 0 0 0 3; -fx-border-color: transparent transparent transparent -fx-primary; }
+.bat-card-head { -fx-border-color: -fx-border-default; -fx-border-width: 0 0 1 0; -fx-padding: 10 14; -fx-spacing: 8; -fx-alignment: CENTER_LEFT; }
+.bat-card-title { -fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: -fx-text-color; }
+.bat-source-pill { -fx-font-size: 8px; -fx-font-weight: bold; -fx-padding: 1 5; -fx-background-radius: 2; -fx-text-fill: white; }
+.bat-source-pill.wmi { -fx-background-color: #8b5cf6; }
+.bat-source-pill.mavlink { -fx-background-color: -fx-primary; }
+.bat-card-body { -fx-padding: 14; -fx-spacing: 10; -fx-alignment: CENTER_LEFT; }
+.bat-cap-bar-wrap { -fx-pref-height: 14; -fx-background-color: -fx-bg-bar; -fx-background-radius: 3; -fx-max-width: Infinity; }
+.bat-cap-bar-fill { -fx-background-radius: 3; -fx-pref-height: 14; }
+.bat-cap-bar-fill.charging { -fx-background-color: linear-gradient(to right, -fx-success, #7aabff); }
+.bat-cap-bar-fill.full { -fx-background-color: linear-gradient(to right, -fx-accent-gold, -fx-warning); }
+.bat-cap-pct { -fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: -fx-text-color; -fx-min-width: 40; -fx-alignment: CENTER_RIGHT; }
+.bat-info-row { -fx-spacing: 8; -fx-alignment: CENTER_LEFT; -fx-padding: 2 0; }
+.bat-info-label { -fx-font-size: 10px; -fx-text-fill: -fx-text-muted; -fx-min-width: 70; }
+.bat-info-val { -fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: -fx-text-secondary; }
+.bat-info-val.ok { -fx-text-fill: -fx-success; }
+.bat-info-val.warn { -fx-text-fill: -fx-warning; }
+.bat-info-val.err { -fx-text-fill: -fx-danger; }
+.bat-info-val.pending { -fx-text-fill: -fx-text-muted; -fx-font-style: italic; }
+.bat-card-status { -fx-font-size: 10px; -fx-text-fill: -fx-text-muted; -fx-padding: 0 14 8 14; }
+
+.bat-config-hint-box { -fx-background-color: -fx-bg-panel; -fx-border-color: -fx-border-default; -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 12 14; -fx-spacing: 6; }
+.bat-config-hint-title { -fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: -fx-text-secondary; }
+.bat-config-hint-text { -fx-font-size: 10px; -fx-text-fill: -fx-text-muted; -fx-wrap-text: true; -fx-line-spacing: 2; }

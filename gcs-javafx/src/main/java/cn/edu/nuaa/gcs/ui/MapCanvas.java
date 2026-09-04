@@ -120,6 +120,22 @@ public class MapCanvas extends Canvas {
         }
         draw();
     }
+    /** 批量更新无人机位置/高度/航向，只触发一次 draw()，避免高频遥测时 3 次重绘。 */
+    public void setDroneState(double lat, double lon, double alt, double heading) {
+        this.droneLat = lat;
+        this.droneLon = lon;
+        this.droneAlt = alt;
+        this.droneHeading = heading;
+        trail.add(new double[]{lon, lat});
+        if (trail.size() > 600) trail.remove(0);
+        if (followEnabled) {
+            centerLat = lat;
+            centerLon = lon;
+            offsetPixelX = 0;
+            offsetPixelY = 0;
+        }
+        draw();
+    }
     public void setDroneHeading(double h) { this.droneHeading = h; draw(); }
     public void setAirspaceZones(List<AirspaceService.Zone> zones) { this.airspaceZones = zones; draw(); }
     public void setAirspaceVisible(boolean v) { this.airspaceVisible = v; draw(); }

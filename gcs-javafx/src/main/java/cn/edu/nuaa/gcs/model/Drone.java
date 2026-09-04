@@ -77,6 +77,25 @@ public class Drone {
     // Shell 输出
     private final StringProperty shellText = new SimpleStringProperty("");
 
+    // 电池状态（BATTERY_STATUS(147)）
+    private final DoubleProperty batteryCurrent = new SimpleDoubleProperty(0);
+    private final DoubleProperty batteryTemp = new SimpleDoubleProperty(0);
+    private final DoubleProperty capacityConsumed = new SimpleDoubleProperty(0);
+    private final int[] cellVoltages = new int[10];
+
+    // 状态文本（STATUSTEXT(253)）
+    private final IntegerProperty statusSeverity = new SimpleIntegerProperty(0);
+    private final StringProperty statusText = new SimpleStringProperty("");
+
+    // 高精度 IMU（HIGHRES_IMU(105)）
+    private final DoubleProperty absPressure = new SimpleDoubleProperty(0);
+    private final DoubleProperty pressureAlt = new SimpleDoubleProperty(0);
+    private final DoubleProperty imuTemp2 = new SimpleDoubleProperty(0);
+    private final DoubleProperty airTemp = new SimpleDoubleProperty(0);
+    private final DoubleProperty magX = new SimpleDoubleProperty(0);
+    private final DoubleProperty magY = new SimpleDoubleProperty(0);
+    private final DoubleProperty magZ = new SimpleDoubleProperty(0);
+
     // 状态总览
     private final StringProperty status = new SimpleStringProperty("DISCONNECTED");
     private final BooleanProperty armed = new SimpleBooleanProperty(false);
@@ -90,6 +109,18 @@ public class Drone {
     private final BooleanProperty rcAvailable = new SimpleBooleanProperty(false);
     private final BooleanProperty motorsAvailable = new SimpleBooleanProperty(false);
     private final BooleanProperty landedStateAvailable = new SimpleBooleanProperty(false);
+    private final BooleanProperty batteryStatusAvailable = new SimpleBooleanProperty(false);
+    private final BooleanProperty statusTextAvailable = new SimpleBooleanProperty(false);
+    private final BooleanProperty highresImuAvailable = new SimpleBooleanProperty(false);
+    private final BooleanProperty gpsAvailable = new SimpleBooleanProperty(false);
+    private final BooleanProperty vfrHudAvailable = new SimpleBooleanProperty(false);
+
+    // GPS 原始数据（GPS_RAW_INT）
+    private final IntegerProperty fixType = new SimpleIntegerProperty(0);
+    // VFR_HUD 补充数据
+    private final DoubleProperty relAlt = new SimpleDoubleProperty(0);
+    private final DoubleProperty climbRate = new SimpleDoubleProperty(0);
+    private final IntegerProperty throttle = new SimpleIntegerProperty(0);
 
     public Drone() {
         sensorTypes.addAll("IMU", "COMPASS", "BARO", "GPS");
@@ -180,6 +211,64 @@ public class Drone {
             shellText.set(next);
         }
 
+        if (t.hasBatteryStatus) {
+            batteryCurrent.set(t.batteryCurrent);
+            batteryTemp.set(t.batteryTemp);
+            capacityConsumed.set(t.capacityConsumed);
+            System.arraycopy(t.cellVoltages, 0, cellVoltages, 0,
+                Math.min(cellVoltages.length, t.cellVoltages.length));
+            // 仅在 remaining 为有效正百分比(0-100)时覆盖，-1(未知)/其它负值忽略，避免显示 "-1%"
+            if (t.batteryRemaining2 >= 0 && t.batteryRemaining2 <= 100) batteryPct.set(t.batteryRemaining2);
+            batteryStatusAvailable.set(true);
+        }
+
+        if (t.hasStatusText && t.statusText != null) {
+            statusSeverity.set(t.statusSeverity);
+            statusText.set(t.statusText);
+            statusTextAvailable.set(true);
+        }
+
+        if (t.hasHighresImu) {
+            absPressure.set(t.absPressure);
+            pressureAlt.set(t.pressureAlt);
+            imuTemp2.set(t.imuTemp2);
+            airTemp.set(t.airTemp);
+            magX.set(t.magX);
+            magY.set(t.magY);
+            magZ.set(t.magZ);
+            highresImuAvailable.set(true);
+        }
+
+        if (t.hasGpsRaw) {
+            fixType.set(t.fixType);
+            satellites.set(t.satellites);
+            hdop.set(t.hdop);
+            gpsAvailable.set(true);
+            // GPS 有有效定位时补充位置（GLOBAL_POSITION_INT 缺失的回退）
+            if (t.fixType >= 2 && t.lat != 0 && t.lon != 0) {
+                if (!t.hasPosition) {
+                    lat.set(t.lat);
+                    lon.set(t.lon);
+                    alt.set(t.alt);
+                    speed.set(t.gpsSpeed);
+                    heading.set(t.gpsCog);
+                }
+            }
+        }
+
+        if (t.hasVfrHud) {
+            relAlt.set(t.vfrAlt);
+            climbRate.set(t.vfrClimb);
+            throttle.set(t.vfrThrottle);
+            // VFR_HUD 补充速度/航向/高度（GLOBAL_POSITION_INT 缺失时）
+            if (!t.hasPosition) {
+                alt.set(t.vfrAlt);
+                speed.set(t.vfrSpeed);
+                heading.set(t.vfrHeading);
+            }
+            vfrHudAvailable.set(true);
+        }
+
         status.set("CONNECTED");
     }
 
@@ -193,6 +282,11 @@ public class Drone {
         rcAvailable.set(false);
         motorsAvailable.set(false);
         landedStateAvailable.set(false);
+        batteryStatusAvailable.set(false);
+        statusTextAvailable.set(false);
+        highresImuAvailable.set(false);
+        gpsAvailable.set(false);
+        vfrHudAvailable.set(false);
         armed.set(false);
         status.set("DISCONNECTED");
     }
@@ -386,4 +480,86 @@ public class Drone {
             default -> "—";
         };
     }
+
+    // ----- BATTERY_STATUS / STATUSTEXT / HIGHRES_IMU 访问器 -----
+
+    public double getBatteryCurrent() { return batteryCurrent.get(); }
+    public DoubleProperty batteryCurrentProperty() { return batteryCurrent; }
+
+    public double getBatteryTemp() { return batteryTemp.get(); }
+    public DoubleProperty batteryTempProperty() { return batteryTemp; }
+
+    public double getCapacityConsumed() { return capacityConsumed.get(); }
+    public DoubleProperty capacityConsumedProperty() { return capacityConsumed; }
+
+    public int[] getCellVoltages() { return cellVoltages; }
+    public int getCellVoltage(int idx) { return cellVoltages[idx]; }
+
+    public int getStatusSeverity() { return statusSeverity.get(); }
+    public IntegerProperty statusSeverityProperty() { return statusSeverity; }
+
+    public String getStatusText() { return statusText.get(); }
+    public StringProperty statusTextProperty() { return statusText; }
+
+    public double getAbsPressure() { return absPressure.get(); }
+    public DoubleProperty absPressureProperty() { return absPressure; }
+
+    public double getPressureAlt() { return pressureAlt.get(); }
+    public DoubleProperty pressureAltProperty() { return pressureAlt; }
+
+    public double getImuTemp2() { return imuTemp2.get(); }
+    public DoubleProperty imuTemp2Property() { return imuTemp2; }
+
+    public double getAirTemp() { return airTemp.get(); }
+    public DoubleProperty airTempProperty() { return airTemp; }
+
+    public double getMagX() { return magX.get(); }
+    public DoubleProperty magXProperty() { return magX; }
+
+    public double getMagY() { return magY.get(); }
+    public DoubleProperty magYProperty() { return magY; }
+
+    public double getMagZ() { return magZ.get(); }
+    public DoubleProperty magZProperty() { return magZ; }
+
+    public boolean isBatteryStatusAvailable() { return batteryStatusAvailable.get(); }
+    public BooleanProperty batteryStatusAvailableProperty() { return batteryStatusAvailable; }
+
+    public boolean isStatusTextAvailable() { return statusTextAvailable.get(); }
+    public BooleanProperty statusTextAvailableProperty() { return statusTextAvailable; }
+
+    public boolean isHighresImuAvailable() { return highresImuAvailable.get(); }
+    public BooleanProperty highresImuAvailableProperty() { return highresImuAvailable; }
+
+    public boolean isGpsAvailable() { return gpsAvailable.get(); }
+    public BooleanProperty gpsAvailableProperty() { return gpsAvailable; }
+
+    public boolean isVfrHudAvailable() { return vfrHudAvailable.get(); }
+    public BooleanProperty vfrHudAvailableProperty() { return vfrHudAvailable; }
+
+    public int getFixType() { return fixType.get(); }
+    public IntegerProperty fixTypeProperty() { return fixType; }
+
+    public String getFixTypeName() {
+        return switch (fixType.get()) {
+            case 0 -> "无定位";
+            case 1 -> "2D";
+            case 2 -> "3D";
+            case 3 -> "DGPS";
+            case 4 -> "RTK";
+            case 5 -> "RTK浮点";
+            case 6 -> "静态";
+            case 7 -> "PPS";
+            default -> "—";
+        };
+    }
+
+    public double getRelAlt() { return relAlt.get(); }
+    public DoubleProperty relAltProperty() { return relAlt; }
+
+    public double getClimbRate() { return climbRate.get(); }
+    public DoubleProperty climbRateProperty() { return climbRate; }
+
+    public int getThrottle() { return throttle.get(); }
+    public IntegerProperty throttleProperty() { return throttle; }
 }
