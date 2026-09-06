@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SkyLink Map</title>
+<link rel="stylesheet" href="leaflet.css">
+<style>
+  html, body, #map { height: 100%; margin: 0; background: #0d1117; }
+  .leaflet-container { background: #0d1117; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; }
+  .leaflet-control-attribution {
+      background: rgba(13,17,23,.75) !important; color: #8b949e !important;
+      font-size: 10px !important; padding: 1px 6px !important;
+  }
+  .leaflet-control-attribution a { color: #8b949e !important; }
+  .leaflet-control-scale-line {
+      background: rgba(13,17,23,.7) !important; border-color: #30363d !important;
+      color: #c9d1d9 !important; font-size: 10px !important;
+  }
+  .mapbtn-col {
+      position: absolute; top: 12px; right: 12px; z-index: 1000;
+      display: flex; flex-direction: column;
+      box-shadow: 0 2px 10px rgba(0,0,0,.55); border-radius: 6px; overflow: hidden;
+  }
+  .mapbtn {
+      width: 34px; height: 34px; background: #161b22; border: none;
+      border-bottom: 1px solid #21262d; color: #c9d1d9; font-size: 16px;
+      display: flex; align-items: center; justify-content: center; cursor: pointer;
+      user-select: none; font-family: Consolas, monospace;
+  }
+  .mapbtn:last-child { border-bottom: none; }
+  .mapbtn:hover { background: #1c2128; color: #f0a500; }
+  .wp-badge {
+      background: #f0a500; color: #161b22; font: 700 10px/18px Consolas, monospace;
+      width: 18px; height: 18px; border-radius: 50%; text-align: center;
+      border: 2px solid #161b22; box-shadow: 0 0 4px rgba(0,0,0,.6);
+  }
+  .home-dot { background: #4b8bf5; width: 10px; height: 10px; border-radius: 50%;
+      border: 2px solid #fff; box-shadow: 0 0 6px #4b8bf5; }
+  .drone-rot { transition: transform .2s; }
+  .drone-arrow { color: #22c55e; font-size: 20px; line-height: 22px; text-align: center;
+      text-shadow: 0 0 5px rgba(34,197,94,.9); }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div class="mapbtn-col">
+  <div class="mapbtn" onclick="map.zoomIn()" title="放大">+</div>
+  <div class="mapbtn" onclick="map.zoomOut()" title="缩小">−</div>
+  <div class="mapbtn" onclick="toggleBase()" title="暗色 / 卫星">◑</div>
+  <div class="mapbtn" onclick="fit()" title="适配航点">⌖</div>
+</div>
+<script src="leaflet.js"></script>
+<script>
+var map = L.map('map', { zoomControl: false, attributionControl: true, zoomSnap: 1, preferCanvas: true });
+map.attributionControl.setPrefix('');
+map.setView([39.9042, 116.4074], 11);
+
+// ---- 瓦片图源：高德端点（离线优先→在线回退） ----
+// vec=高德矢量（浅色原始瓦片 + CSS 反相滤镜成暗色）；sat=高德卫星
+// 本地瓦片由 TileServer(127.0.0.1:8135) 提供，TILE_ROOT 为空则直接在线
+var TILE_ROOT = null;
+var SOURCES = {
+  vec: {
+    cls: 'vec-dark',
+    online: function (c) {
+      var s = 1 + ((c.x + c.y) % 4);
+      return 'https://webrd0' + s + '.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x=' + c.x + '&y=' + c.y + '&z=' + c.z;
+    }
+  },
+  sat: {
+    cls: '',
+    online: function (c) {
+      var s = 1 + ((c.x + c.y) % 4);
+      return 'https://webst0' + s + '.is.autonavi.com/appmaptile?style=6&x=' + c.x + '&y=' + c.y + '&z=' + c.z;
+    }
+  }
+};
+function setTileRoot(root) { TILE_ROOT = root; }
+
+function offlineLayer(source, opts) {
+  var Cls = L.TileLayer.extend({
+    createTile: function (coords, done) {
+      var srcDef = SOURCES[source];
+      var size = this.getTileSize();
+      var called = false;
+      function fin(err) { if (!called) { called = true; done(err); } }
+
+      var canvas = document.createElement('canvas');
+      canvas.width = size.x;
+      canvas.height = size.y;
+      var ctx = canvas.getContext('2d');
+
+      var img = document.createElement('img');
+      img.crossOrigin = 'anonymous'; // TileServer 带 ACAO 头：本地/服务端代理瓦片均可安全取像素
+      img.onload = function () {
+        if (source === 'vec') {
+          try { // 反相 + R/B 互换 ≈ 暗色化（本地与在线代理瓦片统一走此链路）
+            ctx.drawImage(img, 0, 0, size.x, size.y);
+            var id = ctx.getImageData(0, 0, size.x, size.y), d = id.data;
+            for (var i = 0; i < d.length; i += 4) {
+              var r = 255 - d[i], g2 = 255 - d[i + 1], b2 = 255 - d[i + 2];
+              d[i] = b2; d[i + 1] = g2; d[i + 2] = r;
+            }
+            ctx.putImageData(id, 0, 0);
+          } catch (e) { // 像素读取失败兜底：原样显示
+            try { ctx.drawImage(img, 0, 0, size.x, size.y); } catch (e2) {}
+          }
+        } else {
+          ctx.drawImage(img, 0, 0, size.x, size.y);
+        }
+        fin(null);
+      };
+      // 本地未命中由 TileServer 服务端回退高德并渐进落盘，前端只处理最终失败
+      img.onerror = function () { fin(new Error('tile fail')); };
+      img.src = TILE_ROOT
+        ? TILE_ROOT + '/' + source + '/' + coords.z + '/' + coords.x + '/' + coords.y + '.png'
+        : srcDef.online(coords);
+      return canvas;
+    }
+  });
+  return new Cls('', Object.assign({ tileSize: 256, maxZoom: 19, keepBuffer: 2,
+      attribution: '&copy; 高德地图 AutoNavi（测试用途）' }, opts || {}));
+}
+
+var layers = {
+  dark: L.layerGroup([offlineLayer('vec')]),
+  sat: L.layerGroup([offlineLayer('sat')])
+};
+var base = 'dark';
+layers.dark.addTo(map);
+L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map);
+
+function setBase(name) {
+  if (!layers[name] || name === base) { return base; }
+  map.removeLayer(layers[base]);
+  layers[name].addTo(map);
+  base = name;
+  return base;
+}
+function toggleBase() { return setBase(base === 'dark' ? 'sat' : 'dark'); }
+
+// ---- 航点 ----
+var wpMarkers = {}, wpOrder = [];
+var line = L.polyline([], { color: '#f0a500', weight: 2, opacity: 0.9 }).addTo(map);
+
+function wpIcon(id) {
+  return L.divIcon({ className: '', html: '<div class="wp-badge">' + id + '</div>',
+      iconSize: [18, 18], iconAnchor: [9, 9] });
+}
+function addWaypoint(id, lat, lng) {
+  if (wpMarkers[id]) { wpMarkers[id].setLatLng([lat, lng]); updateLine(); return; }
+  var m = L.marker([lat, lng], { icon: wpIcon(id), draggable: true }).addTo(map);
+  m.on('dragend', function () {
+    var ll = m.getLatLng();
+    try { javaBridge.onWaypointMoved(String(id), ll.lat.toFixed(6), ll.lng.toFixed(6)); } catch (e) {}
+  });
+  wpMarkers[id] = m;
+  wpOrder.push(id);
+  updateLine();
+}
+function moveWaypoint(id, lat, lng) {
+  if (wpMarkers[id]) { wpMarkers[id].setLatLng([lat, lng]); updateLine(); }
+}
+function removeWaypoint(id) {
+  if (wpMarkers[id]) { map.removeLayer(wpMarkers[id]); delete wpMarkers[id]; }
+  wpOrder = wpOrder.filter(function (x) { return String(x) !== String(id); });
+  updateLine();
+}
+function clearWaypoints() {
+  for (var k in wpMarkers) { map.removeLayer(wpMarkers[k]); }
+  wpMarkers = {}; wpOrder = [];
+  updateLine();
+}
+function updateLine() {
+  line.setLatLngs(wpOrder.map(function (id) { return wpMarkers[id].getLatLng(); }));
+}
+function fit() {
+  if (wpOrder.length === 1) {
+    map.setView(wpMarkers[wpOrder[0]].getLatLng(), 15);
+  } else if (wpOrder.length > 1) {
+    map.fitBounds(L.polyline(wpOrder.map(function (id) { return wpMarkers[id].getLatLng(); })).getBounds(),
+        { padding: [40, 40] });
+  }
+}
+
+// ---- Home / 无人机 ----
+var homeMarker = L.circleMarker([39.9042, 116.4074],
+    { radius: 6, color: '#fff', weight: 2, fillColor: '#4b8bf5', fillOpacity: 1 }).addTo(map);
+var droneMarker = L.marker([39.9042, 116.4074], {
+  icon: L.divIcon({ className: '', html: '<div class="drone-rot"><div class="drone-arrow">➤</div></div>',
+      iconSize: [22, 22], iconAnchor: [11, 11] }),
+  opacity: 0
+}).addTo(map);
+var droneRotEl = droneMarker.getElement().querySelector('.drone-rot');
+var follow = false;
+
+function setHome(lat, lng) { homeMarker.setLatLng([lat, lng]); }
+function setDrone(lat, lng, hdg) {
+  droneMarker.setOpacity(1);
+  droneMarker.setLatLng([lat, lng]);
+  if (droneRotEl) { droneRotEl.style.transform = 'rotate(' + (hdg || 0) + 'deg)'; }
+  if (follow) { map.setView([lat, lng], Math.max(map.getZoom(), 14)); }
+}
+function setFollow(f) {
+  follow = f;
+  if (f) { map.setView(droneMarker.getLatLng(), Math.max(map.getZoom(), 14)); }
+}
+
+// ---- 事件 → Java ----
+map.on('click', function (e) {
+  try { javaBridge.onClick(e.latlng.lat.toFixed(6), e.latlng.lng.toFixed(6)); } catch (err) {}
+});
+
+// ---- Java 调用入口 ----
+window.mapApi = {
+  setTileRoot: setTileRoot, setBase: setBase, toggleBase: toggleBase,
+  addWaypoint: addWaypoint, moveWaypoint: moveWaypoint,
+  removeWaypoint: removeWaypoint, clearWaypoints: clearWaypoints, fit: fit,
+  setHome: setHome, setDrone: setDrone, setFollow: setFollow,
+  base: function () { return base; },
+  center: function () { var c = map.getCenter(); return c.lat.toFixed(6) + ',' + c.lng.toFixed(6); },
+  zoom: function () { return map.getZoom(); }
+};
+window.onJavaReady = function () { setTimeout(function () { map.invalidateSize(); }, 60); };
+</script>
+</body>
+</html>

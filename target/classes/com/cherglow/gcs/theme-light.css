@@ -1,0 +1,18 @@
+/* ============================================================
+   SkyLink GCS — 浅色主题
+   仅覆盖 looked-up colors（-c-*），加载顺序在 app.css 之后。
+   品牌黄/危险红/警告色保持不变。
+   ============================================================ */
+
+.root {
+    -c-bg: #f6f8fa;
+    -c-panel: #ffffff;
+    -c-hover: #eef1f4;
+    -c-bar: #e7ebf0;
+    -c-border: #d0d7de;
+    -c-border2: #b6c0ca;
+    -c-text: #1f2328;
+    -c-text2: #3d444d;
+    -c-muted: #8c959f;
+    -c-info: #59636e;
+}

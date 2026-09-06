@@ -1,0 +1,300 @@
+{
+  "feature": "SkyLink GCS — JavaFX 无人机地面站（复刻 CHERGLOW GCS，对接 CF-Drone 真机）",
+  "source": "13 张 CHERGLOW GCS 截图 + 交互界面原型.html + CF-Drone 固件源码 + COM5 真机 COM 探测抓包（2026-09-06）",
+  "codebase": "C:\\Users\\wjh22\\Desktop\\skylink-gcs-main\\skylink-gcs-main",
+  "toolchain": "Java 17（Temurin 17.0.19）+ JavaFX 17.0.2 + Maven 3.9.6（缓存发行版）+ jSerialComm 2.11.0",
+  "linkDecision": "用户指令：真机经 USB 连接（COM5，115200 8N1），不得使用 CF-Drone 模拟器与遥控模型。实测 COM5 为 CLI 文本协议（琛光 CF-Drone 固件，比 GitHub main 新）：status/ps/psq/rc/mot/imu/p/sys/wifi/modes 命令均有确定性输出；指令含 arm/disarm、acro/stab/althold/poshold、p <name> <value>、ca/cr/cm 校准、reboot。WiFi AP 运行中（Drone_WiFi / 192.168.4.1，MAVLink UDP 14550 待连接）作为后续高频遥测备用通道（S13）。",
+  "realDeviceFacts": {
+    "port": "COM5 115200 8N1，DTR/RTS 必须保持 false（防 ESP32 复位）",
+    "status": "armed/controlSource/rcLinkUp/webLinkUp/mavLinkUp/loopRate/armingDisabled/phase/isAirborne/landed/altState/batteryVoltage/altitude/tofStatus/sensors(baro,range,hasAltitude)/mag —— 一次轮询覆盖电池+安全+飞行状态",
+    "attitude": "ps→roll/pitch/yaw(度)；psq→qw/qx/qy/qz",
+    "rc": "CH1-16 + 通道映射 + 控制量 roll/pitch/yaw/throttle + mode/controlSource",
+    "motors": "front-right/front-left/rear-right/rear-left（0~1 推力）",
+    "imu": "MPU-6500，model/gyro/acc/原始/偏置/缩放/landed",
+    "params": "p 一次回约 100 项 'NAME = value'（CTL_*/IMU_*/MOT_*/RC_*/WIFI_*/MAV_*/SF_*/ALT_*/PH_*/MAHONY_*/EST_*/ARM_CHK_LEVEL/BARO_LPF_HZ/FLOW_ROT_YAW）",
+    "sensors": "实机 BMP388/VL53L1X/QMC5883x/PMW3901 均未检测到（定高/光流/磁力计/气压 全空态）",
+    "safety": "实机 3.311V 电量低 → armingDisabled: 电量低禁止解锁；主循环 ~1000Hz",
+    "wifi": "AP 模式 SSID=Drone_WiFi IP=192.168.4.1 MAVLink connected:0（UDP 14550 预留）"
+  },
+  "stories": [
+    {
+      "id": "S1",
+      "title": "工程骨架与设计系统外壳",
+      "covers": [
+        1
+      ],
+      "status": "done",
+      "blockedBy": [],
+      "techGuidance": "已完成：TopNav/PageRouter(1-5)/Toast/AppState/SVGPath 图标/设计令牌 CSS。"
+    },
+    {
+      "id": "S2",
+      "title": "真机串口链路（CLI 协议）与连接状态机",
+      "covers": [
+        2,
+        3
+      ],
+      "status": "done",
+      "tasks": [
+        "jSerialComm 接入：端口枚举、COM5@115200 8N1 打开、DTR/RTS=false、读线程按行装配",
+        "CliProtocol：命令构建 + 响应解析器（status/ps/psq/rc/mot/imu/p/sys），以真机抓包文本为黄金样本",
+        "VehicleSnapshot（不可变）+ LiveVehicle（FX Property 镜像，Platform.runLater）",
+        "CliLink 轮询调度：串行请求-响应 + 解析器满足即止（不靠固定窗）；带宽预算 ≈ psq+mot 每拍(≈5Hz)、rc+imu 隔拍(≈2.5Hz)、status 1Hz、p 按需（调参页触发）",
+        "ConnectionManager 状态机：DISCONNECTED→CONNECTING(开端口)→首包成功→CONNECTED；失败保持 error+retrying 标记，成功才转 connected；3s 无响应判掉线；退避重试 1s→8s",
+        "单测：解析器黄金样本全字段断言 + 状态机转换矩阵（error 不被覆盖回归）",
+        "tools.SerialSmokeTest：COM5 连接→5s 遥测流打印→断开清理（java -cp 直接跑）"
+      ],
+      "executionFit": "fits-one-run",
+      "demoBoundary": "真机 COM5：连接→5s 持续遥测（姿态/电机/RC/电池/状态）→断开清理，单测全绿",
+      "scopeNotes": "链路+状态机+解析；不涉及页面 UI（S4 对话框、S6 仪表盘接线）。",
+      "blockedBy": [],
+      "techGuidance": "CLI 无帧界：以『解析器满足/超时 200ms』判响应结束；命令严格串行防交叉；armingDisabled 原文透传 UI；禁止任何主动 arm/测试电机指令出现在轮询与测试代码中。"
+    },
+    {
+      "id": "S4",
+      "title": "连接对话框与顶栏接入（串口主通道）",
+      "covers": [
+        4
+      ],
+      "status": "done",
+      "tasks": [
+        "ConnectDialog：串口/USB tab（端口下拉枚举+刷新、波特率 115200 默认、连接/断开）+ WebSocket tab（按截图还原，预留）+ UDP tab（192.168.4.1:14550，标注 WiFi 直连预留 S13）",
+        "连接 chip 接 ConnectionManager：CONNECTING/CONNECTED/detail(COM5@115200)/ERROR(原因原文)/retrying 徽标",
+        "断开清理：停轮询、关端口、清遥测订阅",
+        "e2e：真机插拔/占用端口（串口被占）→错误原文展示且保持 error"
+      ],
+      "executionFit": "fits-one-run",
+      "demoBoundary": "对话框选择 COM5→连接→顶栏已连接·COM5@115200；拔线/占用→错误保持+自动重试",
+      "scopeNotes": "连接 UI + 真实链路一体；WebSocket/UDP 仅 UI 骨架预留。",
+      "blockedBy": [
+        "S2"
+      ],
+      "techGuidance": "串口被占/拔出时 jSerialComm 异常原文透传；重试期间端口反复 open 失败要有退避防刷。"
+    },
+    {
+      "id": "S5",
+      "title": "Leaflet 地图组件（WebView 封装）",
+      "covers": [
+        5
+      ],
+      "tasks": [
+        "WebView 内嵌 Leaflet（本地 html 资源）",
+        "双底图：OpenFreeMap 暗色（默认）+ ESRI World Imagery 卫星，保留 attribution",
+        "JS↔Java bridge（标记/折线/跟随/切底图/onMapClick，统一 Platform.runLater 切线程）",
+        "无位置源时显示 Home 中心点（CF-Drone 无 GPS 现状，位置源接口留扩展）",
+        "航点标记（序号徽章）+ 连线 + 拖动回调 API",
+        "缩放控件（+/−/定位）与比例尺",
+        "独立手动验证入口"
+      ],
+      "executionFit": "fits-one-run",
+      "demoBoundary": "验证页显示暗色地图，点击取坐标回调 Java，卫星切换与标记/折线联动正常",
+      "scopeNotes": "可复用地图组件，被 S7/S8 复用；与串口链路无耦合可并行。",
+      "blockedBy": [
+        "S1"
+      ],
+      "techGuidance": "JS 回调线程切 FX 线程；瓦片 CDN 失败留空底图兜底样式。",
+      "status": "done"
+    },
+    {
+      "id": "S6",
+      "title": "仪表盘页（3D 模型 / ADI / 传感器 / 遥控 / 电机）",
+      "covers": [
+        6
+      ],
+      "tasks": [
+        "三列两行卡片布局（上：模型/ADI/传感器 2x3；下：遥控输入/控制源/电机输出）",
+        "JavaFX 3D 四旋翼：psq 四元数驱动姿态，拖拽旋转视角",
+        "ADI 姿态仪 Canvas：俯仰滚轮刻度 ±10/20、航向带（yaw 实测可用）",
+        "传感器卡 2x3：IMU 实时（imu 命令）；罗盘/气压计/测距仪/光流/GPS 按 status sensors 在线位渲染——实机全为空态 —（与截图一致），探测结果来自 status/wifi 而非硬编码",
+        "遥控输入 CH1-16 条形（rc 命令，µs→百分比）+ 控制源徽章（无/RC/WebRC/MAVLink，替代『遥控器模拟』面板——用户已明确不使用遥控模型模拟）",
+        "电机输出 M1-M12：M1-M4 实时（mot 命令），M5-M12 空态",
+        "接 LiveVehicle 全页联动"
+      ],
+      "executionFit": "fits-one-run",
+      "demoBoundary": "真机连接后：3D 模型随手转动姿态、ADI 滚动、传感器卡空态正确、电池电压实时（status）",
+      "scopeNotes": "单页面 story，视觉组件独立可并行。",
+      "blockedBy": [
+        "S2"
+      ],
+      "techGuidance": "姿态 5Hz（CLI 轮询上限）足够 MVP；3D/Canvas 走 AnimationTimer；『遥控器模拟』面板按用户要求不实现。",
+      "status": "done"
+    },
+    {
+      "id": "S7",
+      "title": "飞行页（地图 + HUD + 指令）",
+      "covers": [
+        7
+      ],
+      "tasks": [
+        "全幅地图 + 叠加层容器",
+        "HUD：HDG(yaw)/ALT(status altitude，无源显示 —)/GS(无源 —)/VS(无源 —)/ROLL/PITCH + 模式徽章(STAB/ACRO/ALTHOLD/POSHOLD) + phase/isAirborne",
+        "左下迷你 ADI 浮窗（可关闭）",
+        "系统消息条：连接事件 + armingDisabled 原因（电量低等原文）+ 控制源变化",
+        "底部状态栏：电池电压(status)/解锁状态/RC 链路(rcLinkUp)/控制源/LAT/LON(无源 0.000000)",
+        "指令条：解锁/上锁（arm/disarm）+ 模式切换 acro/stab/althold/poshold（CLI 直切）；带确认对话框；armingDisabled 时禁用解锁并显示原因",
+        "Ctrl+A 快捷键 + 确认对话框"
+      ],
+      "executionFit": "fits-one-run",
+      "demoBoundary": "真机：解锁按钮在电量低时禁用并显示原因；模式切换 CLI 生效（status phase/mode 回读）；HUD 实时刷新",
+      "scopeNotes": "页面组装+指令链路；解锁类指令必须二次确认+显示安全状态。",
+      "blockedBy": [
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "techGuidance": "实机电池低禁止解锁是固件硬约束，GCS 只透传；arm 指令发送前 UI 强制确认框；模式回读以 rc 命令 mode 行为准。",
+      "status": "done"
+    },
+    {
+      "id": "S8",
+      "title": "规划页（设计平价 + 本地任务管理）",
+      "covers": [
+        8
+      ],
+      "tasks": [
+        "右侧任务规划面板（可折叠）：任务名输入、航点列表（序号徽章+经纬度+删除）、脏标记圆点",
+        "地图点击加航点 + 拖动调整 + 删除",
+        "航点数与预计距离（haversine 累计）",
+        "保存/加载任务文件（JSON）+ 适配视图/卫星切换/清空",
+        "上传到飞控：CLI 无任务协议 → 显示『当前固件不支持机载任务』并置灰（固件升级或 S13 MAVLink 路线后启用）",
+        "与飞行页横幅联动"
+      ],
+      "executionFit": "fits-one-run",
+      "demoBoundary": "添加 3 航点→距离正确→保存→清空→加载恢复；上传按钮给出明确不可用提示",
+      "scopeNotes": "UI 平价 + 本地任务文件管理；上传协议留扩展位。",
+      "blockedBy": [
+        "S5"
+      ],
+      "techGuidance": "实机无 GPS 且无任务协议，本页定位为设计平价与未来扩展。",
+      "status": "done"
+    },
+    {
+      "id": "S9",
+      "title": "调参页（CLI 参数字典驱动）",
+      "covers": [
+        9
+      ],
+      "tasks": [
+        "左侧栏两分组 section 路由（与截图一致）",
+        "参数字典注册表：p 全量拉取（实测约 100 项）+ 内置中文描述/范围/单位映射 + 未知参数通用渲染",
+        "机架类型页 → 机型信息（sys Chip/IMU model/电机布局 MOT_PIN_FL/FR/RL/RR）",
+        "电机设置 → MOT_PWM_FREQ/RES/MIN/MAX/MOT_THR_MIN/MAX 表单",
+        "遥控器 → RC 通道卡（rc 命令实时）+ 通道映射显示（当前未设置）+ RC_PROTOCOL/RC_BAUD/RC_RX_PIN 配置",
+        "端口设置 → WIFI_MODE/SSID/WIFI_LOC_PORT/WIFI_REM_PORT/MAV_SYS_ID 展示（wifi 命令数据）",
+        "PID 调参 → 四 tab（姿态环/角速度环/高度控制/位置控制）：CTL_P_P/I/D/WU/D_HZ、CTL_*_RATE_*、ALT_*、PH_*；『已加载 n/N 个参数』+ 批量读取",
+        "安全设置 → SF_RC_LOSS_TIME/SF_DESCEND_TIME/ARM_CHK_LEVEL + 固件安全逻辑说明",
+        "传感器组 → 校准向导：ca（加速计）、cr（RC）、cm（磁力计）CLI 流程 UI；未配备传感器空态",
+        "参数写入 p <name> <value> → 回读 p <name> 校验"
+      ],
+      "executionFit": "fits-one-run",
+      "demoBoundary": "真机 p 全量拉取渲染各 section；修改一项参数写入并回读一致；未知参数通用渲染",
+      "scopeNotes": "参数 CRUD 为主线；CLI 命令慢（p 全量 ~2s）需进度提示。",
+      "blockedBy": [
+        "S2"
+      ],
+      "techGuidance": "p 全量输出 2014 字节≈180ms，串行通道内做独占事务；写参数前提醒电机停转；ARM_CHK_LEVEL 等安全参数改前二次确认。",
+      "status": "done"
+    },
+    {
+      "id": "S10",
+      "title": "数据页 — 波形监视器",
+      "covers": [
+        10
+      ],
+      "tasks": [
+        "数据页三 tab 容器（波形监视器/控制台/飞行日志）",
+        "波形工具栏：5s/10s/30s/60s、暂停/继续、清空、『N 通道 · M 样本』",
+        "Canvas 滚动波形 + 环形缓冲",
+        "数据源侧栏：姿态（roll/pitch/yaw + 角速率由相邻帧差分）、电机（M1-M4）、遥控（CH1-16 控制量）、电池电压（status）、芯片温度（sys，低频）",
+        "十字光标 + tooltip",
+        "采样线程接 LiveVehicle 落环形缓冲"
+      ],
+      "executionFit": "fits-one-run",
+      "demoBoundary": "真机连接：默认 4 通道波形滚动，暂停/清空/切窗/开关通道即时生效",
+      "scopeNotes": "单一可视化组件；tab 容器在此建立。",
+      "blockedBy": [
+        "S2"
+      ],
+      "techGuidance": "电池电压/温度来自低频轮询，曲线做阶梯插值；角速率差分标注『由姿态差分』。",
+      "status": "done"
+    },
+    {
+      "id": "S11",
+      "title": "数据页 — CLI 控制台与飞行日志",
+      "covers": [
+        11
+      ],
+      "tasks": [
+        "CLI 控制台：交互式终端（命令输入+原始输出流，白名单危险命令二次确认：arm/mfr/mfl/mrr/mrl/preset/reboot）",
+        "过滤/暂停/清空 + 自动滚动开关",
+        "SQLite 飞行日志库：会话表+采样点表，连接期间自动记录",
+        "自动记录策略：解锁(armed=1)开始→上锁/断开结束生成会话",
+        "飞行日志双栏：左侧列表（刷新/空态）+ 右侧详情（姿态/电机曲线回放）",
+        "板上日志导入：CLI log dump 文本解析入会话"
+      ],
+      "executionFit": "fits-one-run",
+      "demoBoundary": "真机连接自动记录→(不解锁也可记录悬停数据段)→列表/回放可用；控制台任意只读命令往返正常",
+      "scopeNotes": "『数据回看域』闭环；危险命令白名单是安全硬约束。",
+      "blockedBy": [
+        "S4",
+        "S10"
+      ],
+      "techGuidance": "log dump 输出较大需独占事务+进度；SQLite 后台批提交；消息环形上限防膨胀。",
+      "status": "done",
+      "notes": [
+        "代码完成且 mvn test 全绿（2026-09-06 21:16）。实现偏差：飞行日志未用 SQLite，改为 ~/.skylink/logs/session_<ts>.skylog 文件（首行元数据JSON + CSV采样行）；板上日志导入（log dump 解析）未实现，留待 S12 评估。真机验收清单未跑：控制台指令收发/危险命令二次确认/解锁自动记录/会话回放——列入 S12 端到端清单。"
+      ]
+    },
+    {
+      "id": "S12",
+      "title": "真机端到端验收与交付",
+      "covers": [
+        12
+      ],
+      "tasks": [
+        "e2e 检查脚本（真机 COM5，只读+安全操作）：枚举→连接→遥测流→参数拉取→模式切换→日志落库→断开清理",
+        "安全验收清单：电量低禁解锁 UI 提示、卸桨状态下 arm 确认框、电机输出归零确认",
+        "5 页面逐项对照截图手测清单",
+        "README：构建/运行/连接说明（COM5@115200 优先，WiFi UDP 预留）",
+        "jpackage 打包配置（win 可执行，可选）"
+      ],
+      "executionFit": "fits-one-run",
+      "demoBoundary": "真机 e2e 清单全绿 + README 可交付",
+      "scopeNotes": "集成验收；真机问题回归对应 story。",
+      "blockedBy": [
+        "S6",
+        "S7",
+        "S8",
+        "S9",
+        "S10",
+        "S11"
+      ],
+      "techGuidance": "全程卸桨；低电先充电再测解锁；e2e 不含自动 arm。",
+      "notes": [
+        "第一步先补 S11 真机验收（CLI 控制台 + 飞行日志），再做端到端清单/README/jpackage。",
+        "挂账回修项：3D 模型（Drone3DView Canvas 软投影版用户仍反馈显示异常，用户指示暂缓，回修基于现版继续）。"
+      ]
+    },
+    {
+      "id": "S13",
+      "title": "（预留）MAVLink/WiFi UDP 直连与高频遥测",
+      "covers": [
+        13
+      ],
+      "tasks": [
+        "MAVLink 精简编解码 + 黄金帧（pymavlink 生成；CRC=整帧去 magic+CRC_EXTRA）",
+        "UdpTransport 14550（广播→锁首包来源 IP 语义）+ PC 接入 Drone_WiFi AP 引导 UI",
+        "遥测升级：ATTITUDE_QUATERNION/SCALED_IMU/RC_CHANNELS_RAW/ACTUATOR_CONTROL_TARGET 10Hz 替代 CLI 轮询",
+        "MISSION_REQUEST_LIST 空态兼容（固件恒回 count=0）",
+        "与 CLI 链路并存：连接对话框三通道（串口/UDP/WebSocket）"
+      ],
+      "executionFit": "fits-one-run",
+      "demoBoundary": "PC 加入 Drone_WiFi 后 UDP 直连：10Hz 遥测流取代轮询，页面无感切换",
+      "scopeNotes": "用户当前以 USB/CLI 为主线；本 story 为带宽升级预留，开工前需用户确认。",
+      "blockedBy": [
+        "S4"
+      ],
+      "techGuidance": "固件 MAVLink 仅在收到任意下行包后开始发遥测；sysid 1/compid 1（MAV_SYS_ID 可改）；GCS sysid 255/compid 190；PARAM 均为 REAL32；Windows UDP 10054 容错。"
+    }
+  ]
+}
