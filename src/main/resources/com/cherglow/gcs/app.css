@@ -575,6 +575,28 @@
     -fx-border-color: #f59e0b;
 }
 
+/* ---- CLI 控制台 / 飞行日志列表（ListView 接入主题令牌，修复默认白底） ---- */
+.console-out,
+.console-out .virtual-flow,
+.console-out .virtual-flow .clipped-container {
+    -fx-background-color: -c-panel;
+}
+
+.console-out .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: -c-text;
+    -fx-padding: 1 10 1 10;
+}
+
+.console-out .list-cell:odd {
+    -fx-background-color: -c-bg;
+}
+
+.console-out .list-cell:filled:selected {
+    -fx-background-color: -c-hover;
+    -fx-text-fill: -c-text;
+}
+
 /* 遥控器模拟 */
 .joy-panel {
     -fx-padding: 12 10 8 10;

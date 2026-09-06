@@ -503,8 +503,15 @@ public class DataPage extends BorderPane {
             pauseBtn.setText(consolePaused ? "\u25b6 继续" : "\u23f8 暂停");
         });
 
-        Label autoBtn = chipBtn("自动滚动", consoleAutoScroll);
-        autoBtn.setOnMouseClicked(e -> consoleAutoScroll.set(!consoleAutoScroll.get()));
+        Button autoBtn = new Button(consoleAutoScroll.get() ? "自动滚动：开" : "自动滚动：关");
+        autoBtn.getStyleClass().add("btn-soft");
+        autoBtn.setOnAction(e -> {
+            consoleAutoScroll.set(!consoleAutoScroll.get());
+            autoBtn.setText(consoleAutoScroll.get() ? "自动滚动：开" : "自动滚动：关");
+            if (consoleAutoScroll.get()) {
+                consoleView.scrollTo(Math.max(0, consoleLines.size() - 1));
+            }
+        });
 
         Button clear = new Button("清空");
         clear.getStyleClass().add("btn-soft");
@@ -524,8 +531,11 @@ public class DataPage extends BorderPane {
                 super.updateItem(item, empty);
                 setText(empty || item == null ? null : item);
                 setFont(Font.font("Consolas", 11));
-                setTextFill(item != null && item.startsWith(">>>")
-                        ? Color.web("#f0a500") : Color.web("#c9d1d9"));
+                // 命令回显橙 / 警告琥珀 / 其余主文本色（深浅主题均随背景令牌保证对比度）
+                setTextFill(item == null ? Color.web("#e6edf3")
+                        : item.startsWith(">>>") ? Color.web("#f0a500")
+                        : item.startsWith("⚠") ? Color.web("#f59e0b")
+                        : Color.web("#e6edf3"));
             }
         });
         VBox.setVgrow(consoleView, Priority.ALWAYS);
@@ -591,17 +601,6 @@ public class DataPage extends BorderPane {
         while (consoleLines.size() > 800) {
             consoleLines.remove(0);
         }
-    }
-
-    private Label chipBtn(String text, javafx.beans.property.BooleanProperty state) {
-        Label l = new Label(text);
-        l.getStyleClass().add("chip");
-        l.setOpacity(state.get() ? 1 : 0.45);
-        l.setOnMouseClicked(e -> {
-            state.set(!state.get());
-            l.setOpacity(state.get() ? 1 : 0.45);
-        });
-        return l;
     }
 
     // ================= 飞行日志 =================

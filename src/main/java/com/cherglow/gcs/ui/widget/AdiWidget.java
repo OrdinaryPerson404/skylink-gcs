@@ -71,7 +71,8 @@ public class AdiWidget extends StackPane {
 
         g.translate(cx, cy);
         g.rotate(-roll);
-        g.translate(0, pitch * ppd);
+        // 固件口径 +pitch=低头（CF-Drone quaternion.h ZYX/FLU，2026-09-06 真机核实）：低头看到更多地面 → 地平线向上移
+        g.translate(0, -pitch * ppd);
 
         double span = r * 2.6;
         g.setFill(Color.web(SKY));
@@ -87,13 +88,14 @@ public class AdiWidget extends StackPane {
         g.setStroke(Color.web(LADDER));
         g.setFill(Color.web(LADDER));
         for (int p : new int[]{-20, -10, 10, 20}) {
-            double y = (pitch - p) * ppd;
+            double y = (-pitch - p) * ppd;   // 俯仰梯：p 为航空口径刻度值，随 −pitch 平移
             if (Math.abs(y) > r) {
                 continue;
             }
             double half = Math.abs(p) == 20 ? 34 : 22;
             g.strokeLine(-half, y, half, y);
-            String t = (p > 0 ? "+" : "") + p;
+            int v = -p;   // 梯度标签统一固件口径（+pitch=低头），与左侧数字框/ps 输出一致
+            String t = (v > 0 ? "+" : "") + v;
             g.fillText(t, half + 5, y + 3.5);
             g.fillText(t, -half - 19, y + 3.5);
         }

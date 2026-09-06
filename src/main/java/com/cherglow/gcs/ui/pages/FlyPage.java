@@ -31,7 +31,7 @@ import java.util.Map;
  * 右上 HUD 数据卡（HDG/ALT/GS/VS/ROLL/PITCH + 模式徽章 + WP）；
  * 左下迷你 ADI 浮窗（可关闭）；顶部任务横幅（与规划页脏标记联动）；
  * 底部：系统消息条 + 指令条（解锁/上锁 + ACRO/STAB/ALTHOLD/POSHOLD）+ 状态栏。
- * 指令经 CLI 链路下发真机：解锁需二次确认，禁止解锁时置灰并透传原因。
+ * 指令经 CLI 链路下发真机：解锁需二次确认，禁止解锁时置灰、点击以 Toast 透传原因。
  */
 public class FlyPage extends BorderPane {
 
@@ -284,12 +284,24 @@ public class FlyPage extends BorderPane {
             Toast.show("未连接飞控，无法发送指令", Toast.Type.WARNING);
             return;
         }
+        String disabled = lv.armingDisabled.get();
+        if (!lv.armed.get() && disabled != null && !disabled.isEmpty()) {
+            Toast.show("禁止解锁 — " + disabled, Toast.Type.WARNING);
+            return;
+        }
         if (lv.armed.get()) {
             ConfirmDialog.show("上锁确认", "确认上锁？电机将立即停转。", () -> send("disarm", "上锁指令"));
         } else {
             ConfirmDialog.show("解锁确认",
                     "确认解锁电机？\n⚠ 请务必拆除桨叶，并远离人群与障碍物！", () -> send("arm", "解锁指令"));
         }
+    }
+
+    /** 禁止解锁时视觉置灰但不真禁用（禁用按钮不产生点击事件），点击时 Toast 透传原因 */
+    private void refreshArmBlocked() {
+        String reason = lv.armingDisabled.get();
+        boolean blocked = !lv.armed.get() && reason != null && !reason.isEmpty();
+        armBtn.setOpacity(blocked ? 0.55 : 1.0);
     }
 
     private void send(String cmd, String label) {
@@ -337,16 +349,17 @@ public class FlyPage extends BorderPane {
             armBtn.getStyleClass().removeAll("btn-danger", "btn-primary");
             armBtn.getStyleClass().add(b ? "btn-primary" : "btn-danger");
             armedBadge.setText(b ? "已解锁" : "未解锁");
+            refreshArmBlocked();
         });
 
-        // 禁止解锁 → 置灰并透传原因
+        // 禁止解锁 → 视觉置灰 + 消息条透传原因（点击时 Toast 反馈，见 confirmArm）
         lv.armingDisabled.addListener((o, a, b) -> {
-            boolean blocked = b != null && !b.isEmpty();
-            armBtn.setDisable(blocked && !lv.armed.get());
-            if (blocked) {
+            if (b != null && !b.isEmpty()) {
                 addMsg("安全提示：禁止解锁 — " + b);
             }
+            refreshArmBlocked();
         });
+        refreshArmBlocked();
 
         // 连接事件 → 消息
         AppState.get().connStatusProperty().addListener((o, a, b) -> {
