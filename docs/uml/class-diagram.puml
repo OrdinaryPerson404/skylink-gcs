@@ -1,0 +1,369 @@
+@startuml SkyLink GCS 类图
+
+' ============================================================
+' 全局样式：信息完整 + 可读性平衡
+' ============================================================
+skinparam classAttributeIconSize 0
+skinparam classFontSize 14
+skinparam classAttributeFontSize 11
+skinparam classMethodFontSize 11
+skinparam packageFontSize 15
+skinparam noteFontSize 12
+skinparam legendFontSize 12
+skinparam linetype ortho
+skinparam nodesep 50
+skinparam ranksep 70
+skinparam shadowing false
+skinparam roundcorner 10
+skinparam ArrowThickness 1
+skinparam defaultFontName "Microsoft YaHei"
+skinparam dpi 150
+skinparam maxAsciiMessageLength 200
+skinparam wrapWidth 220
+hide stereotype
+hide circle
+
+skinparam package {
+  BackgroundColor #FAFBFC
+  BorderColor #666
+  FontColor #222
+  FontStyle bold
+}
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #455A64
+  FontColor #212121
+  AttributeFontColor #37474F
+}
+
+top to bottom direction
+
+' ============================================================
+' 图例
+' ============================================================
+legend top
+  |= 角色 |= 配色 |含义
+  | <#C8E6C9> 浅绿 | View 层 (界面/边界)
+  | <#BBDEFB> 浅蓝 | Controller/Service (业务)
+  | <#FFE0B2> 浅橙 | Model (实体/数据)
+  | <#E1BEE7> 浅紫 | 协议/编解码
+  | <#ECEFF1> 浅灰 | 枚举/值对象
+endlegend
+
+' ============================================================
+' 第一层：View
+' ============================================================
+package "View 层 (界面边界类)" #E8F5E9 {
+  class Launcher {
+    + {static} main(String[]): void
+  }
+  class App {
+    + start(Stage): void
+    + stop(): void
+  }
+  class MainShell {
+    + switchPage(String): boolean
+    + setConnectOpener(Runnable): void
+    + installKeyboardShortcuts(Scene): void
+  }
+  class TopNav {
+    + {static} TABS: List<String>
+    + setActive(String): void
+  }
+  class OverviewPage {
+    - lv: LiveVehicle
+  }
+  class FlyPage {
+    - map: MapView
+    - lv: LiveVehicle
+    + confirmArm(): void
+    + setGoToPlan(Runnable): void
+  }
+  class PlanPage {
+    - map: MapView
+    - waypoints: Map<Integer, double[]>
+  }
+  class SetupPage {
+    - lv: LiveVehicle
+  }
+  class DataPage {
+    - lv: LiveVehicle
+  }
+
+  package "组件 Widget" #C8E6C9 {
+    class MapView {
+      - tileCache: Map<String, Image>
+      + addWaypoint(int, double, double): void
+      + removeWaypoint(int): void
+      + fitWaypoints(): void
+      + setHome(double, double): void
+      + setDronePosition(Double, Double, Double): void
+      + setOnMapClick(Consumer<double[]>): void
+    }
+    class AdiWidget {
+      - canvas: Canvas
+    }
+    class Drone3DView {
+      - canvas: Canvas
+    }
+    class JoystickWidget {
+      + update(double, double): void
+    }
+    class SensorCard {
+      + setValue(String, String): void
+    }
+  }
+  package "通用 UI 工具" #C8E6C9 {
+    class ThemeManager {
+      + {static} setMainScene(Scene): void
+      + {static} toggleMain(): void
+      + {static} isDark(): boolean
+    }
+    class Toast {
+      + {static} bind(Pane): void
+      + {static} show(String, Type): void
+    }
+    class ConfirmDialog {
+      + {static} show(String, String, Runnable): void
+    }
+    class ConnectDialog {
+      - portCombo: ComboBox<String>
+      - baudCombo: ComboBox<String>
+      + show(): void
+    }
+  }
+}
+
+' ============================================================
+' 第二层：Controller/Service
+' ============================================================
+package "Controller/Service 层 (业务编排)" #E3F2FD {
+  class ConnectionService {
+    - cm: ConnectionManager
+    - link: CommandLink
+    + connectSerial(String, int): void
+    + connectUdp(String, int): void
+    + disconnect(): void
+    + isConnected(): boolean
+    + requestOnce(String): void
+    + sendCommand(String, Consumer<String>): void
+    + shutdown(): void
+  }
+  class ConnectionManager {
+    - channel: LinkChannel
+    + connect(): void
+    + disconnect(): void
+    + addStateListener(Consumer<State>): void
+    + startWatchdog(): void
+    + getState(): State
+  }
+  interface CommandLink {
+    + requestOnce(String): void
+    + sendCommand(String, Consumer<String>): void
+  }
+  class CliLink {
+    - transport: SerialTransport
+    - cur: VehicleSnapshot.Builder
+    + setErrorListener(Consumer<String>): void
+    + isPolling(): boolean
+  }
+  class MavLinkLink {
+    - udp: UdpTransport
+    - parser: MavLink.Parser
+  }
+  class FlightRecorder {
+    - sampler: Timeline
+    + addListener(Consumer<String>): void
+    + stopAndSave(String): void
+    + isRecording(): boolean
+    + {static} load(Path): Session
+  }
+  class SerialTransport {
+    - port: SerialPort
+    + open(String, int): void
+    + writeLine(String): void
+    + close(): void
+    + {static} listPorts(): List<String>
+  }
+  class UdpTransport {
+    - socket: DatagramSocket
+    + open(int, String, int): void
+    + send(byte[]): void
+    + close(): void
+  }
+  class TileServer {
+    - server: HttpServer
+    + start(Path): void
+    + {static} url(): String
+  }
+}
+
+' ============================================================
+' 第三层：Model
+' ============================================================
+package "Model 层 (实体/数据)" #FFF8E1 {
+  class LiveVehicle {
+    + armed: BooleanProperty
+    + connected: BooleanProperty
+    + modeName: StringProperty
+    + batteryVoltage: DoubleProperty
+    + rollDeg / pitchDeg / yawDeg: DoubleProperty
+    + params: ObjectProperty<Map>
+    + updateFrom(VehicleSnapshot): void
+  }
+  class VehicleSnapshot {
+    + timestampMs: long
+    + rollDeg / pitchDeg / yawDeg: double
+    + qw / qx / qy / qz: double
+    + motorFR / FL / RR / RL: double
+    + rcChannels: int[]
+    + armed: Boolean
+    + batteryVoltage: double
+    + batteryPct: double
+    + params: Map<String, Double>
+    + altitude: Double
+  }
+  class AppState {
+    + connStatusProperty(): ObjectProperty<ConnStatus>
+    + connDetailProperty(): StringProperty
+    + missionDirtyProperty(): BooleanProperty
+    + missionCountProperty(): IntegerProperty
+  }
+  class "VehicleSnapshot.Builder" as SnapBuilder {
+    + rollDeg / pitchDeg / yawDeg: double
+    + submit(): VehicleSnapshot
+  }
+}
+
+' ============================================================
+' 第四层：协议
+' ============================================================
+package "协议层 (编解码)" #F3E5F5 {
+  class CliProtocol {
+    + {static} parseEuler(String): Euler
+    + {static} parseQuat(String): Quat
+    + {static} parseImu(String): ImuData
+    + {static} parseRc(String): RcData
+    + {static} parseStatus(String): StatusData
+    + {static} parseParams(String): LinkedHashMap
+    + {static} parseWifi(String): WifiData
+  }
+  class MavLink {
+    + {static} buildV1(int, byte[]): byte[]
+    + {static} crc(int, byte[], int, int): int
+    + {static} payloadCommandLong(..): byte[]
+  }
+  class "MavLink.Parser" as MavParser {
+    + feed(byte[], int, int, Consumer<Frame>): void
+  }
+}
+
+' ============================================================
+' 枚举
+' ============================================================
+package "枚举/值对象" #ECEFF1 {
+  enum "AppState.ConnStatus" as ConnStatus {
+    DISCONNECTED
+    CONNECTING
+    CONNECTED
+    ERROR
+  }
+  enum "ConnectionManager.State" as CState {
+    DISCONNECTED
+    CONNECTING
+    CONNECTED
+    ERROR
+  }
+}
+
+' ============================================================
+' 关系
+' ============================================================
+Launcher ..> App : 启动
+App --> MainShell : 创建
+App --> ThemeManager : 装配主题
+App --> ConnectDialog : 注入连接入口
+App --> ConnectionService : shutdown
+
+MainShell *-- TopNav
+MainShell *-- OverviewPage
+MainShell *-- FlyPage
+MainShell *-- PlanPage
+MainShell *-- SetupPage
+MainShell *-- DataPage
+MainShell --> Toast : 全局通知
+TopNav --> AppState : 连接状态
+
+OverviewPage --> LiveVehicle : 绑定遥测
+OverviewPage *-- AdiWidget
+OverviewPage *-- Drone3DView
+OverviewPage *-- JoystickWidget
+OverviewPage *-- SensorCard
+
+FlyPage *-- MapView
+FlyPage --> LiveVehicle
+FlyPage --> AppState
+FlyPage --> ConnectionService : 指令
+FlyPage --> ConfirmDialog
+FlyPage --> Toast
+
+PlanPage *-- MapView
+PlanPage --> AppState : 航点计数
+PlanPage --> Toast
+
+SetupPage --> LiveVehicle : 参数读写
+SetupPage --> ConnectionService
+SetupPage --> ConfirmDialog
+SetupPage --> Toast
+
+DataPage --> LiveVehicle : 波形/日志
+DataPage --> ConnectionService
+DataPage --> ConfirmDialog
+
+MapView --> TileServer : 在线补块
+
+ConnectionService *-- ConnectionManager
+ConnectionService o-- CommandLink : setLink
+ConnectionService --> LiveVehicle : 刷入遥测
+ConnectionService --> AppState : 状态桥接
+ConnectionService --> Toast
+
+ConnectionManager --> CState
+
+CliLink ..|> CommandLink
+MavLinkLink ..|> CommandLink
+CliLink *-- SerialTransport
+CliLink --> CliProtocol : 解析
+CliLink --> SnapBuilder : 合并快照
+MavLinkLink *-- UdpTransport
+MavLinkLink --> MavLink : 编解码
+MavLinkLink --> MavParser
+MavLinkLink --> CliProtocol : SERIAL_CONTROL
+MavLinkLink --> SnapBuilder
+
+FlightRecorder --> LiveVehicle : 采样
+FlightRecorder --> AppState
+
+MavLink *-- MavParser
+MavLink *-- MavFrame
+
+LiveVehicle ..> VehicleSnapshot : updateFrom
+SnapBuilder ..> VehicleSnapshot : 构造
+AppState --> ConnStatus
+
+' ============================================================
+' 设计说明
+' ============================================================
+note right of CommandLink
+  <b>OCP 开闭原则</b>
+  面向 CommandLink 接口编程，
+  CLI / MAVLink 可替换扩展
+end note
+
+note bottom of LiveVehicle
+  <b>FX 线程安全</b>
+  单例属性镜像，
+  仅经 updateFrom() 变更
+end note
+
+@enduml

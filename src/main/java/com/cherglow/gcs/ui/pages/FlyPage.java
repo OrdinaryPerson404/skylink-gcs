@@ -30,7 +30,7 @@ import java.util.Map;
  * 飞行页（S7）：全幅地图 + 叠加层。
  * 右上 HUD 数据卡（HDG/ALT/GS/VS/ROLL/PITCH + 模式徽章 + WP）；
  * 左下迷你 ADI 浮窗（可关闭）；顶部任务横幅（与规划页脏标记联动）；
- * 底部：系统消息条 + 指令条（解锁/上锁 + ACRO/STAB/ALTHOLD/POSHOLD）+ 状态栏。
+ * 底部：系统消息条 + 指令条（解锁/上锁 + ACRO/STAB，本固件仅此两种模式）+ 状态栏。
  * 指令经 CLI 链路下发真机：解锁需二次确认，禁止解锁时置灰、点击以 Toast 透传原因。
  */
 public class FlyPage extends BorderPane {
@@ -222,20 +222,14 @@ public class FlyPage extends BorderPane {
         Button stab = modeBtn("STAB");
         stab.setText("自稳 STAB");
         stab.getStyleClass().add("active");
-        Button althold = modeBtn("ALTHOLD");
-        althold.setText("定高 ALTHOLD");
-        Button poshold = modeBtn("POSHOLD");
-        poshold.setText("定点 POSHOLD");
         modeButtons.put("ACRO", acro);
         modeButtons.put("STAB", stab);
-        modeButtons.put("ALTHOLD", althold);
-        modeButtons.put("POSHOLD", poshold);
 
         Label hint = new Label("指令需连接飞控 · Ctrl+A 解锁");
         hint.getStyleClass().add("stat-label");
         Region sp2 = new Region();
         HBox.setHgrow(sp2, Priority.ALWAYS);
-        cmdBar.getChildren().addAll(armBtn, sep(), acro, stab, althold, poshold, sp2, hint);
+        cmdBar.getChildren().addAll(armBtn, sep(), acro, stab, sp2, hint);
 
         bottom.getChildren().addAll(msgBlock, cmdBar);
         return bottom;
@@ -267,7 +261,7 @@ public class FlyPage extends BorderPane {
             return "—";
         }
         return switch (code.toUpperCase()) {
-            case "RAW" -> "手动";
+            case "RAW" -> "RAW";   // 固件无「手动」模式（用户确认），RAW 原样显示
             case "ACRO" -> "特技";
             case "STAB" -> "自稳";
             case "ALTHOLD" -> "定高";

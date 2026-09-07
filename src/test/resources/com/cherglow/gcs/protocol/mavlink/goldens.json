@@ -1,0 +1,99 @@
+{
+ "gcs_send_v1": {
+  "gcs_heartbeat": "fe0900ffbe000000000006000000030818",
+  "gcs_command_arm": "fe2100ffbe4c0000803f0000000000000000000000000000000000000000000000009001010100390a",
+  "gcs_command_disarm": "fe2100ffbe4c0000000000000000000000000000000000000000000000000000000090010101005f6e",
+  "gcs_command_setmode_stab": "fe2100ffbe4c00000000000000400000000000000000000000000000000000000000b0000101002fd3",
+  "gcs_manual_control_zero": "fe0b00ffbe450000000000000000000001f9d5",
+  "gcs_param_request_list": "fe0200ffbe1501017937",
+  "gcs_param_request_read": "fe1400ffbe14ffff010143544c5f525f524154455f5000000000a2e0",
+  "gcs_param_set": "fe1700ffbe178fc2753d010143544c5f525f524154455f500000000009a5ff",
+  "gcs_serial_control_status": "fe5100ffbe7e0000000000000a00067374617475730000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001014db5"
+ },
+ "dev_emit_v2": {
+  "dev_heartbeat": "fd090000000101000000020000000203900403cb61",
+  "dev_extended_sys_state": "fd020000000101f50000000116e9",
+  "dev_attitude_quaternion": "fd2000000001011f00003930000077be7f3f0ad7233c0ad7a33c8fc2f53c0ad7233c0ad7a3bc8fc2f53cc1f8",
+  "dev_scaled_imu": "fd0f00000001011a0000393000001e00fbff2cfc6400ceff146bc5",
+  "dev_rc_channels_raw": "fd160000000101230000851a0000e803dc05dc05dc05e803dc05dc05dc0500ff270d",
+  "dev_actuator_control_target": "fd1800000001018c00003930000000000000cdcccc3d0000000000000000cdcccc3db507",
+  "dev_serial_control_shell": "fd1100000001017e00000000000000000a0008726f6c6c3a20312e707d",
+  "dev_command_ack_arm": "fd0a00000001014d0000900100ff00000000ffbe43a1",
+  "dev_param_value": "fd1900000001011600008fc2753d7000050043544c5f525f524154455f50000000000915ac",
+  "dev_autopilot_version": "fd190000000101940000400100000000000000000000000000000100000000000000018781"
+ },
+ "crc_extra": {
+  "0": {
+   "name": "HEARTBEAT",
+   "extra": 50
+  },
+  "20": {
+   "name": "PARAM_REQUEST_READ",
+   "extra": 214
+  },
+  "21": {
+   "name": "PARAM_REQUEST_LIST",
+   "extra": 159
+  },
+  "22": {
+   "name": "PARAM_VALUE",
+   "extra": 220
+  },
+  "23": {
+   "name": "PARAM_SET",
+   "extra": 168
+  },
+  "26": {
+   "name": "SCALED_IMU",
+   "extra": 170
+  },
+  "31": {
+   "name": "ATTITUDE_QUATERNION",
+   "extra": 246
+  },
+  "35": {
+   "name": "RC_CHANNELS_RAW",
+   "extra": 244
+  },
+  "44": {
+   "name": "MISSION_COUNT",
+   "extra": 221
+  },
+  "69": {
+   "name": "MANUAL_CONTROL",
+   "extra": 243
+  },
+  "76": {
+   "name": "COMMAND_LONG",
+   "extra": 152
+  },
+  "77": {
+   "name": "COMMAND_ACK",
+   "extra": 143
+  },
+  "120": {
+   "name": "LOG_DATA",
+   "extra": 134
+  },
+  "126": {
+   "name": "SERIAL_CONTROL",
+   "extra": 189
+  },
+  "140": {
+   "name": "ACTUATOR_CONTROL_TARGET",
+   "extra": 181
+  },
+  "148": {
+   "name": "AUTOPILOT_VERSION",
+   "extra": 178
+  },
+  "245": {
+   "name": "EXTENDED_SYS_STATE",
+   "extra": 130
+  }
+ },
+ "crc_extra_legacy_variants": {
+  "ATTITUDE_QUATERNION_32B": 97,
+  "COMMAND_ACK_3B": 189
+ }
+}

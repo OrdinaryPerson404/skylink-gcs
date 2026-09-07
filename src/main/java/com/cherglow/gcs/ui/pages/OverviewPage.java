@@ -5,6 +5,7 @@ import com.cherglow.gcs.ui.widget.AdiWidget;
 import com.cherglow.gcs.ui.widget.Drone3DView;
 import com.cherglow.gcs.ui.widget.JoystickWidget;
 import com.cherglow.gcs.ui.widget.SensorCard;
+import com.cherglow.gcs.ui.widget.SignalCard;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
@@ -47,7 +48,7 @@ public class OverviewPage extends BorderPane {
     private final SensorCard flowCard = new SensorCard("∘", "光流");
     private final SensorCard gpsCard = new SensorCard("⊕", "GPS");
     private final SensorCard battCard = new SensorCard("⚡", "电池");
-    private final SensorCard sigCard = new SensorCard("≋", "信号");
+    private final SignalCard sigCard = new SignalCard();
 
     // 遥控器模拟（电机反推）
     private final JoystickWidget joyLeft = new JoystickWidget();
@@ -57,6 +58,7 @@ public class OverviewPage extends BorderPane {
 
     // 遥控输入条形（12 路，双极性）
     private final RcBar[] rcBars = new RcBar[12];
+    private final Label rcHint = new Label("无 RC 链路 · 未连接遥控接收机（UDP 通道无 RC 数据时显示）");
     // 电机条形（12 路，单极性，M1-4 有效）
     private final MotorBar[] motorBars = new MotorBar[12];
 
@@ -163,14 +165,14 @@ public class OverviewPage extends BorderPane {
         r.setPercentHeight(25);
         g.getRowConstraints().addAll(r, r, r, r);
 
-        SensorCard[][] cards = {
+        javafx.scene.layout.Region[][] cards = {
                 {imuCard, magCard},
                 {baroCard, rangeCard},
                 {flowCard, gpsCard},
                 {battCard, sigCard}};
         for (int row = 0; row < 4; row++) {
             for (int col2 = 0; col2 < 2; col2++) {
-                SensorCard sc = cards[row][col2];
+                javafx.scene.layout.Region sc = cards[row][col2];
                 GridPane.setHgrow(sc, Priority.ALWAYS);
                 GridPane.setVgrow(sc, Priority.ALWAYS);
                 g.add(sc, col2, row);
@@ -208,7 +210,7 @@ public class OverviewPage extends BorderPane {
 
     // ================= 遥控输入 =================
 
-    private HBox rcPanel() {
+    private Region rcPanel() {
         HBox box = new HBox(6);
         box.getStyleClass().add("bar-panel");
         box.setAlignment(Pos.BOTTOM_CENTER);
@@ -217,7 +219,9 @@ public class OverviewPage extends BorderPane {
             HBox.setHgrow(rcBars[i], Priority.ALWAYS);
             box.getChildren().add(rcBars[i]);
         }
-        return box;
+        StackPane stack = new StackPane(box, rcHint);
+        StackPane.setAlignment(rcHint, Pos.CENTER);
+        return stack;
     }
 
     // ================= 电机输出 =================
@@ -280,7 +284,7 @@ public class OverviewPage extends BorderPane {
             boolean online = lv.batteryVoltage.get() == lv.batteryVoltage.get();
             battCard.setOnline(online, "HY 802540 · 3.7V");
             if (online) {
-                battCard.val1().setText(String.format("电压 %.2f V / 3.7V", lv.batteryVoltage.get()));
+                battCard.val1().setText(String.format("电压 %.2f V（标称 3.7V）", lv.batteryVoltage.get()));
                 double pct = lv.batteryPct.get();
                 battCard.val2().setText(pct == pct
                         ? String.format("600mAh · 2.22Wh · ~%.0f%%", pct)
@@ -291,24 +295,20 @@ public class OverviewPage extends BorderPane {
         lv.batteryPct.addListener((o, a, b) -> battUpd.run());
         battUpd.run();
 
-        // 信号卡（CRSF 链路质量 + 三条链路在线位）
-        Runnable sigUpd = () -> {
-            boolean any = lv.rcLinkUp.get() || lv.webLinkUp.get() || lv.mavLinkUp.get();
-            sigCard.setOnline(any, any ? "在线" : "无链路");
-            int lq = lv.linkQuality.get();
-            sigCard.val1().setText(lq >= 0 ? String.format("上行质量 %d%%", lq) : "上行质量 —");
-            sigCard.val2().setText(String.format("RC%s Web%s MAV%s",
-                    lv.rcLinkUp.get() ? "✓" : "✗",
-                    lv.webLinkUp.get() ? "✓" : "✗",
-                    lv.mavLinkUp.get() ? "✓" : "✗"));
-        };
+        // 信号卡（图形化 WiFi 图标：RC / Web / MAV 三链路）
+        Runnable sigUpd = () -> sigCard.update(
+                lv.rcLinkUp.get(), lv.webLinkUp.get(), lv.mavLinkUp.get(), lv.linkQuality.get());
         lv.linkQuality.addListener((o, a, b) -> sigUpd.run());
         lv.rcLinkUp.addListener((o, a, b) -> sigUpd.run());
         lv.webLinkUp.addListener((o, a, b) -> sigUpd.run());
         lv.mavLinkUp.addListener((o, a, b) -> sigUpd.run());
         sigUpd.run();
 
-        // 遥控条形
+        // 遥控条形（UDP 通道无 RC 时显示空态提示）
+        Runnable rcHintUpd = () -> rcHint.setVisible(lv.rcChannels.get() == null);
+        lv.rcChannels.addListener((o, a, b) -> rcHintUpd.run());
+        rcHintUpd.run();
+        rcHint.getStyleClass().add("section-note");
         lv.rcChannels.addListener((o, a, b) -> {
             int[] ch = b;
             for (int i = 0; i < 12; i++) {

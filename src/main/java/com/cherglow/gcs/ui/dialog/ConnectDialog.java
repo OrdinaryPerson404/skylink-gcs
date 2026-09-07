@@ -28,7 +28,7 @@ import java.util.List;
 
 /**
  * 连接飞控设备对话框（对齐截图：深色圆角卡片 + 双 tab + 右下角操作按钮）。
- * 串口/USB 为主通道（CF-Drone CLI 链路）；WebSocket / UDP 为预留通道（S13 启用）。
+ * 串口/USB（CF-Drone CLI 链路）与 UDP/WiFi（MAVLink，S13）为可用通道；WebSocket 仍为预留。
  */
 public class ConnectDialog {
 
@@ -36,7 +36,7 @@ public class ConnectDialog {
     private final StackPane contentStack = new StackPane();
     private final Button serialTab = tabButton("串口 / USB");
     private final Button wsTab = tabButton("WebSocket");
-    private final Button udpTab = tabButton("UDP（预留）");
+    private final Button udpTab = tabButton("UDP / WiFi");
     private final ComboBox<String> portCombo = new ComboBox<>();
     private final ComboBox<String> baudCombo = new ComboBox<>();
     private final Button connectBtn = primaryButton("连接");
@@ -123,10 +123,70 @@ public class ConnectDialog {
                 "192.168.4.1", "8765",
                 "通过 WiFi 直连飞控 WebSocket 服务。飞控需支持 WebSocket MAVLink 输出，或经 UDP 转 WebSocket 桥接器实现连接。当前固件版本请使用串口直连，该通道将在 S13 启用。");
 
-        // ---- UDP 面板（预留） ----
-        VBox udpPanel = reservedPanel(
-                "192.168.4.1", "14550",
-                "加入无人机 AP（Drone_WiFi）后经 MAVLink UDP 直连，可获得 10Hz 高频遥测。该通道将在 S13 启用。");
+        // ---- UDP 面板（S13 已启用：MAVLink over WiFi UDP） ----
+        VBox udpPanel = new VBox(12);
+        udpPanel.setPadding(new Insets(4, 0, 0, 0));
+        HBox udpIpRow = new HBox(10);
+        udpIpRow.setAlignment(Pos.CENTER_LEFT);
+        Label udpIpLabel = new Label("IP 地址");
+        udpIpLabel.getStyleClass().add("field-label");
+        TextField udpIpField = new TextField("192.168.4.1");
+        udpIpField.getStyleClass().add("text-field-dark");
+        udpIpField.setPrefWidth(240);
+        udpIpRow.getChildren().addAll(udpIpLabel, udpIpField);
+
+        HBox udpPortRow = new HBox(10);
+        udpPortRow.setAlignment(Pos.CENTER_LEFT);
+        Label udpPortLabel = new Label("端口");
+        udpPortLabel.getStyleClass().add("field-label");
+        TextField udpPortField = new TextField("14550");
+        udpPortField.getStyleClass().add("text-field-dark");
+        udpPortField.setPrefWidth(160);
+        udpPortRow.getChildren().addAll(udpPortLabel, udpPortField);
+
+        Label udpNote = new Label("电脑加入无人机 AP「Drone_WiFi」（默认密码 12345678）后经 MAVLink UDP 直连："
+                + "10~20Hz 高频遥测 + 解锁/模式/调参全功能。本机会占用 UDP 14550 端口。");
+        udpNote.getStyleClass().add("section-note");
+        udpNote.setWrapText(true);
+
+        Label udpStatus = new Label();
+        udpStatus.getStyleClass().add("section-note");
+        AppState.get().connStatusProperty().addListener((o, a, b) -> udpStatus.setText(
+                "● " + switch (b) {
+                    case CONNECTED -> "已连接 · " + AppState.get().connDetailProperty().get();
+                    case CONNECTING -> "连接中…";
+                    case ERROR -> "连接失败 · " + AppState.get().connDetailProperty().get();
+                    default -> "未连接";
+                }));
+        udpStatus.setText("● 未连接");
+
+        HBox udpBtnRow = new HBox(10);
+        udpBtnRow.setAlignment(Pos.CENTER_RIGHT);
+        Button udpConnect = primaryButton("连接");
+        Button udpDisconnect = dangerButton("断开连接");
+        udpConnect.setOnAction(e -> {
+            String ip = udpIpField.getText().trim();
+            String port = udpPortField.getText().trim();
+            if (ip.isEmpty() || port.isEmpty()) {
+                Toast.show("请填写 IP 与端口", Toast.Type.WARNING);
+                return;
+            }
+            try {
+                ConnectionService.get().connectUdp(ip, Integer.parseInt(port));
+            } catch (NumberFormatException ex) {
+                Toast.show("端口必须为数字", Toast.Type.WARNING);
+            }
+        });
+        udpDisconnect.setOnAction(e -> ConnectionService.get().disconnect());
+        var busy2 = Bindings.createBooleanBinding(
+                () -> AppState.get().getConnStatus() == AppState.ConnStatus.CONNECTING
+                        || AppState.get().getConnStatus() == AppState.ConnStatus.CONNECTED,
+                AppState.get().connStatusProperty());
+        udpConnect.disableProperty().bind(busy2);
+        udpDisconnect.disableProperty().bind(busy2.not());
+        udpBtnRow.getChildren().addAll(udpDisconnect, udpConnect);
+
+        udpPanel.getChildren().addAll(udpIpRow, udpPortRow, udpNote, udpStatus, udpBtnRow);
 
         contentStack.getChildren().addAll(serialPanel, wsPanel, udpPanel);
         contentStack.setAlignment(Pos.TOP_LEFT);

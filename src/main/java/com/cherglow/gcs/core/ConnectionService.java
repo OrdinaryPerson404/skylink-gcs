@@ -24,7 +24,7 @@ public final class ConnectionService {
 
     private ScheduledExecutorService exec;
     private ConnectionManager cm;
-    private CliLink link;
+    private CommandLink link;
     private volatile String desc = "";
 
     private synchronized ScheduledExecutorService ensureExec() {
@@ -46,11 +46,12 @@ public final class ConnectionService {
         ScheduledExecutorService ex = ensureExec();
         desc = port + "@" + baud;
 
-        link = new CliLink(port, baud, ex, snapshot -> FxSafe.run(() -> LiveVehicle.get().updateFrom(snapshot)));
-        link.setErrorListener(err -> FxSafe.run(() ->
+        CliLink cli = new CliLink(port, baud, ex, snapshot -> FxSafe.run(() -> LiveVehicle.get().updateFrom(snapshot)));
+        cli.setErrorListener(err -> FxSafe.run(() ->
                 Toast.show("串口错误：" + err, Toast.Type.WARNING)));
+        link = cli;
 
-        ConnectionManager m = new ConnectionManager(link, ex, System::currentTimeMillis);
+        ConnectionManager m = new ConnectionManager(cli, ex, System::currentTimeMillis);
         m.addStateListener(s -> FxSafe.run(() -> {
             AppState.ConnStatus ui = switch (s) {
                 case DISCONNECTED -> AppState.ConnStatus.DISCONNECTED;
@@ -73,6 +74,45 @@ public final class ConnectionService {
             }
         }));
         cm = m;
+        m.connect();
+    }
+
+    /** MAVLink/UDP（WiFi 直连，S13）连接；重复调用会先断开旧连接 */
+    public synchronized void connectUdp(String remoteIp, int remotePort) {
+        if (cm != null) {
+            cm.disconnect();
+        }
+        ScheduledExecutorService ex = ensureExec();
+        desc = remoteIp + ":" + remotePort + " (UDP)";
+
+        MavLinkLink ml = new MavLinkLink(remoteIp, remotePort, ex,
+                snapshot -> FxSafe.run(() -> LiveVehicle.get().updateFrom(snapshot)));
+        link = ml;
+
+        ConnectionManager m = new ConnectionManager(ml, ex, System::currentTimeMillis);
+        m.addStateListener(s -> FxSafe.run(() -> {
+            AppState.ConnStatus ui = switch (s) {
+                case DISCONNECTED -> AppState.ConnStatus.DISCONNECTED;
+                case CONNECTING -> AppState.ConnStatus.CONNECTING;
+                case CONNECTED -> AppState.ConnStatus.CONNECTED;
+                case ERROR -> AppState.ConnStatus.ERROR;
+            };
+            AppState.get().connStatusProperty().set(ui);
+            LiveVehicle.get().connected.set(s == ConnectionManager.State.CONNECTED);
+            switch (s) {
+                case CONNECTED -> {
+                    AppState.get().connDetailProperty().set(desc);
+                    Toast.show("已连接 " + desc, Toast.Type.SUCCESS);
+                }
+                case ERROR -> {
+                    AppState.get().connDetailProperty().set(m.getDetail());
+                    Toast.show("连接失败：" + m.getDetail(), Toast.Type.ERROR);
+                }
+                default -> AppState.get().connDetailProperty().set("");
+            }
+        }));
+        cm = m;
+        m.startWatchdog();
         m.connect();
     }
 

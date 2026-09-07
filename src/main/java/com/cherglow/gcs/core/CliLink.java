@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit;
  * 命令严格串行（写→收→解析→下一命令），响应结束以『解析器满足或超时』判定（CLI 无帧界）。
  * 同时实现 LinkChannel 供 ConnectionManager 驱动。
  */
-public final class CliLink implements ConnectionManager.LinkChannel {
+public final class CliLink implements ConnectionManager.LinkChannel, CommandLink {
 
     /** 轮询计划：ps/psq×2（欧拉+四元数）、mot×2、rc、imu、status ≈ 姿态 ~3.3Hz / status ~1.7Hz */
     private static final String[] POLL_PLAN = {
