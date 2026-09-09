@@ -16,12 +16,33 @@ JavaFX 桌面无人机地面站（GCS）课程实践作品，致敬并复刻 [CH
 ## 目录
 
 1. [项目概述](#1-项目概述)
-2. [核心功能](#2-核心功能)
-3. [系统架构](#3-系统架构)
-4. [安装说明](#4-安装说明)
-5. [使用指南](#5-使用指南)
-6. [开发文档](#6-开发文档)
-7. [贡献指南](#7-贡献指南)
+2. [🎬 作品演示](#-作品演示)
+3. [核心功能](#2-核心功能)
+4. [系统架构](#3-系统架构)
+5. [安装说明](#4-安装说明)
+6. [使用指南](#5-使用指南)
+7. [开发文档](#6-开发文档)
+8. [贡献指南](#7-贡献指南)
+
+---
+
+## 2. 🎬 作品演示
+
+### B 站视频
+
+<div align="center">
+<iframe src="//player.bilibili.com/player.html?bvid=BV1w2Y46aE4r&page=1&autoplay=0" width="560" height="315" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"></iframe>
+<br><br>
+[📺 **在 B 站观看完整演示**](https://www.bilibili.com/video/BV1w2Y46aE4r/?vd_source=7711654065b1435fcebab82d13aa2ff2) — 包含连接、遥测、仪表盘、飞行、规划、调参等全链路操作展示
+</div>
+
+### 抖音视频
+
+<div align="center">
+<a href="https://creator.douyin.com/creator-micro/work-management/work-detail/7683546100300614955?enterfrom=content" target="_blank"><img src="https://p3-sign.douyinpic.com/tos-cn-i-dy/9c0baed0d2c1436caae50cb1cd542d71~tplv-dy-360p.jpeg?lk=3&ls=3&op=0&pi=0&sc=image&f=WEBP&us=0&dr=0&fr=&btver=10031&size=f416_736&q=70&di=72c4f5b4-cb5b-48e1-95bc-5168e61c1a87&dp=10031&sc=&biz=3&et=wp&uid=1028&cp=&nexp=1" alt="SkyLink GCS 演示 - 抖音" width="300"></a>
+<br><br>
+[🎵 **在抖音观看**](https://creator.douyin.com/creator-micro/work-management/work-detail/7683546100300614955?enterfrom=content) — 手机端实时接入无人机 AP，GPSLogger 外部 GNSS 链路联动
+</div>
 
 ---
 
