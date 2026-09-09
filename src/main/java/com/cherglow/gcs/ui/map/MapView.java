@@ -1,6 +1,7 @@
 package com.cherglow.gcs.ui.map;
 
 import com.cherglow.gcs.tools.TileDownloader;
+import com.cherglow.gcs.util.GeoConvert;
 import javafx.animation.AnimationTimer;
 import javafx.application.Platform;
 import javafx.scene.canvas.Canvas;
@@ -25,6 +26,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.ArrayDeque;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -72,16 +74,29 @@ public class MapView extends StackPane {
 
     // 覆盖层数据
     private final Map<Integer, double[]> waypoints = new LinkedHashMap<>();
+    private final Map<Integer, String> waypointRoles = new LinkedHashMap<>();
     private double[] home;
-    private double[] dronePos;   // null=隐藏
+    private double[] dronePos;   // GCJ-02，null=隐藏
     private Double droneHeading = 0.0;
     private boolean follow;
+    /** 航迹（GCJ-02 经纬度点列，环形缓冲，随瓦片重绘/平移保留） */
+    private final ArrayDeque<double[]> track = new ArrayDeque<>();
+    private static final int MAX_TRACK = 512;
 
     // 交互状态
     private boolean panning;
     private double lastX, lastY, pressX, pressY;
     private boolean moved;
     private Integer dragWp;
+    /** 航点拖拽开关（规划页开、飞行页关）：关闭时按下即平移，避免误抓航点徽章导致地图"拉不动" */
+    private boolean wpDragEnabled = true;
+
+    // B3 预览动画状态
+    private boolean previewPlaying;
+    private long previewStartMs;
+    private List<double[]> previewPath;
+    private double[] previewPos;
+    private static final double PREVIEW_SEG_MS = 500.0;
 
     private Consumer<double[]> clickHandler;
     private BiConsumer<Integer, double[]> wpMoveHandler;
@@ -90,6 +105,10 @@ public class MapView extends StackPane {
     private final AnimationTimer pulse = new AnimationTimer() {
         @Override
         public void handle(long now) {
+            if (previewPlaying) {
+                advancePreview((now / 1_000_000.0) - previewStartMs);
+                markDirty();
+            }
             if (dirty) {
                 dirty = false;
                 draw();
@@ -112,10 +131,11 @@ public class MapView extends StackPane {
         heightProperty().addListener((o, a, b) -> markDirty());
 
         canvas.setOnMousePressed(e -> {
+            stopPreview();
             pressX = lastX = e.getX();
             pressY = lastY = e.getY();
             moved = false;
-            dragWp = hitWaypoint(e.getX(), e.getY());
+            dragWp = wpDragEnabled ? hitWaypoint(e.getX(), e.getY()) : null;
             panning = dragWp == null;
         });
         canvas.setOnMouseDragged(e -> {
@@ -200,11 +220,51 @@ public class MapView extends StackPane {
 
     public void removeWaypoint(int id) {
         waypoints.remove(id);
+        waypointRoles.remove(id);
         markDirty();
     }
 
     public void clearWaypoints() {
         waypoints.clear();
+        waypointRoles.clear();
+        markDirty();
+    }
+
+    /** 设置航点角色（START/END/WAYPOINT），影响徽章颜色和标记。 */
+    public void setWaypointRole(int id, String role) {
+        if (role == null || role.isEmpty()) {
+            waypointRoles.remove(id);
+        } else {
+            waypointRoles.put(id, role);
+        }
+        markDirty();
+    }
+
+    /** 清除所有航点角色标记。 */
+    public void clearWaypointRoles() {
+        waypointRoles.clear();
+        markDirty();
+    }
+
+    /**
+     * 按指定 ID 顺序重排航点（路径优化后调用）。
+     * 清空并按 orderedIds 顺序重新添加航点，路径线随之更新。
+     */
+    public void reorderWaypoints(List<Integer> orderedIds) {
+        Map<Integer, double[]> backupPos = new LinkedHashMap<>(waypoints);
+        Map<Integer, String> backupRoles = new LinkedHashMap<>(waypointRoles);
+        waypoints.clear();
+        waypointRoles.clear();
+        for (int id : orderedIds) {
+            double[] pos = backupPos.get(id);
+            if (pos != null) {
+                waypoints.put(id, pos);
+                String role = backupRoles.get(id);
+                if (role != null) {
+                    waypointRoles.put(id, role);
+                }
+            }
+        }
         markDirty();
     }
 
@@ -257,8 +317,40 @@ public class MapView extends StackPane {
         markDirty();
     }
 
+    /** S15：写入外部 GNSS 位置（WGS84，入图前纠偏 GCJ-02）。lat/lon 含 null 或 NaN 时隐藏标记。 */
+    public void setVehiclePosition(Double lat, Double lng, Double headingDeg) {
+        if (lat == null || lng == null || Double.isNaN(lat) || Double.isNaN(lng)) {
+            dronePos = null;
+            markDirty();
+            return;
+        }
+        double[] g = GeoConvert.wgs84ToGcj02(lat, lng);
+        dronePos = new double[]{g[0], g[1]};
+        droneHeading = headingDeg == null ? 0.0 : headingDeg;
+        track.addLast(new double[]{g[0], g[1]});
+        while (track.size() > MAX_TRACK) {
+            track.removeFirst();
+        }
+        if (follow) {
+            centerLat = g[0];
+            centerLng = g[1];
+        }
+        markDirty();
+    }
+
+    /** 清空历史航迹（换机/断连时清）。 */
+    public void clearTrack() {
+        track.clear();
+        markDirty();
+    }
+
     public void setFollow(boolean f) {
         follow = f;
+    }
+
+    /** 开关航点拖拽（默认开）。飞行页应关闭：航点仅作展示，按下任意位置都直接平移地图。 */
+    public void setWaypointDragEnabled(boolean enabled) {
+        this.wpDragEnabled = enabled;
     }
 
     public void setCenter(double lat, double lng, int zoomLevel) {
@@ -287,6 +379,53 @@ public class MapView extends StackPane {
 
     public void setOnWaypointMoved(BiConsumer<Integer, double[]> handler) {
         this.wpMoveHandler = handler;
+    }
+
+    // ================= B3 预览模拟动画 =================
+
+    public void playPreview() {
+        if (waypoints.size() < 2) {
+            return;
+        }
+        previewPath = new ArrayList<>(waypoints.values());
+        previewStartMs = System.nanoTime() / 1_000_000;
+        previewPlaying = true;
+        markDirty();
+    }
+
+    public void stopPreview() {
+        if (!previewPlaying) {
+            return;
+        }
+        previewPlaying = false;
+        previewPos = null;
+        previewPath = null;
+        markDirty();
+    }
+
+    /** 按当前播放时长推进到 .advancePreview 对应经纬度；播完自动停。 */
+    private void advancePreview(double elapsedMs) {
+        if (previewPath == null || previewPath.isEmpty()) {
+            previewPlaying = false;
+            return;
+        }
+        if (previewPath.size() == 1) {
+            previewPos = previewPath.get(0);
+            previewPlaying = false;
+            return;
+        }
+        double segMs = PREVIEW_SEG_MS;
+        double totalMs = (previewPath.size() - 1) * segMs;
+        if (elapsedMs >= totalMs) {
+            previewPos = previewPath.get(previewPath.size() - 1);
+            previewPlaying = false;
+            return;
+        }
+        int seg = (int) (elapsedMs / segMs);
+        double f = (elapsedMs - seg * segMs) / segMs;
+        double[] a = previewPath.get(seg);
+        double[] b = previewPath.get(seg + 1);
+        previewPos = new double[]{a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f};
     }
 
     // ================= 墨卡托换算 =================
@@ -500,13 +639,38 @@ public class MapView extends StackPane {
             if (x < -20 || y < -20 || x > w + 20 || y > h + 20) {
                 continue;
             }
-            g.setFill(Color.web("#f0a500"));
+            String role = waypointRoles.get(e.getKey());
+            String badgeColor = "#f0a500";
+            String badgeText = String.valueOf(e.getKey());
+            if ("START".equals(role)) {
+                badgeColor = "#22c55e";
+                badgeText = "S";
+            } else if ("END".equals(role)) {
+                badgeColor = "#ef4444";
+                badgeText = "E";
+            }
+            g.setFill(Color.web(badgeColor));
             g.fillOval(x - 9, y - 9, 18, 18);
             g.setStroke(Color.web("#161b22"));
             g.setLineWidth(2);
             g.strokeOval(x - 9, y - 9, 18, 18);
             g.setFill(Color.web("#161b22"));
-            g.fillText(String.valueOf(e.getKey()), x, y + 3.5);
+            g.fillText(badgeText, x, y + 3.5);
+        }
+
+        // ---- 航迹（GNSS 位置点连线） ----
+        if (track.size() >= 2) {
+            g.setStroke(Color.web("#22c55e", 0.55));
+            g.setLineWidth(2);
+            double[] prev = null;
+            for (double[] p : track) {
+                double x = lngToPx(p[1], zoom) - originWx;
+                double y = latToPx(p[0], zoom) - originWy;
+                if (prev != null) {
+                    g.strokeLine(prev[0], prev[1], x, y);
+                }
+                prev = new double[]{x, y};
+            }
         }
 
         // ---- 无人机（有位置源才显示） ----
@@ -521,6 +685,22 @@ public class MapView extends StackPane {
             g.restore();
         }
         g.setTextAlign(TextAlignment.LEFT);
+
+        // ---- 预览动画标记（B3） ----
+        if (previewPlaying && previewPos != null) {
+            double x = lngToPx(previewPos[1], zoom) - originWx;
+            double y = latToPx(previewPos[0], zoom) - originWy;
+            g.setFill(Color.web("#ff7b1f"));
+            g.fillOval(x - 8, y - 8, 16, 16);
+            g.setStroke(Color.web("#161b22"));
+            g.setLineWidth(2);
+            g.strokeOval(x - 8, y - 8, 16, 16);
+            g.setFill(Color.web("#161b22"));
+            g.setFont(Font.font("Consolas", FontWeight.BOLD, 10));
+            g.setTextAlign(TextAlignment.CENTER);
+            g.fillText("▶", x, y + 3.5);
+            g.setTextAlign(TextAlignment.LEFT);
+        }
 
         // ---- 比例尺（左下） ----
         double mpp = 156543.03392 * Math.cos(Math.toRadians(centerLat)) / (1 << zoom);

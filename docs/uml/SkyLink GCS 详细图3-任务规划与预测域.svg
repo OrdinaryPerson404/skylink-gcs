@@ -1,0 +1,229 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1780" height="1430" viewBox="0 0 1780 1430" font-family="Microsoft YaHei, PingFang SC, sans-serif">
+  <defs>
+    <marker id="arrowOpen" markerWidth="12" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L11,5 L0,10" fill="none" stroke="#444" stroke-width="1.4"/>
+    </marker>
+    <marker id="triHollow" markerWidth="18" markerHeight="14" refX="16" refY="7" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M1,1 L16,7 L1,13 Z" fill="#ffffff" stroke="#444" stroke-width="1.3"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1780" height="1430" fill="#ffffff"/>
+  <text x="24" y="32" font-size="19" font-weight="bold" fill="#1f2328">SkyLink GCS 详细图③ —— 任务规划与预测域（算法类 · 记录类 · XML 文件读写）</text>
+  <text x="26" y="54" font-size="12" fill="#57606a">规划页编排：航点编辑 → 贪婪路径优化 → 冲突检测 → 电量/航程预测 → 任务 XML 持久化；算法全部手写实现，不依赖第三方库</text>
+  <rect x="60" y="96" width="480" height="280" fill="#f7fafd" stroke="#3b6ea5" stroke-width="1.5" rx="6"/>
+  <rect x="60" y="96" width="480" height="26" fill="#dbe9ff" stroke="#3b6ea5" stroke-width="1.5" rx="6"/>
+  <rect x="61" y="113" width="478" height="10" fill="#dbe9ff"/>
+  <text x="70" y="114" font-size="12.5" font-weight="bold" fill="#1f2328">PlanPage  «界面 · 规划页编排者»</text>
+  <text x="72" y="130" font-size="11" fill="#1f2328">- map: MapView {final}</text>
+  <text x="72" y="145.5" font-size="11" fill="#1f2328">- waypoints: Map&lt;Integer,Waypoint&gt; {final}</text>
+  <text x="72" y="161" font-size="11" fill="#1f2328">- nextId: int  - dirty / routeMode / optimized: boolean</text>
+  <text x="72" y="176.5" font-size="11" fill="#1f2328">- nameField / payloadField / windSpeedField: TextField</text>
+  <text x="72" y="192" font-size="11" fill="#1f2328">- countVal / distVal / conflictVal: Label</text>
+  <text x="72" y="207.5" font-size="11" fill="#1f2328">- originalOrder: List&lt;Integer&gt;   - MISSION_DIR: Path {static final}</text>
+  <line x1="60" y1="224" x2="540" y2="224" stroke="#3b6ea5" stroke-width="1"/>
+  <text x="72" y="231" font-size="11" fill="#1f2328">+ onPageShown(): void  «覆写 BasePage»</text>
+  <text x="72" y="246.5" font-size="11" fill="#1f2328">- optimizeRoute(): void     // 贪婪优化入口</text>
+  <text x="72" y="262" font-size="11" fill="#1f2328">- restoreOrder(): void      // 一键还原原始顺序</text>
+  <text x="72" y="277.5" font-size="11" fill="#1f2328">- saveMission() / loadMission()  {private}</text>
+  <text x="72" y="293" font-size="11" fill="#1f2328">- triggerPrediction() {private}   // 弹出预测</text>
+  <text x="72" y="308.5" font-size="11" fill="#1f2328">- checkConflicts(..) {private}   // O(n²) 间距审查</text>
+  <text x="72" y="328" font-size="10.2" fill="#57606a">冲突规则：任意两航点间距 &lt; 2m 或总航程 &gt; 2km → 面板红字 + Toast；</text>
+  <text x="72" y="343" font-size="10.2" fill="#57606a">地图点击加点 / 拖拽移动；预计航程 = haversine 累计</text>
+  <rect x="580" y="96" width="470" height="233.5" fill="#f7fafd" stroke="#3b6ea5" stroke-width="1.5" rx="6"/>
+  <rect x="580" y="96" width="470" height="26" fill="#dbe9ff" stroke="#3b6ea5" stroke-width="1.5" rx="6"/>
+  <rect x="581" y="113" width="468" height="10" fill="#dbe9ff"/>
+  <text x="590" y="114" font-size="12.5" font-weight="bold" fill="#1f2328">PredictDialog  «对话框 · 预测结果»</text>
+  <text x="592" y="130" font-size="11" fill="#1f2328">- stage: Stage {final}</text>
+  <text x="592" y="145.5" font-size="11" fill="#1f2328">- CHART_W = 600 / CHART_H = 260 {static final}</text>
+  <text x="592" y="161" font-size="11" fill="#1f2328">- V_MIN = 3.0 / V_MAX = 4.3 {static final}</text>
+  <line x1="580" y1="177.5" x2="1050" y2="177.5" stroke="#3b6ea5" stroke-width="1"/>
+  <text x="592" y="184.5" font-size="11" fill="#1f2328">+ PredictDialog(result: PredictionResult)</text>
+  <text x="592" y="200" font-size="11" fill="#1f2328">+ show(): void</text>
+  <text x="592" y="215.5" font-size="11" fill="#1f2328">- buildSummary(r): VBox   {private}</text>
+  <text x="592" y="231" font-size="11" fill="#1f2328">- buildWindAnalysis(r): VBox  {private}</text>
+  <text x="592" y="246.5" font-size="11" fill="#1f2328">- drawChart(g, r): void  {private}   // Canvas 曲线</text>
+  <text x="592" y="262" font-size="11" fill="#1f2328">- drawThresholdLine(..) {private}    // 3.31/3.5V 阈值线</text>
+  <text x="592" y="281.5" font-size="10.2" fill="#57606a">预测结果弹窗：逐航点电压曲线 + 解锁/告警阈值线 + 分段风力分析；</text>
+  <text x="592" y="296.5" font-size="10.2" fill="#57606a">由 PlanPage「预览路径」按钮同时触发</text>
+  <rect x="1090" y="96" width="320" height="202" fill="#fffdf4" stroke="#a8791b" stroke-width="1.5" rx="6"/>
+  <rect x="1090" y="96" width="320" height="26" fill="#fdeeca" stroke="#a8791b" stroke-width="1.5" rx="6"/>
+  <rect x="1091" y="113" width="318" height="10" fill="#fdeeca"/>
+  <text x="1100" y="114" font-size="12.5" font-weight="bold" fill="#1f2328">RangeEstimator  «算法 · 航时/航程»</text>
+  <text x="1102" y="130" font-size="11" fill="#1f2328">+ NOMINAL_FLIGHT_MINUTES = 8.0</text>
+  <text x="1102" y="145.5" font-size="11" fill="#1f2328">  {static final}</text>
+  <line x1="1090" y1="162" x2="1410" y2="162" stroke="#a8791b" stroke-width="1"/>
+  <text x="1102" y="169" font-size="11" fill="#1f2328">+ remainingMinutes(batteryPct: int):</text>
+  <text x="1102" y="184.5" font-size="11" fill="#1f2328">    double {static}</text>
+  <text x="1102" y="200" font-size="11" fill="#1f2328">+ remainingDistanceMeters(batteryPct: int,</text>
+  <text x="1102" y="215.5" font-size="11" fill="#1f2328">    speedMps: double): double {static}</text>
+  <text x="1102" y="235" font-size="10.2" fill="#57606a">标称模型（无电流传感器）：电量% × 8min →</text>
+  <text x="1102" y="250" font-size="10.2" fill="#57606a">剩余航时；× GPS 地速 → 剩余航程。</text>
+  <text x="1102" y="265" font-size="10.2" fill="#57606a">由 FlyPage 状态栏调用，界面标注"估算值"</text>
+  <rect x="1450" y="96" width="290" height="248.5" fill="#f6fcf7" stroke="#2f8a4e" stroke-width="1.5" rx="6"/>
+  <rect x="1450" y="96" width="290" height="26" fill="#e4f4e8" stroke="#2f8a4e" stroke-width="1.5" rx="6"/>
+  <rect x="1451" y="113" width="288" height="10" fill="#e4f4e8"/>
+  <text x="1460" y="114" font-size="12.5" font-weight="bold" fill="#1f2328">Waypoint  «实体 · 航点»</text>
+  <text x="1462" y="130" font-size="11" fill="#1f2328">- id: int {final}</text>
+  <text x="1462" y="145.5" font-size="11" fill="#1f2328">- lat / lon: double   - altM: double = 0</text>
+  <text x="1462" y="161" font-size="11" fill="#1f2328">- staySec: int = 0   - priority: int = 0</text>
+  <text x="1462" y="176.5" font-size="11" fill="#1f2328">- action: Action = CRUISE</text>
+  <text x="1462" y="192" font-size="11" fill="#1f2328">- role: Role = WAYPOINT</text>
+  <line x1="1450" y1="208.5" x2="1740" y2="208.5" stroke="#2f8a4e" stroke-width="1"/>
+  <text x="1462" y="215.5" font-size="11" fill="#1f2328">+ Waypoint(id: int, lat: double, lon: double)</text>
+  <text x="1462" y="231" font-size="11" fill="#1f2328">+ get..() / set..() 全字段访问器</text>
+  <text x="1462" y="246.5" font-size="11" fill="#1f2328">+ distanceTo(o: Waypoint): double</text>
+  <text x="1462" y="262" font-size="11" fill="#1f2328">+ haversineM(lat1, lng1, lat2, lng2): double {static}</text>
+  <text x="1462" y="281.5" font-size="10.2" fill="#57606a">嵌套枚举 Action{CRUISE,HOLD,PHOTO}</text>
+  <text x="1462" y="296.5" font-size="10.2" fill="#57606a">Role{WAYPOINT,START,END}（中文标签）</text>
+  <text x="1462" y="311.5" font-size="10.2" fill="#57606a">R = 6 371 000 m 球面距离</text>
+  <rect x="60" y="560" width="470" height="171" fill="#fffdf4" stroke="#a8791b" stroke-width="1.5" rx="6"/>
+  <rect x="60" y="560" width="470" height="26" fill="#fdeeca" stroke="#a8791b" stroke-width="1.5" rx="6"/>
+  <rect x="61" y="577" width="468" height="10" fill="#fdeeca"/>
+  <text x="70" y="578" font-size="12.5" font-weight="bold" fill="#1f2328">RoutePlanner  «算法 · 路径优化»</text>
+  <text x="72" y="594" font-size="11" fill="#1f2328">- RoutePlanner()   // 工具类，私有构造</text>
+  <line x1="60" y1="610.5" x2="530" y2="610.5" stroke="#a8791b" stroke-width="1"/>
+  <text x="72" y="617.5" font-size="11" fill="#1f2328">+ planGreedy(start: Waypoint, end: Waypoint,</text>
+  <text x="72" y="633" font-size="11" fill="#1f2328">       intermediates: List&lt;Waypoint&gt;): RouteResult</text>
+  <text x="72" y="648.5" font-size="11" fill="#1f2328">    {static}</text>
+  <text x="72" y="668" font-size="10.2" fill="#57606a">贪婪最近邻：起点出发，每步选最近未访问中间点，</text>
+  <text x="72" y="683" font-size="10.2" fill="#57606a">访问完毕后前往终点；结果含起点与终点；</text>
+  <text x="72" y="698" font-size="10.2" fill="#57606a">时间复杂度 O(n²)，n = 中间航点数，可处理 20+ 航点</text>
+  <rect x="570" y="560" width="430" height="156.5" fill="#fffdf4" stroke="#a8791b" stroke-width="1.5" rx="6"/>
+  <rect x="570" y="560" width="430" height="26" fill="#fdeeca" stroke="#a8791b" stroke-width="1.5" rx="6"/>
+  <rect x="571" y="577" width="428" height="10" fill="#fdeeca"/>
+  <text x="580" y="578" font-size="12.5" font-weight="bold" fill="#1f2328">RoutePlanner.RouteResult  «值对象 · 规划结果»</text>
+  <text x="582" y="594" font-size="11" fill="#1f2328">- orderedWaypoints: List&lt;Waypoint&gt; {final}</text>
+  <text x="582" y="609.5" font-size="11" fill="#1f2328">- totalDistanceMeters: double {final}</text>
+  <line x1="570" y1="626" x2="1000" y2="626" stroke="#a8791b" stroke-width="1"/>
+  <text x="582" y="633" font-size="11" fill="#1f2328">+ RouteResult(orderedWaypoints, totalDistance)</text>
+  <text x="582" y="648.5" font-size="11" fill="#1f2328">+ getOrderedWaypoints(): List&lt;Waypoint&gt;</text>
+  <text x="582" y="664" font-size="11" fill="#1f2328">+ getTotalDistanceMeters(): double</text>
+  <text x="582" y="683.5" font-size="10.2" fill="#57606a">«值对象» 优化结果：有序航点 + 最小总距离</text>
+  <rect x="1040" y="560" width="330" height="217" fill="#fffdf4" stroke="#a8791b" stroke-width="1.5" rx="6"/>
+  <rect x="1040" y="560" width="330" height="26" fill="#fdeeca" stroke="#a8791b" stroke-width="1.5" rx="6"/>
+  <rect x="1041" y="577" width="328" height="10" fill="#fdeeca"/>
+  <text x="1050" y="578" font-size="12.5" font-weight="bold" fill="#1f2328">MissionXml  «文件读写 · 任务 XML»</text>
+  <text x="1052" y="594" font-size="11" fill="#1f2328">+ FORMAT_VERSION = 1 {static final}</text>
+  <line x1="1040" y1="610.5" x2="1370" y2="610.5" stroke="#a8791b" stroke-width="1"/>
+  <text x="1052" y="617.5" font-size="11" fill="#1f2328">+ save(file: Path, name: String,</text>
+  <text x="1052" y="633" font-size="11" fill="#1f2328">       waypoints: Collection&lt;Waypoint&gt;): void</text>
+  <text x="1052" y="648.5" font-size="11" fill="#1f2328">+ load(file: Path): MissionFile</text>
+  <text x="1052" y="664" font-size="11" fill="#1f2328">- parse / writeDocument / newDocumentBuilder</text>
+  <text x="1052" y="679.5" font-size="11" fill="#1f2328">- required* / optional* 属性读取器  {private static}</text>
+  <text x="1052" y="699" font-size="10.2" fill="#57606a">DOM 生成 + DOM 解析（DocumentBuilderFactory /</text>
+  <text x="1052" y="714" font-size="10.2" fill="#57606a">Transformer）；四重校验：根节点 / 版本 / id 唯一 /</text>
+  <text x="1052" y="729" font-size="10.2" fill="#57606a">waypointCount 一致；FEATURE_SECURE_PROCESSING</text>
+  <text x="1052" y="744" font-size="10.2" fill="#57606a">禁 DTD 与外部实体（防 XXE）；保存后回读自检</text>
+  <rect x="1410" y="560" width="330" height="310.5" fill="#fffdf4" stroke="#a8791b" stroke-width="1.5" rx="6"/>
+  <rect x="1410" y="560" width="330" height="26" fill="#fdeeca" stroke="#a8791b" stroke-width="1.5" rx="6"/>
+  <rect x="1411" y="577" width="328" height="10" fill="#fdeeca"/>
+  <text x="1420" y="578" font-size="12.5" font-weight="bold" fill="#1f2328">BatteryPredictor  «算法 · 电量预测»</text>
+  <text x="1422" y="594" font-size="11" fill="#1f2328">+ START_VOLTAGE=4.2 / LOCK_VOLTAGE=3.31</text>
+  <text x="1422" y="609.5" font-size="11" fill="#1f2328">+ WARN_VOLTAGE=3.5 / CRUISE_SPEED_MPS=5.0</text>
+  <text x="1422" y="625" font-size="11" fill="#1f2328">- COEF_DISTANCE  = 0.00040  // V/m</text>
+  <text x="1422" y="640.5" font-size="11" fill="#1f2328">- COEF_PAYLOAD   = 0.00006  // V/g</text>
+  <text x="1422" y="656" font-size="11" fill="#1f2328">- COEF_WIND      = -0.00080 // V/(m/s)</text>
+  <text x="1422" y="671.5" font-size="11" fill="#1f2328">- COEF_STAY      = 0.00190  // V/s</text>
+  <text x="1422" y="687" font-size="11" fill="#1f2328">- COEF_ALTITUDE  = 0.00001  // V/m</text>
+  <text x="1422" y="702.5" font-size="11" fill="#1f2328">- beta: double[] {static}  // 静态块训练</text>
+  <line x1="1410" y1="719" x2="1740" y2="719" stroke="#a8791b" stroke-width="1"/>
+  <text x="1422" y="726" font-size="11" fill="#1f2328">+ predict(waypoints, payloadG, wind, windDir):</text>
+  <text x="1422" y="741.5" font-size="11" fill="#1f2328">       PredictionResult  {static}</text>
+  <text x="1422" y="757" font-size="11" fill="#1f2328">+ bearing(wp1, wp2): double  {static}</text>
+  <text x="1422" y="772.5" font-size="11" fill="#1f2328">+ effectiveWind(pathBearing, windFrom, v): double {static}</text>
+  <text x="1422" y="788" font-size="11" fill="#1f2328">+ getBeta(): double[]  + setFirmwareAdjustFactor(f)</text>
+  <text x="1422" y="807.5" font-size="10.2" fill="#57606a">五特征多元线性回归：随机数种子固定（800 训练样本，</text>
+  <text x="1422" y="822.5" font-size="10.2" fill="#57606a">±3% 高斯噪声）；可行判定 minVoltage &gt; 3.31V；</text>
+  <text x="1422" y="837.5" font-size="10.2" fill="#57606a">嵌套：PredictionResult / VoltagePoint / SegmentWindInfo</text>
+  <rect x="60" y="1010" width="470" height="218" fill="#fffdf4" stroke="#a8791b" stroke-width="1.5" rx="6"/>
+  <rect x="60" y="1010" width="470" height="26" fill="#fdeeca" stroke="#a8791b" stroke-width="1.5" rx="6"/>
+  <rect x="61" y="1027" width="468" height="10" fill="#fdeeca"/>
+  <text x="70" y="1028" font-size="12.5" font-weight="bold" fill="#1f2328">LinearRegression  «算法 · 多元线性回归»</text>
+  <text x="72" y="1044" font-size="11" fill="#1f2328">- transpose / multiply / multiplyVec</text>
+  <text x="72" y="1059.5" font-size="11" fill="#1f2328">  {static 包级}   // 手写矩阵运算</text>
+  <line x1="60" y1="1076" x2="530" y2="1076" stroke="#a8791b" stroke-width="1"/>
+  <text x="72" y="1083" font-size="11" fill="#1f2328">- inverse(m: double[][]): double[][]</text>
+  <text x="72" y="1098.5" font-size="11" fill="#1f2328">    {static}   // 高斯-若尔当消元求逆</text>
+  <text x="72" y="1114" font-size="11" fill="#1f2328">+ fit(X: double[][], y: double[]): double[]</text>
+  <text x="72" y="1129.5" font-size="11" fill="#1f2328">    {static}   // 正规方程闭式解</text>
+  <text x="72" y="1145" font-size="11" fill="#1f2328">+ predict(x: double[], beta: double[]): double</text>
+  <text x="72" y="1160.5" font-size="11" fill="#1f2328">    {static}</text>
+  <text x="72" y="1180" font-size="10.2" fill="#57606a">最小二乘：β = (XᵀX)⁻¹Xᵀy；fit() 自动添加</text>
+  <text x="72" y="1195" font-size="10.2" fill="#57606a">截距列；矩阵不可逆抛 ArithmeticException</text>
+  <rect x="570" y="1010" width="470" height="188.5" fill="#f6fcf7" stroke="#2f8a4e" stroke-width="1.5" rx="6"/>
+  <rect x="570" y="1010" width="470" height="26" fill="#e4f4e8" stroke="#2f8a4e" stroke-width="1.5" rx="6"/>
+  <rect x="571" y="1027" width="468" height="10" fill="#e4f4e8"/>
+  <text x="580" y="1028" font-size="12.5" font-weight="bold" fill="#1f2328">MissionXml.MissionFile / MissionWaypoint  «值对象 · 任务文件»</text>
+  <text x="582" y="1044" font-size="11" fill="#1f2328">«record» MissionFile：name: String, version: int,</text>
+  <text x="582" y="1059.5" font-size="11" fill="#1f2328">    waypoints: List&lt;MissionWaypoint&gt;</text>
+  <text x="582" y="1075" font-size="11" fill="#1f2328">«record» MissionWaypoint：id: int, lat / lon / altM:</text>
+  <text x="582" y="1090.5" font-size="11" fill="#1f2328">    double, staySec: int, action: Action, priority: int,</text>
+  <text x="582" y="1106" font-size="11" fill="#1f2328">    role: Role</text>
+  <line x1="570" y1="1122.5" x2="1040" y2="1122.5" stroke="#2f8a4e" stroke-width="1"/>
+  <text x="582" y="1127.5" font-size="10.2" fill="#57606a">XML 结构：&lt;mission version waypointCount&gt;&lt;name/&gt;</text>
+  <text x="582" y="1142.5" font-size="10.2" fill="#57606a">&lt;waypoints&gt;&lt;waypoint id lat lon alt stay action</text>
+  <text x="582" y="1157.5" font-size="10.2" fill="#57606a">priority role/&gt;&lt;/waypoints&gt;&lt;/mission&gt;</text>
+  <rect x="1080" y="1010" width="660" height="174" fill="#f6fcf7" stroke="#2f8a4e" stroke-width="1.5" rx="6"/>
+  <rect x="1080" y="1010" width="660" height="26" fill="#e4f4e8" stroke="#2f8a4e" stroke-width="1.5" rx="6"/>
+  <rect x="1081" y="1027" width="658" height="10" fill="#e4f4e8"/>
+  <text x="1090" y="1028" font-size="12.5" font-weight="bold" fill="#1f2328">PredictionResult / VoltagePoint / SegmentWindInfo  «值对象 · 预测结果»</text>
+  <text x="1092" y="1044" font-size="11" fill="#1f2328">«record» PredictionResult：curve: List&lt;VoltagePoint&gt;, windAnalysis: List&lt;SegmentWindInfo&gt;,</text>
+  <text x="1092" y="1059.5" font-size="11" fill="#1f2328">    totalDistanceM: double, estimatedTimeSec: double, minVoltage: double,</text>
+  <text x="1092" y="1075" font-size="11" fill="#1f2328">    finalVoltage: double, feasible: boolean</text>
+  <text x="1092" y="1090.5" font-size="11" fill="#1f2328">«record» VoltagePoint：waypointId: int, distanceM / timeSec / voltage: double</text>
+  <text x="1092" y="1106" font-size="11" fill="#1f2328">«record» SegmentWindInfo：fromId / toId: int, distanceM / bearingDeg /</text>
+  <text x="1092" y="1121.5" font-size="11" fill="#1f2328">    effectiveWindMps: double, windType: String</text>
+  <line x1="1080" y1="1138" x2="1740" y2="1138" stroke="#2f8a4e" stroke-width="1"/>
+  <text x="1092" y="1143" font-size="10.2" fill="#57606a">逐航点电压曲线 + 分段风力分析（顺/逆/侧风）+ 可行性判定，供 PredictDialog 绘制</text>
+  <path d="M 300,468 L 300,560" fill="none" stroke="#444" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrowOpen)"/>
+  <text x="306" y="520" font-size="10.5" fill="#57606a">optimizeRoute 贪婪优化</text>
+  <path d="M 400,468 L 400,530 L 740,530 L 740,560" fill="none" stroke="#444" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrowOpen)"/>
+  <text x="470" y="524" font-size="10.5" fill="#57606a">saveMission / loadMission</text>
+  <path d="M 500,468 L 500,545 L 1520,545 L 1520,560" fill="none" stroke="#444" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrowOpen)"/>
+  <text x="510" y="541" font-size="10.5" fill="#57606a">triggerPrediction 电量预测</text>
+  <path d="M 1600,407 L 1600,560" fill="none" stroke="#444" stroke-width="1.5" marker-end="url(#arrowOpen)"/>
+  <text x="1610" y="500" font-size="10.5" fill="#57606a">waypoints 航点集合（含起终点角色）</text>
+  <path d="M 160,560 L 160,545 L 40,545 L 40,400 L 60,400" fill="none" stroke="#444" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrowOpen)"/>
+  <text x="66" y="394" font-size="10.5" fill="#57606a">依赖航点实体（distanceTo 步进选点）</text>
+  <path d="M 290,560 L 290,538 L 600,538 L 600,560" fill="none" stroke="#444" stroke-width="1.5" marker-end="url(#arrowOpen)"/>
+  <text x="606" y="532" font-size="10.5" fill="#57606a">planGreedy 产出 RouteResult</text>
+  <path d="M 1200,828 L 1200,538 L 900,538 L 900,560" fill="none" stroke="#444" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrowOpen)"/>
+  <text x="906" y="532" font-size="10.5" fill="#57606a">load/save 产出/消费 MissionFile</text>
+  <path d="M 1570,828 L 1570,545 L 1670,545 L 1670,560" fill="none" stroke="#444" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrowOpen)"/>
+  <text x="1408" y="532" font-size="10.5" fill="#57606a">依赖 Waypoint（bearing/distance）</text>
+  <path d="M 1570,800 L 1590,800 L 1590,950 L 295,950 L 295,1010" fill="none" stroke="#444" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrowOpen)"/>
+  <text x="520" y="944" font-size="10.5" fill="#57606a">静态块 train() → LinearRegression.fit(X, y)</text>
+  <path d="M 1050,300 L 1070,300 L 1070,990 L 1400,990 L 1400,1010" fill="none" stroke="#444" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrowOpen)"/>
+  <text x="1080" y="984" font-size="10.5" fill="#57606a">show(result) 弹窗绘制</text>
+  <path d="M 1080,1185 L 1532,1185 L 1550,1203 L 1550,1285 L 1080,1285 Z" fill="#fffbe8" stroke="#b08800" stroke-width="1.2"/>
+  <path d="M 1532,1185 L 1532,1203 L 1550,1203" fill="none" stroke="#b08800" stroke-width="1.2"/>
+  <text x="1092" y="1207" font-size="10.5" fill="#57606a">«文件» 任务 XML</text>
+  <text x="1092" y="1224" font-size="10.5" fill="#57606a">~/.skylink/missions/&lt;任务名&gt;.xml</text>
+  <text x="1092" y="1241" font-size="10.5" fill="#57606a">&lt;mission version waypointCount&gt; … &lt;/mission&gt;</text>
+  <rect x="1470" y="1190" width="274" height="210" fill="#fbfcfe" stroke="#8c959f" rx="4"/>
+  <text x="1484" y="1212" font-size="13" font-weight="bold" fill="#1f2328">图例（答辩速查）</text>
+  <line x1="1484" y1="1230" x2="1544" y2="1230" stroke="#444" stroke-width="1.4" marker-end="url(#arrowOpen)"/>
+  <text x="1554" y="1234" font-size="11.5" fill="#1f2328">关联（实线：长期持有引用）</text>
+  <line x1="1484" y1="1256" x2="1530" y2="1256" stroke="#444" stroke-width="1.4"/>
+  <polygon points="1484,1249 1498,1256 1484,1263 1470,1256" fill="#ffffff" stroke="#444" stroke-width="1.2"/>
+  <text x="1554" y="1260" font-size="11.5" fill="#1f2328">聚合 ◇（部分可独立存在）</text>
+  <line x1="1484" y1="1282" x2="1530" y2="1282" stroke="#444" stroke-width="1.4"/>
+  <polygon points="1484,1275 1498,1282 1484,1289 1470,1282" fill="#444" stroke="#444"/>
+  <text x="1554" y="1286" font-size="11.5" fill="#1f2328">组合 ◆（部分随整体销毁）</text>
+  <line x1="1484" y1="1308" x2="1544" y2="1308" stroke="#444" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrowOpen)"/>
+  <text x="1554" y="1312" font-size="11.5" fill="#1f2328">依赖（虚线：临时调用不持有）</text>
+  <line x1="1484" y1="1334" x2="1540" y2="1334" stroke="#444" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#triHollow)"/>
+  <text x="1554" y="1338" font-size="11.5" fill="#1f2328">实现/继承（规范在父类，斜体=抽象）</text>
+  <text x="1484" y="1358" font-size="11" fill="#1f2328">规划闭环：加点 → 统计 →</text>
+  <text x="1484" y="1382" font-size="11" fill="#1f2328">优化 → 冲突检测 → 预览</text>
+  <text x="1484" y="1406" font-size="11" fill="#1f2328">→ 预测 → 保存 XML</text>
+  <text x="1484" y="1430" font-size="11" fill="#1f2328">预览动画：500ms/段插值</text>
+  <text x="1484" y="1454" font-size="11" fill="#1f2328">（MapView.playPreview）</text>
+  <rect x="40" y="1310" width="1700" height="100" fill="#fbfcfe" stroke="#8c959f" rx="4"/>
+  <text x="54" y="1332" font-size="12" font-weight="bold" fill="#1f2328">任务规划走读（PlanPage 编排 → 算法域 → 文件）</text>
+  <text x="54" y="1354" font-size="11" fill="#1f2328">① 地图点击加航点 → waypoints Map + 地图徽章同步；updateStats 以 haversine 累计预计航程</text>
+  <text x="54" y="1374" font-size="11" fill="#1f2328">② 「路径优化」→ RoutePlanner.planGreedy（贪婪最近邻，O(n²)）→ RouteResult → reorderWaypoints 刷新地图顺序（可一键还原）</text>
+  <text x="54" y="1394" font-size="11" fill="#1f2328">③ checkConflicts：两两间距 &lt; 2m 或总航程 &gt; 2km → 冲突告警；「预览路径」→ MapView.playPreview（500ms/段插值动画）</text>
+  <text x="54" y="1414" font-size="11" fill="#1f2328">④ 同时触发 BatteryPredictor.predict → PredictionResult → PredictDialog 弹窗（电压曲线 + 3.31/3.5V 阈值线 + 风力分析）</text>
+  <text x="54" y="1434" font-size="11" fill="#1f2328">⑤ 「保存」→ MissionXml.save（DOM + 四重校验 + XXE 加固 + 回读自检）→ ~/.skylink/missions/&lt;任务名&gt;.xml；「加载」反向恢复</text>
+</svg>

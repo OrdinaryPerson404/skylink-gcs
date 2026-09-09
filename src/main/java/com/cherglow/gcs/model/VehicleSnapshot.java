@@ -1,5 +1,7 @@
 package com.cherglow.gcs.model;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -9,6 +11,9 @@ import java.util.Map;
 public final class VehicleSnapshot {
 
     public final long timestampMs;
+
+    // S15 外部 GNSS 位置（GPSLogger 推流；NaN=无源）
+    public final double latDeg, lonDeg, spdMps;
 
     // 姿态
     public final double rollDeg, pitchDeg, yawDeg;
@@ -47,7 +52,9 @@ public final class VehicleSnapshot {
 
     // 系统（sys）/ WiFi（wifi）/ 时间
     public final String chip;
-    public final Double temperatureC;
+    public final Double temperatureC;     // ℃，null=未取到
+    public final Double humidityPct;      // %RH，null=无源
+    public final Double pressureHpa;      // hPa，null=无源
     public final Long freeHeap;
     public final String wifiMode, wifiSsid, wifiIp;
     public final Boolean mavlinkConnected;
@@ -55,6 +62,9 @@ public final class VehicleSnapshot {
 
     private VehicleSnapshot(Builder b) {
         this.timestampMs = b.timestampMs;
+        this.latDeg = b.latDeg;
+        this.lonDeg = b.lonDeg;
+        this.spdMps = b.spdMps;
         this.rollDeg = b.rollDeg;
         this.pitchDeg = b.pitchDeg;
         this.yawDeg = b.yawDeg;
@@ -93,9 +103,14 @@ public final class VehicleSnapshot {
         this.magOk = b.magOk;
         this.tofStatus = b.tofStatus;
         this.loopRate = b.loopRate;
-        this.params = b.params;
+        // 发布即拷贝为不可变视图：Builder 的 params 由连接线程持续 putAll 累积，
+        // 快照若直接持有同一引用，会形成连接线程写 / FX 线程读的竞态
+        this.params = b.params == null ? null
+                : Collections.unmodifiableMap(new LinkedHashMap<>(b.params));
         this.chip = b.chip;
         this.temperatureC = b.temperatureC;
+        this.humidityPct = b.humidityPct;
+        this.pressureHpa = b.pressureHpa;
         this.freeHeap = b.freeHeap;
         this.wifiMode = b.wifiMode;
         this.wifiSsid = b.wifiSsid;
@@ -106,6 +121,7 @@ public final class VehicleSnapshot {
 
     public static final class Builder {
         public long timestampMs;
+        public double latDeg = Double.NaN, lonDeg = Double.NaN, spdMps = Double.NaN;
         public double rollDeg = Double.NaN, pitchDeg = Double.NaN, yawDeg = Double.NaN;
         public double qw = Double.NaN, qx = Double.NaN, qy = Double.NaN, qz = Double.NaN;
         public double motorFR = Double.NaN, motorFL = Double.NaN, motorRR = Double.NaN, motorRL = Double.NaN;
@@ -126,6 +142,8 @@ public final class VehicleSnapshot {
         public Map<String, Double> params;
         public String chip;
         public Double temperatureC;
+        public Double humidityPct;
+        public Double pressureHpa;
         public Long freeHeap;
         public String wifiMode, wifiSsid, wifiIp;
         public Boolean mavlinkConnected;

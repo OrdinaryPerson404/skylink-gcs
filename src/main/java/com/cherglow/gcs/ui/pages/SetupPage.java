@@ -51,7 +51,12 @@ import java.util.regex.Pattern;
  * PID 调参（四 tab + 已加载计数 + 范围列 + 步进器 + 批量读取）、安全设置、传感器校准与空态、
  * 参数列表（三态：未连接/待拉取/已加载表格 + 搜索 + 导出/导入 JSON）、固件升级（占位）。
  */
-public class SetupPage extends BorderPane {
+public class SetupPage extends BasePage {
+
+    @Override
+    public String pageId() {
+        return "setup";
+    }
 
     private record SectionItem(String id, String group, String title) {
     }
@@ -98,8 +103,6 @@ public class SetupPage extends BorderPane {
             Duration.millis(250), e -> renderParamState()));
 
     public SetupPage() {
-        getStyleClass().add("page-root");
-
         sidebar.setPadding(new Insets(12, 8, 12, 12));
         sidebar.setPrefWidth(190);
         buildSidebar();

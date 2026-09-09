@@ -1,5 +1,6 @@
 package com.cherglow.gcs.core;
 
+import com.cherglow.gcs.model.Waypoint;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
@@ -8,6 +9,9 @@ import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * 全局应用状态（单例）。S1 仅承载连接状态供 TopNav 展示；
@@ -59,5 +63,21 @@ public final class AppState {
 
     public IntegerProperty missionCountProperty() {
         return missionCount;
+    }
+
+    /** 规划页与飞行页共享的航点数据（PlanPage 写入，FlyPage 读取） */
+    private final ObjectProperty<Map<Integer, Waypoint>> missionWaypoints =
+            new SimpleObjectProperty<>(this, "missionWaypoints", new LinkedHashMap<>());
+
+    public ObjectProperty<Map<Integer, Waypoint>> missionWaypointsProperty() {
+        return missionWaypoints;
+    }
+
+    public Map<Integer, Waypoint> getMissionWaypoints() {
+        return missionWaypoints.get();
+    }
+
+    public void setMissionWaypoints(Map<Integer, Waypoint> wps) {
+        missionWaypoints.set(wps);
     }
 }

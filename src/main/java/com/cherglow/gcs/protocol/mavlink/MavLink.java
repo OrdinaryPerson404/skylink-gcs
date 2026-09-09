@@ -36,8 +36,10 @@ public final class MavLink {
     public static final int MSG_SERIAL_CONTROL = 126;
     public static final int MSG_AUTOPILOT_VERSION = 148;
     public static final int MSG_EXTENDED_SYS_STATE = 245;
+    public static final int MSG_SCALED_PRESSURE = 29;
+    public static final int MSG_HYGROMETER_SENSOR = 12920;
 
-    /** 现代 c_library_v2/common.xml 的 CRC_EXTRA（pymavlink 2.4.49 权威计算，见测试资源 goldens.json） */
+    /** 现代 c_library_v2/common.xml 的 CRC_EXTRA（pymavlink 2.4.49 权威计算） */
     private static final Map<Integer, Integer> CRC_EXTRA = Map.ofEntries(
             Map.entry(MSG_HEARTBEAT, 50),
             Map.entry(MSG_PARAM_REQUEST_READ, 214),
@@ -54,7 +56,9 @@ public final class MavLink {
             Map.entry(MSG_LOG_DATA, 134),
             Map.entry(MSG_SERIAL_CONTROL, 189),
             Map.entry(MSG_AUTOPILOT_VERSION, 178),
-            Map.entry(MSG_EXTENDED_SYS_STATE, 130));
+            Map.entry(MSG_EXTENDED_SYS_STATE, 130),
+            Map.entry(MSG_SCALED_PRESSURE, 115),
+            Map.entry(MSG_HYGROMETER_SENSOR, 20));
 
     /** 运行时学习到的 extras（自适应固件库方言差异；仅对表内 msgid 学习，防 UDP 噪声污染） */
     private static final Map<Integer, Integer> LEARNED = new ConcurrentHashMap<>();
@@ -187,6 +191,28 @@ public final class MavLink {
     public static final class PBuf {
         private final byte[] b = new byte[255];
         private int n;
+
+        // ---- 面向测试的静态写入方法 ----
+
+        /** 小端写 float */
+        public static void packFloat(byte[] dst, int off, float v) {
+            int bits = Float.floatToIntBits(v);
+            for (int i = 0; i < 4; i++) {
+                dst[off + i] = (byte) (bits >> (8 * i));
+            }
+        }
+
+        /** 小端写 signed short */
+        public static void packShort(byte[] dst, int off, short v) {
+            dst[off] = (byte) v;
+            dst[off + 1] = (byte) (v >> 8);
+        }
+
+        /** 小端写 unsigned short (0~65535) */
+        public static void packUShort(byte[] dst, int off, short v) {
+            dst[off] = (byte) v;
+            dst[off + 1] = (byte) (v >> 8);
+        }
 
         public PBuf u8(int v) {
             b[n++] = (byte) v;
@@ -387,6 +413,9 @@ public final class MavLink {
 
         private void fill(byte[] a, int off, int len) {
             System.arraycopy(a, off, payload255, 0, len);
+            if (len < 255) {
+                java.util.Arrays.fill(payload255, len, 255, (byte) 0);
+            }
         }
 
         private void reset() {

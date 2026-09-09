@@ -60,7 +60,7 @@ public final class ConnectionService {
                 case ERROR -> AppState.ConnStatus.ERROR;
             };
             AppState.get().connStatusProperty().set(ui);
-            LiveVehicle.get().connected.set(s == ConnectionManager.State.CONNECTED);
+            LiveVehicle.get().setConnected(s == ConnectionManager.State.CONNECTED);
             switch (s) {
                 case CONNECTED -> {
                     AppState.get().connDetailProperty().set(desc);
@@ -98,7 +98,7 @@ public final class ConnectionService {
                 case ERROR -> AppState.ConnStatus.ERROR;
             };
             AppState.get().connStatusProperty().set(ui);
-            LiveVehicle.get().connected.set(s == ConnectionManager.State.CONNECTED);
+            LiveVehicle.get().setConnected(s == ConnectionManager.State.CONNECTED);
             switch (s) {
                 case CONNECTED -> {
                     AppState.get().connDetailProperty().set(desc);
@@ -124,6 +124,11 @@ public final class ConnectionService {
 
     public boolean isConnected() {
         return cm != null && cm.getState() == ConnectionManager.State.CONNECTED;
+    }
+
+    /** 连接描述（如 "COM6@115200"），未连接时返回空串 */
+    public String getDesc() {
+        return desc;
     }
 
     /** 按需读取（p/sys/wifi 等只读命令），结果并入遥测快照 */

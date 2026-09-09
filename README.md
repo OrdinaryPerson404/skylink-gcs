@@ -50,6 +50,7 @@ powershell -ExecutionPolicy Bypass -File package-jpackage.ps1
 
 - **串口 / USB**（主通道）：COM5 @ 115200，CLI 文本协议轮询。
 - **UDP / WiFi**（S13）：电脑加入无人机 AP「Drone_WiFi」（默认密码 12345678）后，填 192.168.4.1:14550 直连 MAVLink——高频遥测 + 解锁/模式/调参全功能（COMMAND_LONG / PARAM 协议 / SERIAL_CONTROL 桥接 CLI）。本机占用 UDP 14550 端口。
+- **外部 GNSS 载荷**（S14）：手机装 GPSLogger（GPS 记录器）连同一 AP，Custom URL 填 `http://<电脑WLAN_IP>:8080/gps?lat=%LAT&lon=%LON&alt=%ALT&spd=%SPD`（间隔 1s，速度单位 m/s）→ GCS 地图/航迹/航程预测使用手机真实 GPS。首次启动若防火墙弹窗请允许 8080 入站；手机浏览器访问 `http://<电脑WLAN_IP>:8080/` 可见「GNSS link OK · received fixes: N」自检页。
 
 ### CLI 协议速查（只读）
 
@@ -72,7 +73,7 @@ powershell -ExecutionPolicy Bypass -File package-jpackage.ps1
 | 路径 | 内容 |
 |---|---|
 | `~/.skylink/logs/session_<时间戳>.skylog` | 飞行记录：解锁自动开始、上锁/断开结束；首行 JSON 元数据 + CSV 采样行（tRelMs,roll,pitch,yaw,volt,m1..m4，空字段=NaN） |
-| `~/.skylink/missions/*.json` | 规划页任务文件 |
+| `~/.skylink/missions/*.xml` | 规划页任务文件 |
 | `~/.skylink/tiles/` | 地图瓦片缓存 |
 
 ## 开发辅助工具（tools/，java 直跑，不进主程序）

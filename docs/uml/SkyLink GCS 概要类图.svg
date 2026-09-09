@@ -1,0 +1,361 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1840" height="1340" viewBox="0 0 1840 1340" font-family="Microsoft YaHei, PingFang SC, sans-serif">
+  <defs>
+    <marker id="arrowOpen" markerWidth="12" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L11,5 L0,10" fill="none" stroke="#444" stroke-width="1.4"/>
+    </marker>
+    <marker id="triHollow" markerWidth="18" markerHeight="14" refX="16" refY="7" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M1,1 L16,7 L1,13 Z" fill="#ffffff" stroke="#444" stroke-width="1.3"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1840" height="1340" fill="#ffffff"/>
+  <text x="24" y="32" font-size="19" font-weight="bold" fill="#1f2328">SkyLink GCS 类图 —— 概要版（全部 55 类 · 分层全景）</text>
+  <text x="26" y="54" font-size="12" fill="#57606a">概要版到"类与职责"粒度；成员级细节见详细图①连接链路 ②遥测与记录 ③任务规划 ④协议层 ⑤UI体系；口径与 .agent/class-diagram.svg 教学版一致（封装-/+、四种关系）</text>
+  <rect x="40" y="64" width="1410" height="328" fill="#f0f6ff" stroke="#d8e4f4"/>
+  <text x="52" y="80" font-size="12" font-weight="bold" fill="#3b6ea5">— 界面层 —</text>
+  <rect x="40" y="412" width="1410" height="144" fill="#fff9e8" stroke="#f0e2bd"/>
+  <text x="52" y="428" font-size="12" font-weight="bold" fill="#a8791b">— 业务编排层 —</text>
+  <rect x="40" y="576" width="1410" height="100" fill="#eefaf2" stroke="#cfe8d8"/>
+  <text x="52" y="592" font-size="12" font-weight="bold" fill="#2f8a4e">— 实体·模型层 —</text>
+  <rect x="40" y="696" width="1410" height="100" fill="#faf5ff" stroke="#e8dcf5"/>
+  <text x="52" y="712" font-size="12" font-weight="bold" fill="#7a4fb5">— 协议层 —</text>
+  <rect x="40" y="816" width="1410" height="100" fill="#f2f7f9" stroke="#d9e4ea"/>
+  <text x="52" y="832" font-size="12" font-weight="bold" fill="#4a6572">— 传输·服务层 —</text>
+  <rect x="40" y="936" width="1410" height="100" fill="#f5f6f8" stroke="#e2e5e9"/>
+  <text x="52" y="952" font-size="12" font-weight="bold" fill="#6c757d">— 通用工具 —</text>
+  <rect x="40" y="1056" width="1410" height="100" fill="#f5f6f8" stroke="#e2e5e9"/>
+  <text x="52" y="1072" font-size="12" font-weight="bold" fill="#6c757d">— 开发辅助（tools，不参与主程序运行） —</text>
+  <rect x="64" y="104" width="200" height="46" fill="#f7fafd" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="64" y="104" width="200" height="20" fill="#dbe9ff" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="65" y="116" width="198" height="8" fill="#dbe9ff" stroke="none"/>
+  <text x="72" y="118" font-size="11.5" font-weight="bold" fill="#1f2328">BasePage  «abstract»</text>
+  <text x="72" y="142" font-size="9.8" fill="#57606a">页面抽象基类（模板方法）</text>
+  <rect x="276" y="104" width="200" height="46" fill="#f7fafd" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="276" y="104" width="200" height="20" fill="#dbe9ff" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="277" y="116" width="198" height="8" fill="#dbe9ff" stroke="none"/>
+  <text x="284" y="118" font-size="11.5" font-weight="bold" fill="#1f2328">OverviewPage  «页面»</text>
+  <text x="284" y="142" font-size="9.8" fill="#57606a">仪表盘：3D/ADI/传感器/电机</text>
+  <rect x="488" y="104" width="200" height="46" fill="#f7fafd" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="488" y="104" width="200" height="20" fill="#dbe9ff" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="489" y="116" width="198" height="8" fill="#dbe9ff" stroke="none"/>
+  <text x="496" y="118" font-size="11.5" font-weight="bold" fill="#1f2328">FlyPage  «页面»</text>
+  <text x="496" y="142" font-size="9.8" fill="#57606a">飞行页：地图/HUD/指令</text>
+  <rect x="700" y="104" width="200" height="46" fill="#f7fafd" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="700" y="104" width="200" height="20" fill="#dbe9ff" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="701" y="116" width="198" height="8" fill="#dbe9ff" stroke="none"/>
+  <text x="708" y="118" font-size="11.5" font-weight="bold" fill="#1f2328">PlanPage  «页面»</text>
+  <text x="708" y="142" font-size="9.8" fill="#57606a">规划页：航点/优化/预测</text>
+  <rect x="912" y="104" width="200" height="46" fill="#f7fafd" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="912" y="104" width="200" height="20" fill="#dbe9ff" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="913" y="116" width="198" height="8" fill="#dbe9ff" stroke="none"/>
+  <text x="920" y="118" font-size="11.5" font-weight="bold" fill="#1f2328">SetupPage  «页面»</text>
+  <text x="920" y="142" font-size="9.8" fill="#57606a">调参页：参数字典表单</text>
+  <rect x="1124" y="104" width="200" height="46" fill="#f7fafd" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="1124" y="104" width="200" height="20" fill="#dbe9ff" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="1125" y="116" width="198" height="8" fill="#dbe9ff" stroke="none"/>
+  <text x="1132" y="118" font-size="11.5" font-weight="bold" fill="#1f2328">DataPage  «页面»</text>
+  <text x="1132" y="142" font-size="9.8" fill="#57606a">数据页：波形/控制台/日志</text>
+  <rect x="64" y="204" width="200" height="46" fill="#f7fafd" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="64" y="204" width="200" height="20" fill="#dbe9ff" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="65" y="216" width="198" height="8" fill="#dbe9ff" stroke="none"/>
+  <text x="72" y="218" font-size="11.5" font-weight="bold" fill="#1f2328">App  «入口»</text>
+  <text x="72" y="242" font-size="9.8" fill="#57606a">JavaFX 入口；装配与本地服务</text>
+  <rect x="276" y="204" width="200" height="46" fill="#f7fafd" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="276" y="204" width="200" height="20" fill="#dbe9ff" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="277" y="216" width="198" height="8" fill="#dbe9ff" stroke="none"/>
+  <text x="284" y="218" font-size="11.5" font-weight="bold" fill="#1f2328">Launcher  «入口»</text>
+  <text x="284" y="242" font-size="9.8" fill="#57606a">普通 main 启动器</text>
+  <rect x="488" y="204" width="200" height="46" fill="#f7fafd" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="488" y="204" width="200" height="20" fill="#dbe9ff" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="489" y="216" width="198" height="8" fill="#dbe9ff" stroke="none"/>
+  <text x="496" y="218" font-size="11.5" font-weight="bold" fill="#1f2328">MainShell  «外壳»</text>
+  <text x="496" y="242" font-size="9.8" fill="#57606a">主外壳与页面路由</text>
+  <rect x="700" y="204" width="200" height="46" fill="#f7fafd" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="700" y="204" width="200" height="20" fill="#dbe9ff" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="701" y="216" width="198" height="8" fill="#dbe9ff" stroke="none"/>
+  <text x="708" y="218" font-size="11.5" font-weight="bold" fill="#1f2328">TopNav  «外壳»</text>
+  <text x="708" y="242" font-size="9.8" fill="#57606a">顶部导航与连接徽章</text>
+  <rect x="912" y="204" width="200" height="46" fill="#f7fafd" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="912" y="204" width="200" height="20" fill="#dbe9ff" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="913" y="216" width="198" height="8" fill="#dbe9ff" stroke="none"/>
+  <text x="920" y="218" font-size="11.5" font-weight="bold" fill="#1f2328">ThemeManager  «外壳»</text>
+  <text x="920" y="242" font-size="9.8" fill="#57606a">深/浅主题管理</text>
+  <rect x="1124" y="204" width="200" height="46" fill="#f7fafd" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="1124" y="204" width="200" height="20" fill="#dbe9ff" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="1125" y="216" width="198" height="8" fill="#dbe9ff" stroke="none"/>
+  <text x="1132" y="218" font-size="11.5" font-weight="bold" fill="#1f2328">Toast  «外壳»</text>
+  <text x="1132" y="242" font-size="9.8" fill="#57606a">轻量通知（同屏≤4条）</text>
+  <rect x="64" y="268" width="200" height="46" fill="#f7fafd" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="64" y="268" width="200" height="20" fill="#dbe9ff" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="65" y="280" width="198" height="8" fill="#dbe9ff" stroke="none"/>
+  <text x="72" y="282" font-size="11.5" font-weight="bold" fill="#1f2328">ConfirmDialog  «对话框»</text>
+  <text x="72" y="306" font-size="9.8" fill="#57606a">模态二次确认框</text>
+  <rect x="276" y="268" width="200" height="46" fill="#f7fafd" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="276" y="268" width="200" height="20" fill="#dbe9ff" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="277" y="280" width="198" height="8" fill="#dbe9ff" stroke="none"/>
+  <text x="284" y="282" font-size="11.5" font-weight="bold" fill="#1f2328">Icons  «对话框»</text>
+  <text x="284" y="306" font-size="9.8" fill="#57606a">内联 SVGPath 矢量图标</text>
+  <rect x="488" y="268" width="200" height="46" fill="#f7fafd" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="488" y="268" width="200" height="20" fill="#dbe9ff" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="489" y="280" width="198" height="8" fill="#dbe9ff" stroke="none"/>
+  <text x="496" y="282" font-size="11.5" font-weight="bold" fill="#1f2328">ConnectDialog  «对话框»</text>
+  <text x="496" y="306" font-size="9.8" fill="#57606a">连接对话框（串口/UDP）</text>
+  <rect x="700" y="268" width="200" height="46" fill="#f7fafd" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="700" y="268" width="200" height="20" fill="#dbe9ff" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="701" y="280" width="198" height="8" fill="#dbe9ff" stroke="none"/>
+  <text x="708" y="282" font-size="11.5" font-weight="bold" fill="#1f2328">PredictDialog  «对话框»</text>
+  <text x="708" y="306" font-size="9.8" fill="#57606a">电量预测结果弹窗</text>
+  <rect x="912" y="268" width="200" height="46" fill="#f7fafd" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="912" y="268" width="200" height="20" fill="#dbe9ff" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="913" y="280" width="198" height="8" fill="#dbe9ff" stroke="none"/>
+  <text x="920" y="282" font-size="11.5" font-weight="bold" fill="#1f2328">MapView  «组件»</text>
+  <text x="920" y="306" font-size="9.8" fill="#57606a">Canvas 瓦片地图引擎</text>
+  <rect x="1124" y="268" width="200" height="46" fill="#f7fafd" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="1124" y="268" width="200" height="20" fill="#dbe9ff" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="1125" y="280" width="198" height="8" fill="#dbe9ff" stroke="none"/>
+  <text x="1132" y="282" font-size="11.5" font-weight="bold" fill="#1f2328">Drone3DView  «组件»</text>
+  <text x="1132" y="306" font-size="9.8" fill="#57606a">Canvas 三维姿态模型</text>
+  <rect x="64" y="332" width="200" height="46" fill="#f7fafd" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="64" y="332" width="200" height="20" fill="#dbe9ff" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="65" y="344" width="198" height="8" fill="#dbe9ff" stroke="none"/>
+  <text x="72" y="346" font-size="11.5" font-weight="bold" fill="#1f2328">AdiWidget  «组件»</text>
+  <text x="72" y="370" font-size="9.8" fill="#57606a">Canvas ADI 姿态仪</text>
+  <rect x="276" y="332" width="200" height="46" fill="#f7fafd" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="276" y="332" width="200" height="20" fill="#dbe9ff" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="277" y="344" width="198" height="8" fill="#dbe9ff" stroke="none"/>
+  <text x="284" y="346" font-size="11.5" font-weight="bold" fill="#1f2328">JoystickWidget  «组件»</text>
+  <text x="284" y="370" font-size="9.8" fill="#57606a">遥控器模拟摇杆</text>
+  <rect x="488" y="332" width="200" height="46" fill="#f7fafd" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="488" y="332" width="200" height="20" fill="#dbe9ff" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="489" y="344" width="198" height="8" fill="#dbe9ff" stroke="none"/>
+  <text x="496" y="346" font-size="11.5" font-weight="bold" fill="#1f2328">SensorCard  «组件»</text>
+  <text x="496" y="370" font-size="9.8" fill="#57606a">传感器状态小卡</text>
+  <rect x="700" y="332" width="200" height="46" fill="#f7fafd" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="700" y="332" width="200" height="20" fill="#dbe9ff" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="701" y="344" width="198" height="8" fill="#dbe9ff" stroke="none"/>
+  <text x="708" y="346" font-size="11.5" font-weight="bold" fill="#1f2328">SignalCard  «组件»</text>
+  <text x="708" y="370" font-size="9.8" fill="#57606a">RC/Web/MAV 信号卡</text>
+  <rect x="912" y="332" width="200" height="46" fill="#f7fafd" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="912" y="332" width="200" height="20" fill="#dbe9ff" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="913" y="344" width="198" height="8" fill="#dbe9ff" stroke="none"/>
+  <text x="920" y="346" font-size="11.5" font-weight="bold" fill="#1f2328">WifiLinkIcon  «组件»</text>
+  <text x="920" y="370" font-size="9.8" fill="#57606a">WiFi 扇形信号图标</text>
+  <rect x="1124" y="332" width="200" height="46" fill="#f7fafd" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="1124" y="332" width="200" height="20" fill="#dbe9ff" stroke="#3b6ea5" stroke-width="1.3" rx="6"/>
+  <rect x="1125" y="344" width="198" height="8" fill="#dbe9ff" stroke="none"/>
+  <text x="1132" y="346" font-size="11.5" font-weight="bold" fill="#1f2328">ParamDict  «组件»</text>
+  <text x="1132" y="370" font-size="9.8" fill="#57606a">参数中文字典（120 项）</text>
+  <rect x="64" y="432" width="200" height="46" fill="#fffdf4" stroke="#a8791b" stroke-width="1.3" rx="6"/>
+  <rect x="64" y="432" width="200" height="20" fill="#fdeeca" stroke="#a8791b" stroke-width="1.3" rx="6"/>
+  <rect x="65" y="444" width="198" height="8" fill="#fdeeca" stroke="none"/>
+  <text x="72" y="446" font-size="11.5" font-weight="bold" fill="#1f2328">ConnectionService  «服务»</text>
+  <text x="72" y="470" font-size="9.8" fill="#57606a">连接服务单例（装配链路）</text>
+  <rect x="276" y="432" width="200" height="46" fill="#fffdf4" stroke="#a8791b" stroke-width="1.3" rx="6"/>
+  <rect x="276" y="432" width="200" height="20" fill="#fdeeca" stroke="#a8791b" stroke-width="1.3" rx="6"/>
+  <rect x="277" y="444" width="198" height="8" fill="#fdeeca" stroke="none"/>
+  <text x="284" y="446" font-size="11.5" font-weight="bold" fill="#1f2328">ConnectionManager  «服务»</text>
+  <text x="284" y="470" font-size="9.8" fill="#57606a">连接状态机（可单测）</text>
+  <rect x="488" y="432" width="200" height="46" fill="#fffdf4" stroke="#a8791b" stroke-width="1.3" rx="6"/>
+  <rect x="488" y="432" width="200" height="20" fill="#fdeeca" stroke="#a8791b" stroke-width="1.3" rx="6"/>
+  <rect x="489" y="444" width="198" height="8" fill="#fdeeca" stroke="none"/>
+  <text x="496" y="446" font-size="11.5" font-weight="bold" fill="#1f2328">CommandLink  «interface»</text>
+  <text x="496" y="470" font-size="9.8" fill="#57606a">命令通道抽象规范</text>
+  <rect x="700" y="432" width="200" height="46" fill="#fffdf4" stroke="#a8791b" stroke-width="1.3" rx="6"/>
+  <rect x="700" y="432" width="200" height="20" fill="#fdeeca" stroke="#a8791b" stroke-width="1.3" rx="6"/>
+  <rect x="701" y="444" width="198" height="8" fill="#fdeeca" stroke="none"/>
+  <text x="708" y="446" font-size="11.5" font-weight="bold" fill="#1f2328">CliLink  «链路»</text>
+  <text x="708" y="470" font-size="9.8" fill="#57606a">+PendingCmd</text>
+  <rect x="912" y="432" width="200" height="46" fill="#fffdf4" stroke="#a8791b" stroke-width="1.3" rx="6"/>
+  <rect x="912" y="432" width="200" height="20" fill="#fdeeca" stroke="#a8791b" stroke-width="1.3" rx="6"/>
+  <rect x="913" y="444" width="198" height="8" fill="#fdeeca" stroke="none"/>
+  <text x="920" y="446" font-size="11.5" font-weight="bold" fill="#1f2328">MavLinkLink  «链路»</text>
+  <text x="920" y="470" font-size="9.8" fill="#57606a">MAVLink/UDP 链路</text>
+  <rect x="1124" y="432" width="200" height="46" fill="#fffdf4" stroke="#a8791b" stroke-width="1.3" rx="6"/>
+  <rect x="1124" y="432" width="200" height="20" fill="#fdeeca" stroke="#a8791b" stroke-width="1.3" rx="6"/>
+  <rect x="1125" y="444" width="198" height="8" fill="#fdeeca" stroke="none"/>
+  <text x="1132" y="446" font-size="11.5" font-weight="bold" fill="#1f2328">FlightRecorder  «服务»</text>
+  <text x="1132" y="470" font-size="9.8" fill="#57606a">+Session</text>
+  <rect x="64" y="492" width="200" height="46" fill="#fffdf4" stroke="#a8791b" stroke-width="1.3" rx="6"/>
+  <rect x="64" y="492" width="200" height="20" fill="#fdeeca" stroke="#a8791b" stroke-width="1.3" rx="6"/>
+  <rect x="65" y="504" width="198" height="8" fill="#fdeeca" stroke="none"/>
+  <text x="72" y="506" font-size="11.5" font-weight="bold" fill="#1f2328">RoutePlanner  «算法»</text>
+  <text x="72" y="530" font-size="9.8" fill="#57606a">贪婪最近邻路径规划</text>
+  <rect x="276" y="492" width="200" height="46" fill="#fffdf4" stroke="#a8791b" stroke-width="1.3" rx="6"/>
+  <rect x="276" y="492" width="200" height="20" fill="#fdeeca" stroke="#a8791b" stroke-width="1.3" rx="6"/>
+  <rect x="277" y="504" width="198" height="8" fill="#fdeeca" stroke="none"/>
+  <text x="284" y="506" font-size="11.5" font-weight="bold" fill="#1f2328">MissionXml  «算法»</text>
+  <text x="284" y="530" font-size="9.8" fill="#57606a">+MissionFile</text>
+  <rect x="488" y="492" width="200" height="46" fill="#fffdf4" stroke="#a8791b" stroke-width="1.3" rx="6"/>
+  <rect x="488" y="492" width="200" height="20" fill="#fdeeca" stroke="#a8791b" stroke-width="1.3" rx="6"/>
+  <rect x="489" y="504" width="198" height="8" fill="#fdeeca" stroke="none"/>
+  <text x="496" y="506" font-size="11.5" font-weight="bold" fill="#1f2328">BatteryPredictor  «算法»</text>
+  <text x="496" y="530" font-size="9.8" fill="#57606a">电量预测（回归模型）</text>
+  <rect x="700" y="492" width="200" height="46" fill="#fffdf4" stroke="#a8791b" stroke-width="1.3" rx="6"/>
+  <rect x="700" y="492" width="200" height="20" fill="#fdeeca" stroke="#a8791b" stroke-width="1.3" rx="6"/>
+  <rect x="701" y="504" width="198" height="8" fill="#fdeeca" stroke="none"/>
+  <text x="708" y="506" font-size="11.5" font-weight="bold" fill="#1f2328">LinearRegression  «算法»</text>
+  <text x="708" y="530" font-size="9.8" fill="#57606a">最小二乘多元回归</text>
+  <rect x="912" y="492" width="200" height="46" fill="#fffdf4" stroke="#a8791b" stroke-width="1.3" rx="6"/>
+  <rect x="912" y="492" width="200" height="20" fill="#fdeeca" stroke="#a8791b" stroke-width="1.3" rx="6"/>
+  <rect x="913" y="504" width="198" height="8" fill="#fdeeca" stroke="none"/>
+  <text x="920" y="506" font-size="11.5" font-weight="bold" fill="#1f2328">RangeEstimator  «算法»</text>
+  <text x="920" y="530" font-size="9.8" fill="#57606a">剩余航时/航程估算</text>
+  <rect x="64" y="596" width="200" height="46" fill="#f6fcf7" stroke="#2f8a4e" stroke-width="1.3" rx="6"/>
+  <rect x="64" y="596" width="200" height="20" fill="#e4f4e8" stroke="#2f8a4e" stroke-width="1.3" rx="6"/>
+  <rect x="65" y="608" width="198" height="8" fill="#e4f4e8" stroke="none"/>
+  <text x="72" y="610" font-size="11.5" font-weight="bold" fill="#1f2328">AppState  «实体»</text>
+  <text x="72" y="634" font-size="9.8" fill="#57606a">全局应用状态单例</text>
+  <rect x="276" y="596" width="200" height="46" fill="#f6fcf7" stroke="#2f8a4e" stroke-width="1.3" rx="6"/>
+  <rect x="276" y="596" width="200" height="20" fill="#e4f4e8" stroke="#2f8a4e" stroke-width="1.3" rx="6"/>
+  <rect x="277" y="608" width="198" height="8" fill="#e4f4e8" stroke="none"/>
+  <text x="284" y="610" font-size="11.5" font-weight="bold" fill="#1f2328">LiveVehicle  «实体»</text>
+  <text x="284" y="634" font-size="9.8" fill="#57606a">遥测只读属性镜像(43项)</text>
+  <rect x="488" y="596" width="200" height="46" fill="#f6fcf7" stroke="#2f8a4e" stroke-width="1.3" rx="6"/>
+  <rect x="488" y="596" width="200" height="20" fill="#e4f4e8" stroke="#2f8a4e" stroke-width="1.3" rx="6"/>
+  <rect x="489" y="608" width="198" height="8" fill="#e4f4e8" stroke="none"/>
+  <text x="496" y="610" font-size="11.5" font-weight="bold" fill="#1f2328">VehicleSnapshot  «实体»</text>
+  <text x="496" y="634" font-size="9.8" fill="#57606a">+Builder</text>
+  <rect x="700" y="596" width="200" height="46" fill="#f6fcf7" stroke="#2f8a4e" stroke-width="1.3" rx="6"/>
+  <rect x="700" y="596" width="200" height="20" fill="#e4f4e8" stroke="#2f8a4e" stroke-width="1.3" rx="6"/>
+  <rect x="701" y="608" width="198" height="8" fill="#e4f4e8" stroke="none"/>
+  <text x="708" y="610" font-size="11.5" font-weight="bold" fill="#1f2328">Waypoint  «实体»</text>
+  <text x="708" y="634" font-size="9.8" fill="#57606a">+Action/Role</text>
+  <rect x="64" y="716" width="200" height="46" fill="#fbf7fe" stroke="#7a4fb5" stroke-width="1.3" rx="6"/>
+  <rect x="64" y="716" width="200" height="20" fill="#f3e8fd" stroke="#7a4fb5" stroke-width="1.3" rx="6"/>
+  <rect x="65" y="728" width="198" height="8" fill="#f3e8fd" stroke="none"/>
+  <text x="72" y="730" font-size="11.5" font-weight="bold" fill="#1f2328">CliProtocol  «协议»</text>
+  <text x="72" y="754" font-size="9.8" fill="#57606a">CLI 协议解析（50 正则）</text>
+  <rect x="276" y="716" width="200" height="46" fill="#fbf7fe" stroke="#7a4fb5" stroke-width="1.3" rx="6"/>
+  <rect x="276" y="716" width="200" height="20" fill="#f3e8fd" stroke="#7a4fb5" stroke-width="1.3" rx="6"/>
+  <rect x="277" y="728" width="198" height="8" fill="#f3e8fd" stroke="none"/>
+  <text x="284" y="730" font-size="11.5" font-weight="bold" fill="#1f2328">MavLink  «协议»</text>
+  <text x="284" y="754" font-size="9.8" fill="#57606a">+Parser</text>
+  <rect x="64" y="836" width="200" height="46" fill="#f4f8fa" stroke="#4a6572" stroke-width="1.3" rx="6"/>
+  <rect x="64" y="836" width="200" height="20" fill="#e2ebf0" stroke="#4a6572" stroke-width="1.3" rx="6"/>
+  <rect x="65" y="848" width="198" height="8" fill="#e2ebf0" stroke="none"/>
+  <text x="72" y="850" font-size="11.5" font-weight="bold" fill="#1f2328">SerialTransport  «传输»</text>
+  <text x="72" y="874" font-size="9.8" fill="#57606a">jSerialComm 串口封装</text>
+  <rect x="276" y="836" width="200" height="46" fill="#f4f8fa" stroke="#4a6572" stroke-width="1.3" rx="6"/>
+  <rect x="276" y="836" width="200" height="20" fill="#e2ebf0" stroke="#4a6572" stroke-width="1.3" rx="6"/>
+  <rect x="277" y="848" width="198" height="8" fill="#e2ebf0" stroke="none"/>
+  <text x="284" y="850" font-size="11.5" font-weight="bold" fill="#1f2328">UdpTransport  «传输»</text>
+  <text x="284" y="874" font-size="9.8" fill="#57606a">MAVLink UDP 传输</text>
+  <rect x="488" y="836" width="200" height="46" fill="#f4f8fa" stroke="#4a6572" stroke-width="1.3" rx="6"/>
+  <rect x="488" y="836" width="200" height="20" fill="#e2ebf0" stroke="#4a6572" stroke-width="1.3" rx="6"/>
+  <rect x="489" y="848" width="198" height="8" fill="#e2ebf0" stroke="none"/>
+  <text x="496" y="850" font-size="11.5" font-weight="bold" fill="#1f2328">GpsHttpServer  «服务»</text>
+  <text x="496" y="874" font-size="9.8" fill="#57606a">GNSS 推流 HTTP 服务</text>
+  <rect x="700" y="836" width="200" height="46" fill="#f4f8fa" stroke="#4a6572" stroke-width="1.3" rx="6"/>
+  <rect x="700" y="836" width="200" height="20" fill="#e2ebf0" stroke="#4a6572" stroke-width="1.3" rx="6"/>
+  <rect x="701" y="848" width="198" height="8" fill="#e2ebf0" stroke="none"/>
+  <text x="708" y="850" font-size="11.5" font-weight="bold" fill="#1f2328">TileServer  «服务»</text>
+  <text x="708" y="874" font-size="9.8" fill="#57606a">离线瓦片 HTTP 服务</text>
+  <rect x="64" y="956" width="200" height="46" fill="#f8f9fa" stroke="#6c757d" stroke-width="1.3" rx="6"/>
+  <rect x="64" y="956" width="200" height="20" fill="#e9ecef" stroke="#6c757d" stroke-width="1.3" rx="6"/>
+  <rect x="65" y="968" width="198" height="8" fill="#e9ecef" stroke="none"/>
+  <text x="72" y="970" font-size="11.5" font-weight="bold" fill="#1f2328">FxSafe  «工具»</text>
+  <text x="72" y="994" font-size="9.8" fill="#57606a">FX 线程安全桥</text>
+  <rect x="276" y="956" width="200" height="46" fill="#f8f9fa" stroke="#6c757d" stroke-width="1.3" rx="6"/>
+  <rect x="276" y="956" width="200" height="20" fill="#e9ecef" stroke="#6c757d" stroke-width="1.3" rx="6"/>
+  <rect x="277" y="968" width="198" height="8" fill="#e9ecef" stroke="none"/>
+  <text x="284" y="970" font-size="11.5" font-weight="bold" fill="#1f2328">Browse  «工具»</text>
+  <text x="284" y="994" font-size="9.8" fill="#57606a">系统浏览器打开</text>
+  <rect x="488" y="956" width="200" height="46" fill="#f8f9fa" stroke="#6c757d" stroke-width="1.3" rx="6"/>
+  <rect x="488" y="956" width="200" height="20" fill="#e9ecef" stroke="#6c757d" stroke-width="1.3" rx="6"/>
+  <rect x="489" y="968" width="198" height="8" fill="#e9ecef" stroke="none"/>
+  <text x="496" y="970" font-size="11.5" font-weight="bold" fill="#1f2328">GeoConvert  «工具»</text>
+  <text x="496" y="994" font-size="9.8" fill="#57606a">WGS84→GCJ-02 纠偏</text>
+  <rect x="64" y="1076" width="184" height="46" fill="#f8f9fa" stroke="#6c757d" stroke-width="1.3" rx="6"/>
+  <rect x="64" y="1076" width="184" height="20" fill="#e9ecef" stroke="#6c757d" stroke-width="1.3" rx="6"/>
+  <rect x="65" y="1088" width="182" height="8" fill="#e9ecef" stroke="none"/>
+  <text x="72" y="1090" font-size="11.5" font-weight="bold" fill="#1f2328">S12E2eCheck  «开发辅助»</text>
+  <text x="72" y="1114" font-size="9.8" fill="#57606a">真机端到端自检</text>
+  <rect x="260" y="1076" width="184" height="46" fill="#f8f9fa" stroke="#6c757d" stroke-width="1.3" rx="6"/>
+  <rect x="260" y="1076" width="184" height="20" fill="#e9ecef" stroke="#6c757d" stroke-width="1.3" rx="6"/>
+  <rect x="261" y="1088" width="182" height="8" fill="#e9ecef" stroke="none"/>
+  <text x="268" y="1090" font-size="11.5" font-weight="bold" fill="#1f2328">SerialSmokeTest  «开发辅助»</text>
+  <text x="268" y="1114" font-size="9.8" fill="#57606a">串口遥测冒烟</text>
+  <rect x="456" y="1076" width="184" height="46" fill="#f8f9fa" stroke="#6c757d" stroke-width="1.3" rx="6"/>
+  <rect x="456" y="1076" width="184" height="20" fill="#e9ecef" stroke="#6c757d" stroke-width="1.3" rx="6"/>
+  <rect x="457" y="1088" width="182" height="8" fill="#e9ecef" stroke="none"/>
+  <text x="464" y="1090" font-size="11.5" font-weight="bold" fill="#1f2328">RawSerialProbe  «开发辅助»</text>
+  <text x="464" y="1114" font-size="9.8" fill="#57606a">串口原始探针</text>
+  <rect x="652" y="1076" width="184" height="46" fill="#f8f9fa" stroke="#6c757d" stroke-width="1.3" rx="6"/>
+  <rect x="652" y="1076" width="184" height="20" fill="#e9ecef" stroke="#6c757d" stroke-width="1.3" rx="6"/>
+  <rect x="653" y="1088" width="182" height="8" fill="#e9ecef" stroke="none"/>
+  <text x="660" y="1090" font-size="11.5" font-weight="bold" fill="#1f2328">View3DSnapshot  «开发辅助»</text>
+  <text x="660" y="1114" font-size="9.8" fill="#57606a">3D 快照导出</text>
+  <rect x="848" y="1076" width="184" height="46" fill="#f8f9fa" stroke="#6c757d" stroke-width="1.3" rx="6"/>
+  <rect x="848" y="1076" width="184" height="20" fill="#e9ecef" stroke="#6c757d" stroke-width="1.3" rx="6"/>
+  <rect x="849" y="1088" width="182" height="8" fill="#e9ecef" stroke="none"/>
+  <text x="856" y="1090" font-size="11.5" font-weight="bold" fill="#1f2328">AdiSnapshot  «开发辅助»</text>
+  <text x="856" y="1114" font-size="9.8" fill="#57606a">ADI 快照导出</text>
+  <rect x="1044" y="1076" width="184" height="46" fill="#f8f9fa" stroke="#6c757d" stroke-width="1.3" rx="6"/>
+  <rect x="1044" y="1076" width="184" height="20" fill="#e9ecef" stroke="#6c757d" stroke-width="1.3" rx="6"/>
+  <rect x="1045" y="1088" width="182" height="8" fill="#e9ecef" stroke="none"/>
+  <text x="1052" y="1090" font-size="11.5" font-weight="bold" fill="#1f2328">UiSnapshot  «开发辅助»</text>
+  <text x="1052" y="1114" font-size="9.8" fill="#57606a">五页面整屏快照</text>
+  <rect x="1240" y="1076" width="184" height="46" fill="#f8f9fa" stroke="#6c757d" stroke-width="1.3" rx="6"/>
+  <rect x="1240" y="1076" width="184" height="20" fill="#e9ecef" stroke="#6c757d" stroke-width="1.3" rx="6"/>
+  <rect x="1241" y="1088" width="182" height="8" fill="#e9ecef" stroke="none"/>
+  <text x="1248" y="1090" font-size="11.5" font-weight="bold" fill="#1f2328">TileDownloader  «开发辅助»</text>
+  <text x="1248" y="1114" font-size="9.8" fill="#57606a">瓦片批量下载</text>
+  <path d="M 376,150 L 376,172" fill="none" stroke="#444" stroke-width="1.5"/>
+  <path d="M 588,150 L 588,172" fill="none" stroke="#444" stroke-width="1.5"/>
+  <path d="M 800,150 L 800,172" fill="none" stroke="#444" stroke-width="1.5"/>
+  <path d="M 1012,150 L 1012,172" fill="none" stroke="#444" stroke-width="1.5"/>
+  <path d="M 1224,150 L 1224,172" fill="none" stroke="#444" stroke-width="1.5"/>
+  <path d="M 164,172 L 164,150" fill="none" stroke="#444" stroke-width="1.4" stroke-dasharray="6,4" marker-end="url(#triHollow)"/>
+  <text x="294" y="164" font-size="10.5" fill="#57606a" font-weight="bold">继承：五页面 → BasePage（模板方法）</text>
+  <polygon points="518,196 532,204 518,212 504,204" fill="#444" stroke="#444"/>
+  <text x="532" y="190" font-size="10.5" fill="#57606a">组合 pages（switchPage 多态分发 onPageShown）</text>
+  <path d="M 264,210 L 270,210 L 270,197 L 588,197 L 588,204" fill="none" stroke="#444" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrowOpen)"/>
+  <text x="798" y="193" font-size="10.5" fill="#57606a">① 创建主外壳</text>
+  <path d="M 264,238 L 272,238 L 272,404 L 164,404 L 164,432" fill="none" stroke="#444" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrowOpen)"/>
+  <text x="278" y="400" font-size="10.5" fill="#57606a">② 装配 ConnectionService（stop 时 shutdown）</text>
+  <path d="M 264,224 L 268,224 L 268,258 L 1437,258 L 1437,806 L 800,806 L 800,836" fill="none" stroke="#444" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrowOpen)"/>
+  <text x="900" y="254" font-size="10.5" fill="#57606a">③ startLocalServers：拉起 TileServer(8135)/GpsHttpServer(8080)</text>
+  <path d="M 264,466 L 276,466" fill="none" stroke="#444" stroke-width="1.5"/>
+  <polygon points="264,458 278,466 264,474 250,466" fill="#444" stroke="#444"/>
+  <path d="M 264,448 L 488,448" fill="none" stroke="#444" stroke-width="1.5" marker-end="url(#arrowOpen)"/>
+  <path d="M 760,432 L 760,406 L 558,406 L 558,432" fill="none" stroke="#444" stroke-width="1.4" stroke-dasharray="6,4" marker-end="url(#triHollow)"/>
+  <path d="M 952,432 L 952,396 L 608,396 L 608,432" fill="none" stroke="#444" stroke-width="1.4" stroke-dasharray="6,4" marker-end="url(#triHollow)"/>
+  <text x="620" y="392" font-size="10.5" fill="#57606a" font-weight="bold">实现接口：CliLink=串口轮询；MavLinkLink=MAVLink 编解码（子类只写增量）</text>
+  <path d="M 1112,460 L 1444,460 L 1444,568 L 476,568 L 476,624" fill="none" stroke="#444" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrowOpen)"/>
+  <text x="830" y="564" font-size="10.5" fill="#57606a" font-weight="bold">④ 两链路+GNSS+记录器 → FxSafe → updateFrom/updateGps 刷新遥测镜像</text>
+  <path d="M 488,127 L 50,127 L 50,608 L 276,608" fill="none" stroke="#444" stroke-width="1.5" marker-end="url(#arrowOpen)"/>
+  <text x="60" y="548" font-size="10.5" fill="#57606a">页面长期绑定 LiveVehicle（属性监听，无轮询 UI）</text>
+  <path d="M 376,538 L 376,552 L 800,552 L 800,596" fill="none" stroke="#444" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrowOpen)"/>
+  <text x="430" y="550" font-size="10.5" fill="#57606a">序列化航点集合</text>
+  <path d="M 508,538 L 508,552 L 760,552 L 760,538" fill="none" stroke="#444" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrowOpen)"/>
+  <text x="830" y="550" font-size="10.5" fill="#57606a">回归训练</text>
+  <path d="M 70,478 L 62,478 L 62,930 L 164,930 L 164,956" fill="none" stroke="#444" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrowOpen)"/>
+  <text x="68" y="924" font-size="10.5" fill="#57606a">回调切 FX 线程</text>
+  <text x="270" y="487" font-size="10.5" fill="#b45309" font-weight="bold">&#9670; 组合状态机&#160;&#160;｜&#160;&#160;link: CommandLink &#9733;多态调用点（运行时分发）</text>
+  <rect x="1470" y="64" width="346" height="232" fill="#fbfcfe" stroke="#8c959f" rx="4"/>
+  <text x="1484" y="86" font-size="13" font-weight="bold" fill="#1f2328">图例（答辩速查）</text>
+  <line x1="1484" y1="104" x2="1544" y2="104" stroke="#444" stroke-width="1.4" marker-end="url(#arrowOpen)"/>
+  <text x="1554" y="108" font-size="11.5" fill="#1f2328">关联（实线：长期持有引用）</text>
+  <line x1="1484" y1="130" x2="1530" y2="130" stroke="#444" stroke-width="1.4"/>
+  <polygon points="1484,123 1498,130 1484,137 1470,130" fill="#ffffff" stroke="#444" stroke-width="1.2"/>
+  <text x="1554" y="134" font-size="11.5" fill="#1f2328">聚合 ◇（部分可独立存在）</text>
+  <line x1="1484" y1="156" x2="1530" y2="156" stroke="#444" stroke-width="1.4"/>
+  <polygon points="1484,149 1498,156 1484,163 1470,156" fill="#444" stroke="#444"/>
+  <text x="1554" y="160" font-size="11.5" fill="#1f2328">组合 ◆（部分随整体销毁）</text>
+  <line x1="1484" y1="182" x2="1544" y2="182" stroke="#444" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrowOpen)"/>
+  <text x="1554" y="186" font-size="11.5" fill="#1f2328">依赖（虚线：临时调用不持有）</text>
+  <line x1="1484" y1="208" x2="1540" y2="208" stroke="#444" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#triHollow)"/>
+  <text x="1554" y="212" font-size="11.5" fill="#1f2328">实现/继承（规范在父类，斜体=抽象）</text>
+  <text x="1484" y="232" font-size="11" fill="#1f2328">链路走读：①解锁按钮 → ②sendCommand（多态）</text>
+  <text x="1484" y="256" font-size="11" fill="#1f2328">③链路下发 → ④遥测镜像更新 → ⑤记录器写 .skylog</text>
+  <text x="1484" y="280" font-size="11" fill="#1f2328">次要关系速查：CliLink→SerialTransport/</text>
+  <text x="1484" y="304" font-size="11" fill="#1f2328">CliProtocol；MavLinkLink→UdpTransport/MavLink；</text>
+  <text x="1484" y="328" font-size="11" fill="#1f2328">PlanPage→RoutePlanner/MissionXml/BatteryPredictor；</text>
+  <text x="1484" y="352" font-size="11" fill="#1f2328">MapView→TileServer/GeoConvert；详图①-⑤展开</text>
+  <rect x="40" y="1176" width="1410" height="140" fill="#fbfcfe" stroke="#8c959f" rx="4"/>
+  <text x="54" y="1198" font-size="12" font-weight="bold" fill="#1f2328">全景走读（界面 → 控制 → 实体 → 协议/传输 → 文件）</text>
+  <text x="54" y="1220" font-size="11" fill="#1f2328">① 用户在 FlyPage 点「解锁」→ confirmArm() 二次确认 → ConnectionService.sendCommand()（link 父类型引用多态分发）</text>
+  <text x="54" y="1240" font-size="11" fill="#1f2328">② CliLink（串口 CLI 文本协议）或 MavLinkLink（WiFi UDP MAVLink 二进制协议）下发指令 → 固件执行并回流遥测</text>
+  <text x="54" y="1260" font-size="11" fill="#1f2328">③ 链路线程解析报文（CliProtocol 50 正则 / MavLink 黄金帧护栏编解码）→ FxSafe 切 FX 线程 → LiveVehicle.updateFrom() 刷新 43 项只读属性</text>
+  <text x="54" y="1280" font-size="11" fill="#1f2328">④ 全部页面属性监听联动刷新（3D/ADI/HUD/波形/卡片）；FlightRecorder 监听 armed 自动记录 .skylog 会话</text>
+  <text x="54" y="1300" font-size="11" fill="#1f2328">⑤ 本地服务常驻：TileServer(8135) 离线瓦片 + GpsHttpServer(8080) 外部 GNSS 推流；任务/日志/瓦片三类文件落盘 ~/.skylink/</text>
+</svg>

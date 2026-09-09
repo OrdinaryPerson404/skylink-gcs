@@ -46,10 +46,11 @@ public final class CliProtocol {
                              boolean mavLinkUp, int loopRate, String armingDisabled, String phase,
                              boolean isAirborne, boolean landed, double batteryVoltage, Double altitude,
                              Integer tofStatus, boolean baro, boolean range, boolean hasAltitude, boolean magOk,
-                             int crsfLinkQuality) {
+                             int crsfLinkQuality, Double temperatureC, Double humidityPct, Double pressureHpa) {
     }
 
-    public record SysData(String chip, Double temperatureC, Long freeHeap, Integer loopRate) {
+    public record SysData(String chip, Double temperatureC, Long freeHeap, Integer loopRate,
+                          Double humidityPct, Double pressureHpa) {
     }
 
     public record WifiData(String mode, String ssid, String ip, boolean mavlinkConnected) {
@@ -95,7 +96,12 @@ public final class CliProtocol {
     private static final Pattern P_PARAM_LINE = Pattern.compile(
             "(?m)^([A-Z][A-Z0-9_]+)\\s*=\\s*(nan|-?[\\d.]+(?:[eE][-+]?\\d+)?)\\s*$");
     private static final Pattern P_CHIP = Pattern.compile("Chip:\\s*(.+?)\\s*$", Pattern.MULTILINE);
-    private static final Pattern P_TEMP = Pattern.compile("Temperature:\\s*(-?[\\d.]+)");
+    private static final Pattern P_TEMP = Pattern.compile(
+            "Temperature(?:\\([^)]*\\))?:\\s*(-?[\\d.]+)");
+    private static final Pattern P_HUMIDITY = Pattern.compile(
+            "Humidity(?:\\([^)]*\\))?:\\s*([\\d.]+)");
+    private static final Pattern P_PRESSURE = Pattern.compile(
+            "Pressure(?:\\([^)]*\\))?:\\s*([\\d.]+)");
     private static final Pattern P_HEAP = Pattern.compile("Free heap:\\s*(\\d+)");
     private static final Pattern P_WIFI_MODE = Pattern.compile("(?m)^Mode:\\s*(.+?)\\s*$");
     private static final Pattern P_WIFI_SSID = Pattern.compile("SSID:\\s*(.+?)\\s*$", Pattern.MULTILINE);
@@ -287,9 +293,16 @@ public final class CliProtocol {
         if (lqM.find()) {
             lq = Integer.parseInt(lqM.group(1));
         }
+        Double t = null, h = null, pressureVal = null;
+        Matcher tm = P_TEMP.matcher(text);
+        if (tm.find()) { t = Double.parseDouble(tm.group(1)); }
+        Matcher hm = P_HUMIDITY.matcher(text);
+        if (hm.find()) { h = Double.parseDouble(hm.group(1)); }
+        Matcher pm = P_PRESSURE.matcher(text);
+        if (pm.find()) { pressureVal = Double.parseDouble(pm.group(1)); }
         return new StatusData(flag(armed.group(1)), src, rcUp, webUp, mavUp, loopRate, armDis, phase,
                 airborne, landed, batt, altitude, tof, baro != null && baro, range != null && range,
-                hasAlt != null && hasAlt, magOk, lq);
+                hasAlt != null && hasAlt, magOk, lq, t, h, pressureVal);
     }
 
     /** 'p' 全量参数：NAME = value 行（nan → NaN） */
@@ -325,7 +338,12 @@ public final class CliProtocol {
         if (lrM.find()) {
             lrVal = Integer.parseInt(lrM.group(1));
         }
-        return new SysData(chip.group(1), temp, heap, lrVal);
+        Double hum = null, pres = null;
+        Matcher hu = P_HUMIDITY.matcher(text);
+        if (hu.find()) { hum = Double.parseDouble(hu.group(1)); }
+        Matcher pr = P_PRESSURE.matcher(text);
+        if (pr.find()) { pres = Double.parseDouble(pr.group(1)); }
+        return new SysData(chip.group(1), temp, heap, lrVal, hum, pres);
     }
 
     public static WifiData parseWifi(String text) {

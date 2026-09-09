@@ -1,0 +1,241 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1780" height="1350" viewBox="0 0 1780 1350" font-family="Microsoft YaHei, PingFang SC, sans-serif">
+  <defs>
+    <marker id="arrowOpen" markerWidth="12" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L11,5 L0,10" fill="none" stroke="#444" stroke-width="1.4"/>
+    </marker>
+    <marker id="triHollow" markerWidth="18" markerHeight="14" refX="16" refY="7" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M1,1 L16,7 L1,13 Z" fill="#ffffff" stroke="#444" stroke-width="1.3"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1780" height="1350" fill="#ffffff"/>
+  <text x="24" y="32" font-size="19" font-weight="bold" fill="#1f2328">SkyLink GCS 详细图⑤ —— UI 体系（模板方法 · 页面路由 · Canvas 自绘组件群）</text>
+  <text x="26" y="54" font-size="12" fill="#57606a">五个功能页统一继承抽象 BasePage；MainShell 以多态分发页面生命周期；3D/ADI/地图/波形全部 Canvas 自绘（详见走读）</text>
+  <rect x="60" y="96" width="560" height="264.5" fill="#f7fafd" stroke="#3b6ea5" stroke-width="1.5" rx="6"/>
+  <rect x="60" y="96" width="560" height="26" fill="#dbe9ff" stroke="#3b6ea5" stroke-width="1.5" rx="6"/>
+  <rect x="61" y="113" width="558" height="10" fill="#dbe9ff"/>
+  <text x="70" y="114" font-size="12.5" font-weight="bold" fill="#1f2328">MainShell  «外壳 · 页面路由»</text>
+  <text x="72" y="130" font-size="11" fill="#1f2328">- pageStack: StackPane   - toastOverlay: StackPane</text>
+  <text x="72" y="145.5" font-size="11" fill="#1f2328">- topNav: TopNav {final}</text>
+  <text x="72" y="161" font-size="11" fill="#1f2328">- pages: Map&lt;String, BasePage&gt; {final}</text>
+  <text x="72" y="176.5" font-size="11" fill="#1f2328">- flyPage / planPage: 直接引用 {final}</text>
+  <text x="72" y="192" font-size="11" fill="#1f2328">- connectOpener: Runnable</text>
+  <line x1="60" y1="208.5" x2="620" y2="208.5" stroke="#3b6ea5" stroke-width="1"/>
+  <text x="72" y="215.5" font-size="11" fill="#1f2328">+ MainShell()</text>
+  <text x="72" y="231" font-size="11" fill="#1f2328">+ setConnectOpener(opener: Runnable): void</text>
+  <text x="72" y="246.5" font-size="11" fill="#1f2328">+ switchPage(id: String): boolean   // 页面路由</text>
+  <text x="72" y="262" font-size="11" fill="#1f2328">+ installKeyboardShortcuts(scene: Scene): void</text>
+  <text x="72" y="277.5" font-size="11" fill="#1f2328">- register(page: BasePage): void   {private}</text>
+  <text x="72" y="293" font-size="11" fill="#1f2328">- digitOf(code: KeyCode): int  {private static}</text>
+  <text x="72" y="312.5" font-size="10.2" fill="#57606a">数字键 1-5 切页（输入框聚焦时屏蔽）；</text>
+  <text x="72" y="327.5" font-size="10.2" fill="#57606a">Ctrl+A 解锁确认；注册 Toast 全局浮层</text>
+  <rect x="660" y="96" width="420" height="155.5" fill="#f7fafd" stroke="#3b6ea5" stroke-width="1.5" rx="6"/>
+  <rect x="660" y="96" width="420" height="26" fill="#dbe9ff" stroke="#3b6ea5" stroke-width="1.5" rx="6"/>
+  <rect x="661" y="113" width="418" height="10" fill="#dbe9ff"/>
+  <text x="670" y="114" font-size="12.5" font-weight="bold" fill="#1f2328">BasePage  «抽象 · 五页面父类»</text>
+  <text x="672" y="130" font-size="11" fill="#1f2328"># BasePage()   // 保护构造</text>
+  <line x1="660" y1="146.5" x2="1080" y2="146.5" stroke="#3b6ea5" stroke-width="1"/>
+  <text x="672" y="153.5" font-size="11" fill="#1f2328" font-style="italic">+ {abstract} pageId(): String</text>
+  <text x="672" y="169" font-size="11" fill="#1f2328">+ onPageShown(): void   // 默认空实现</text>
+  <text x="672" y="188.5" font-size="10.2" fill="#57606a">«abstract» 模板方法基类（extends BorderPane）：</text>
+  <text x="672" y="203.5" font-size="10.2" fill="#57606a">pageId 声明页面标识；onPageShown 由路由</text>
+  <text x="672" y="218.5" font-size="10.2" fill="#57606a">多态分发（每次切页触发，如波形恢复采样）</text>
+  <rect x="1120" y="96" width="620" height="233.5" fill="#f7fafd" stroke="#3b6ea5" stroke-width="1.5" rx="6"/>
+  <rect x="1120" y="96" width="620" height="26" fill="#dbe9ff" stroke="#3b6ea5" stroke-width="1.5" rx="6"/>
+  <rect x="1121" y="113" width="618" height="10" fill="#dbe9ff"/>
+  <text x="1130" y="114" font-size="12.5" font-weight="bold" fill="#1f2328">TopNav  «外壳 · 顶部导航»</text>
+  <text x="1132" y="130" font-size="11" fill="#1f2328">+ TABS: List&lt;Tab&gt; {static final}   // 5 页签表</text>
+  <text x="1132" y="145.5" font-size="11" fill="#1f2328">- tabIcons: Map&lt;Button,List&lt;Node&gt;&gt; / tabIds: Map&lt;Button,String&gt;</text>
+  <text x="1132" y="161" font-size="11" fill="#1f2328">- connDot: Circle   - connLabel: Label</text>
+  <text x="1132" y="176.5" font-size="11" fill="#1f2328">- activeTab: Button   - userMenu: ContextMenu</text>
+  <line x1="1120" y1="193" x2="1740" y2="193" stroke="#3b6ea5" stroke-width="1"/>
+  <text x="1132" y="200" font-size="11" fill="#1f2328">+ TopNav(onPageSelected, onBellClick, onUserClick, onConnClick)</text>
+  <text x="1132" y="215.5" font-size="11" fill="#1f2328">+ setActive(pageId: String): void</text>
+  <text x="1132" y="231" font-size="11" fill="#1f2328">+ getActiveTab(): Button</text>
+  <text x="1132" y="246.5" font-size="11" fill="#1f2328">- connChip() / brandGcc() / ghostButton(..)  {private}</text>
+  <text x="1132" y="262" font-size="11" fill="#1f2328">- bindConnState(): void   - showUserMenu(anchor) {private}</text>
+  <text x="1132" y="281.5" font-size="10.2" fill="#57606a">嵌套 record Tab(id, label, iconPath)；连接徽章</text>
+  <text x="1132" y="296.5" font-size="10.2" fill="#57606a">绿/橙/红/灰圆点 + 文本（绑定 AppState.connStatus）</text>
+  <rect x="60" y="380" width="310" height="218" fill="#f7fafd" stroke="#3b6ea5" stroke-width="1.5" rx="6"/>
+  <rect x="60" y="380" width="310" height="26" fill="#dbe9ff" stroke="#3b6ea5" stroke-width="1.5" rx="6"/>
+  <rect x="61" y="397" width="308" height="10" fill="#dbe9ff"/>
+  <text x="70" y="398" font-size="12.5" font-weight="bold" fill="#1f2328">OverviewPage  «页面»</text>
+  <text x="72" y="414" font-size="11" fill="#1f2328">- lv: LiveVehicle {final}</text>
+  <text x="72" y="429.5" font-size="11" fill="#1f2328">- statRoll / statPitch / statYaw: Label</text>
+  <text x="72" y="445" font-size="11" fill="#1f2328">- imuCard … gpsCard: SensorCard</text>
+  <text x="72" y="460.5" font-size="11" fill="#1f2328">- sigCard: SignalCard</text>
+  <text x="72" y="476" font-size="11" fill="#1f2328">- joyLeft / joyRight: JoystickWidget</text>
+  <text x="72" y="491.5" font-size="11" fill="#1f2328">- rcBars: RcBar[12]  - motorBars: MotorBar[12]</text>
+  <line x1="60" y1="508" x2="370" y2="508" stroke="#3b6ea5" stroke-width="1"/>
+  <text x="72" y="515" font-size="11" fill="#1f2328">+ pageId(): String  // "overview"</text>
+  <text x="72" y="530.5" font-size="11" fill="#1f2328">+ onPageShown(): void «覆写»</text>
+  <text x="72" y="550" font-size="10.2" fill="#57606a">仪表盘 3×2 卡片墙：3D/ADI/传感器/</text>
+  <text x="72" y="565" font-size="10.2" fill="#57606a">遥控输入/遥控器模拟/电机输出</text>
+  <rect x="400" y="380" width="310" height="233" fill="#f7fafd" stroke="#3b6ea5" stroke-width="1.5" rx="6"/>
+  <rect x="400" y="380" width="310" height="26" fill="#dbe9ff" stroke="#3b6ea5" stroke-width="1.5" rx="6"/>
+  <rect x="401" y="397" width="308" height="10" fill="#dbe9ff"/>
+  <text x="410" y="398" font-size="12.5" font-weight="bold" fill="#1f2328">FlyPage  «页面»</text>
+  <text x="412" y="414" font-size="11" fill="#1f2328">- map: MapView {final}   - lv: LiveVehicle</text>
+  <text x="412" y="429.5" font-size="11" fill="#1f2328">- hudHdg / hudAlt / hudGs / hudVs /</text>
+  <text x="412" y="445" font-size="11" fill="#1f2328">  hudRoll / hudPitch: Label</text>
+  <text x="412" y="460.5" font-size="11" fill="#1f2328">- armBtn: Button  - modeButtons: Map</text>
+  <text x="412" y="476" font-size="11" fill="#1f2328">- adiFloat: VBox  - clock: Timeline</text>
+  <text x="412" y="491.5" font-size="11" fill="#1f2328">- banner: Label  - msgList: ListView</text>
+  <line x1="400" y1="508" x2="710" y2="508" stroke="#3b6ea5" stroke-width="1"/>
+  <text x="412" y="515" font-size="11" fill="#1f2328">+ pageId(): String  // "fly"</text>
+  <text x="412" y="530.5" font-size="11" fill="#1f2328">+ onPageShown(): void «覆写»</text>
+  <text x="412" y="550" font-size="10.2" fill="#57606a">全幅地图 + HUD 六要素 + 指令条；</text>
+  <text x="412" y="565" font-size="10.2" fill="#57606a">confirmArm() 二次确认；禁解锁置灰</text>
+  <text x="412" y="580" font-size="10.2" fill="#57606a">透传原因；迷你 ADI 浮窗</text>
+  <rect x="740" y="380" width="310" height="217.5" fill="#f7fafd" stroke="#3b6ea5" stroke-width="1.5" rx="6"/>
+  <rect x="740" y="380" width="310" height="26" fill="#dbe9ff" stroke="#3b6ea5" stroke-width="1.5" rx="6"/>
+  <rect x="741" y="397" width="308" height="10" fill="#dbe9ff"/>
+  <text x="750" y="398" font-size="12.5" font-weight="bold" fill="#1f2328">PlanPage  «页面»</text>
+  <text x="752" y="414" font-size="11" fill="#1f2328">- map: MapView {final}</text>
+  <text x="752" y="429.5" font-size="11" fill="#1f2328">- waypoints: Map&lt;Integer,Waypoint&gt;</text>
+  <text x="752" y="445" font-size="11" fill="#1f2328">- nameField / payloadField / windSpeedField</text>
+  <text x="752" y="460.5" font-size="11" fill="#1f2328">- countVal / distVal / conflictVal: Label</text>
+  <text x="752" y="476" font-size="11" fill="#1f2328">- originalOrder: List&lt;Integer&gt;</text>
+  <line x1="740" y1="492.5" x2="1050" y2="492.5" stroke="#3b6ea5" stroke-width="1"/>
+  <text x="752" y="499.5" font-size="11" fill="#1f2328">+ pageId(): String  // "plan"</text>
+  <text x="752" y="515" font-size="11" fill="#1f2328">+ onPageShown(): void «覆写»</text>
+  <text x="752" y="534.5" font-size="10.2" fill="#57606a">航点编辑/路径优化/冲突检测/</text>
+  <text x="752" y="549.5" font-size="10.2" fill="#57606a">电量预测/任务 XML ——</text>
+  <text x="752" y="564.5" font-size="10.2" fill="#57606a">详见详细图③</text>
+  <rect x="1080" y="380" width="310" height="217.5" fill="#f7fafd" stroke="#3b6ea5" stroke-width="1.5" rx="6"/>
+  <rect x="1080" y="380" width="310" height="26" fill="#dbe9ff" stroke="#3b6ea5" stroke-width="1.5" rx="6"/>
+  <rect x="1081" y="397" width="308" height="10" fill="#dbe9ff"/>
+  <text x="1090" y="398" font-size="12.5" font-weight="bold" fill="#1f2328">SetupPage  «页面»</text>
+  <text x="1092" y="414" font-size="11" fill="#1f2328">- lv: LiveVehicle  - conn: ConnectionService</text>
+  <text x="1092" y="429.5" font-size="11" fill="#1f2328">- sidebar / content / sectionCache</text>
+  <text x="1092" y="445" font-size="11" fill="#1f2328">- allRows: List&lt;ParamRow&gt;  - pidAll: List&lt;String&gt;</text>
+  <text x="1092" y="460.5" font-size="11" fill="#1f2328">- paramRenderDebouncer: Timeline</text>
+  <text x="1092" y="476" font-size="11" fill="#1f2328">- ITEMS(14 分组) / FRAMES(机架) {static final}</text>
+  <line x1="1080" y1="492.5" x2="1390" y2="492.5" stroke="#3b6ea5" stroke-width="1"/>
+  <text x="1092" y="499.5" font-size="11" fill="#1f2328">+ pageId(): String  // "setup"</text>
+  <text x="1092" y="515" font-size="11" fill="#1f2328">+ onPageShown(): void «覆写»</text>
+  <text x="1092" y="534.5" font-size="10.2" fill="#57606a">参数字典 120 项（ParamDict）驱动；</text>
+  <text x="1092" y="549.5" font-size="10.2" fill="#57606a">PID 四环表单 + 写入回读校验；</text>
+  <text x="1092" y="564.5" font-size="10.2" fill="#57606a">JSON 参数导入导出</text>
+  <rect x="1420" y="380" width="310" height="217.5" fill="#f7fafd" stroke="#3b6ea5" stroke-width="1.5" rx="6"/>
+  <rect x="1420" y="380" width="310" height="26" fill="#dbe9ff" stroke="#3b6ea5" stroke-width="1.5" rx="6"/>
+  <rect x="1421" y="397" width="308" height="10" fill="#dbe9ff"/>
+  <text x="1430" y="398" font-size="12.5" font-weight="bold" fill="#1f2328">DataPage  «页面»</text>
+  <text x="1432" y="414" font-size="11" fill="#1f2328">- channels: List&lt;Chan&gt;  - rings: Map&lt;String,Ring&gt;</text>
+  <text x="1432" y="429.5" font-size="11" fill="#1f2328">- consoleLines: ObservableList&lt;String&gt;</text>
+  <text x="1432" y="445" font-size="11" fill="#1f2328">- consoleVisible: FilteredList&lt;String&gt;</text>
+  <text x="1432" y="460.5" font-size="11" fill="#1f2328">- recorder: FlightRecorder {final}</text>
+  <text x="1432" y="476" font-size="11" fill="#1f2328">- sampler / pulse: Timeline  - chart: Canvas</text>
+  <line x1="1420" y1="492.5" x2="1730" y2="492.5" stroke="#3b6ea5" stroke-width="1"/>
+  <text x="1432" y="499.5" font-size="11" fill="#1f2328">+ pageId(): String  // "data"</text>
+  <text x="1432" y="515" font-size="11" fill="#1f2328">+ onPageShown(): void «覆写»</text>
+  <text x="1432" y="534.5" font-size="10.2" fill="#57606a">波形监视器（250ms 环形缓冲）/</text>
+  <text x="1432" y="549.5" font-size="10.2" fill="#57606a">CLI 控制台（危险命令二次确认）/</text>
+  <text x="1432" y="564.5" font-size="10.2" fill="#57606a">飞行日志（会话筛选与回放）</text>
+  <rect x="60" y="700" width="620" height="341.5" fill="#f7fafd" stroke="#3b6ea5" stroke-width="1.5" rx="6"/>
+  <rect x="60" y="700" width="620" height="26" fill="#dbe9ff" stroke="#3b6ea5" stroke-width="1.5" rx="6"/>
+  <rect x="61" y="717" width="618" height="10" fill="#dbe9ff"/>
+  <text x="70" y="718" font-size="12.5" font-weight="bold" fill="#1f2328">MapView  «组件 · 瓦片地图引擎»</text>
+  <text x="72" y="734" font-size="11" fill="#1f2328">- TILE = 256 / CACHE_MAX = 512 / MAX_TRACK = 512 {static final}</text>
+  <text x="72" y="749.5" font-size="11" fill="#1f2328">- canvas: Canvas   - tileCache: Map&lt;String,Image&gt;（LRU）</text>
+  <text x="72" y="765" font-size="11" fill="#1f2328">- loader: ExecutorService   - loading / failedAt</text>
+  <text x="72" y="780.5" font-size="11" fill="#1f2328">- centerLat = 39.9042 / centerLng = 116.4074 / zoom = 11 / base = "vec"</text>
+  <text x="72" y="796" font-size="11" fill="#1f2328">- waypoints: Map&lt;Integer,double[]&gt;  - waypointRoles: Map&lt;Integer,String&gt;</text>
+  <text x="72" y="811.5" font-size="11" fill="#1f2328">- home / dronePos: double[]   - track: ArrayDeque&lt;double[]&gt;</text>
+  <text x="72" y="827" font-size="11" fill="#1f2328">- pulse: AnimationTimer（脏区重绘）  - previewPath / previewPos</text>
+  <line x1="60" y1="843.5" x2="680" y2="843.5" stroke="#3b6ea5" stroke-width="1"/>
+  <text x="72" y="850.5" font-size="11" fill="#1f2328">+ addWaypoint(id, lat, lng) / removeWaypoint / clearWaypoints</text>
+  <text x="72" y="866" font-size="11" fill="#1f2328">+ setWaypointRole(id, role) / reorderWaypoints(ids) / fitWaypoints()</text>
+  <text x="72" y="881.5" font-size="11" fill="#1f2328">+ setHome(lat, lng)  + setVehiclePosition(lat, lng, heading)</text>
+  <text x="72" y="897" font-size="11" fill="#1f2328">+ setOnMapClick(h: Consumer&lt;double[]&gt;)</text>
+  <text x="72" y="912.5" font-size="11" fill="#1f2328">+ setOnWaypointMoved(h: BiConsumer&lt;Integer,double[]&gt;)</text>
+  <text x="72" y="928" font-size="11" fill="#1f2328">+ playPreview() / stopPreview()   // 500ms/段插值</text>
+  <text x="72" y="943.5" font-size="11" fill="#1f2328">+ setCenter(lat, lng, zoom)  + getViewportBBox(): double[]</text>
+  <text x="72" y="959" font-size="11" fill="#1f2328">+ toggleBase(..)  + setDark() / setSatellite()  + clearTrack()</text>
+  <text x="72" y="978.5" font-size="10.2" fill="#57606a">纯 Canvas 瓦片引擎：LRU 512 + 磁盘直读 + 上级瓦片补位 ≤3 级 +</text>
+  <text x="72" y="993.5" font-size="10.2" fill="#57606a">锚点缩放；vec 源 invert() 像素反相暗色化；高德 GCJ-02 与 GPS WGS84</text>
+  <text x="72" y="1008.5" font-size="10.2" fill="#57606a">经 GeoConvert 纠偏；未命中瓦片经 TileServer(8135) 补拉落盘</text>
+  <rect x="720" y="700" width="500" height="328.5" fill="#f7fafd" stroke="#3b6ea5" stroke-width="1.5" rx="6"/>
+  <rect x="720" y="700" width="500" height="26" fill="#dbe9ff" stroke="#3b6ea5" stroke-width="1.5" rx="6"/>
+  <rect x="721" y="717" width="498" height="10" fill="#dbe9ff"/>
+  <text x="730" y="718" font-size="12.5" font-weight="bold" fill="#1f2328">自绘组件群（ui.widget）  «组件 · 仪表与信号»</text>
+  <text x="732" y="734" font-size="11" fill="#1f2328">Drone3DView extends StackPane：</text>
+  <text x="732" y="749.5" font-size="11" fill="#1f2328">    - canvas: Canvas(320×240)  - bgLayer: Image</text>
+  <text x="732" y="765" font-size="11" fill="#1f2328">    - AZ_DEG=45 / EL_DEG=-73 / D=4.0 {static final}</text>
+  <text x="732" y="780.5" font-size="11" fill="#1f2328">    + setAxesVisible(on): void  - draw()  - ensureBg(w,h)</text>
+  <text x="732" y="796" font-size="11" fill="#1f2328">    // Canvas 软投影：FLU 机体系，分色地平线（逐像素光线</text>
+  <text x="732" y="811.5" font-size="11" fill="#1f2328">    // 投射静态缓存）+ 罗盘环 + 地面网格 + 三轴箭头；</text>
+  <text x="732" y="827" font-size="11" fill="#1f2328">    // 嵌套 Proj 投影器；姿态口径 +roll右倾/+pitch低头/+yaw左转</text>
+  <text x="732" y="842.5" font-size="11" fill="#1f2328">AdiWidget extends StackPane：</text>
+  <text x="732" y="858" font-size="11" fill="#1f2328">    - canvas: Canvas(360×300)  - draw(): void</text>
+  <text x="732" y="873.5" font-size="11" fill="#1f2328">    // 俯仰滚轮 ±10/±20 梯度 + 航向带（−pitch 口径）</text>
+  <text x="732" y="889" font-size="11" fill="#1f2328">JoystickWidget：- canvas(170×132)；+ update(nx, ny)</text>
+  <text x="732" y="904.5" font-size="11" fill="#1f2328">SensorCard extends VBox：+ setOnline(b, state) / val1() / val2()</text>
+  <text x="732" y="920" font-size="11" fill="#1f2328">SignalCard extends VBox：- rc/web/mav: WifiLinkIcon；</text>
+  <text x="732" y="935.5" font-size="11" fill="#1f2328">    + update(rc, web, mav, lq)</text>
+  <text x="732" y="951" font-size="11" fill="#1f2328">WifiLinkIcon extends Canvas：+ setOn(on: boolean)</text>
+  <line x1="720" y1="967.5" x2="1220" y2="967.5" stroke="#3b6ea5" stroke-width="1"/>
+  <text x="732" y="972.5" font-size="10.2" fill="#57606a">全部 Canvas 2D 自绘；SensorCard 空态诚实显示"未配备"</text>
+  <text x="732" y="987.5" font-size="10.2" fill="#57606a">（真机探测结果渲染，不硬编码）</text>
+  <rect x="1260" y="700" width="480" height="266.5" fill="#f8f9fa" stroke="#6c757d" stroke-width="1.5" rx="6"/>
+  <rect x="1260" y="700" width="480" height="26" fill="#e9ecef" stroke="#6c757d" stroke-width="1.5" rx="6"/>
+  <rect x="1261" y="717" width="478" height="10" fill="#e9ecef"/>
+  <text x="1270" y="718" font-size="12.5" font-weight="bold" fill="#1f2328">通用 UI 工具（ui 包静态类）  «工具 · 横切 UI»</text>
+  <text x="1272" y="734" font-size="11" fill="#1f2328">ThemeManager：- dark: BooleanProperty {static final}</text>
+  <text x="1272" y="749.5" font-size="11" fill="#1f2328">    + setMainScene(scene) / apply(scene) / toggleMain()</text>
+  <text x="1272" y="765" font-size="11" fill="#1f2328">    // looked-up color（-c-* 令牌）深/浅一键换肤</text>
+  <text x="1272" y="780.5" font-size="11" fill="#1f2328">Toast：- overlay: Pane {static}</text>
+  <text x="1272" y="796" font-size="11" fill="#1f2328">    + bind(overlayPane: Pane) / show(message, type)</text>
+  <text x="1272" y="811.5" font-size="11" fill="#1f2328">    // 淡入 120ms → 停留 2400ms → 淡出 260ms；同屏 ≤4</text>
+  <text x="1272" y="827" font-size="11" fill="#1f2328">    // 嵌套枚举 Type{INFO, SUCCESS, WARNING, ERROR}</text>
+  <text x="1272" y="842.5" font-size="11" fill="#1f2328">ConfirmDialog：+ show(title, message, onConfirm)</text>
+  <text x="1272" y="858" font-size="11" fill="#1f2328">    // 透明模态遮罩 + 二次确认（危险指令唯一入口）</text>
+  <text x="1272" y="873.5" font-size="11" fill="#1f2328">Icons：+ icon / filled / tint / droneLogo</text>
+  <text x="1272" y="889" font-size="11" fill="#1f2328">    // 内联 SVGPath 矢量图标（DASHBOARD/FLY/… 11 常量）</text>
+  <line x1="1260" y1="905.5" x2="1740" y2="905.5" stroke="#6c757d" stroke-width="1"/>
+  <text x="1272" y="910.5" font-size="10.2" fill="#57606a">ConnectDialog（连接对话框，串口/UDP 双通道）与</text>
+  <text x="1272" y="925.5" font-size="10.2" fill="#57606a">PredictDialog（预测弹窗）见详细图①/③</text>
+  <path d="M 215,380 L 215,352 L 790,352" fill="none" stroke="#444" stroke-width="1.5"/>
+  <path d="M 555,380 L 555,352 L 830,352" fill="none" stroke="#444" stroke-width="1.5"/>
+  <path d="M 895,380 L 895,352 L 870,352" fill="none" stroke="#444" stroke-width="1.5"/>
+  <path d="M 1235,380 L 1235,352 L 910,352" fill="none" stroke="#444" stroke-width="1.5"/>
+  <path d="M 1575,380 L 1575,352 L 950,352" fill="none" stroke="#444" stroke-width="1.5"/>
+  <path d="M 870,352 L 870,378" fill="none" stroke="#444" stroke-width="1.4" stroke-dasharray="6,4" marker-end="url(#triHollow)"/>
+  <text x="80" y="368" font-size="10.5" fill="#57606a">继承：五页面 → BasePage（pageId 抽象 / onPageShown 钩子）—— 模板方法模式</text>
+  <path d="M 300,96 L 300,76 L 870,76 L 870,96" fill="none" stroke="#444" stroke-width="1.5" marker-end="url(#arrowOpen)"/>
+  <text x="380" y="70" font-size="10.5" fill="#57606a">pages: Map&lt;String,BasePage&gt; ◆ 组合（switchPage 多态分发 onPageShown）</text>
+  <path d="M 340,356 L 1120,356" fill="none" stroke="#444" stroke-width="1.5" marker-end="url(#arrowOpen)"/>
+  <text x="710" y="372" font-size="10.5" fill="#57606a">topNav: TopNav ◆ 组合（构造注入回调）</text>
+  <path d="M 215,590 L 215,700" fill="none" stroke="#444" stroke-width="1.5" marker-end="url(#arrowOpen)"/>
+  <text x="221" y="640" font-size="10.5" fill="#57606a">OverviewPage ◆ AdiWidget / Drone3DView / JoystickWidget / SensorCard / SignalCard</text>
+  <path d="M 555,590 L 555,640 L 370,640 L 370,700" fill="none" stroke="#444" stroke-width="1.5" marker-end="url(#arrowOpen)"/>
+  <text x="561" y="632" font-size="10.5" fill="#57606a">FlyPage ◆ MapView</text>
+  <path d="M 895,590 L 895,640 L 700,640 L 700,700" fill="none" stroke="#444" stroke-width="1.5" marker-end="url(#arrowOpen)"/>
+  <path d="M 1500,590 L 1500,640 L 1330,640 L 1330,700" fill="none" stroke="#444" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrowOpen)"/>
+  <text x="1150" y="632" font-size="10.5" fill="#57606a">DataPage → FxSafe/Recorder 见详细图②</text>
+  <rect x="1470" y="1060" width="274" height="210" fill="#fbfcfe" stroke="#8c959f" rx="4"/>
+  <text x="1484" y="1082" font-size="13" font-weight="bold" fill="#1f2328">图例（答辩速查）</text>
+  <line x1="1484" y1="1100" x2="1544" y2="1100" stroke="#444" stroke-width="1.4" marker-end="url(#arrowOpen)"/>
+  <text x="1554" y="1104" font-size="11.5" fill="#1f2328">关联（实线：长期持有引用）</text>
+  <line x1="1484" y1="1126" x2="1530" y2="1126" stroke="#444" stroke-width="1.4"/>
+  <polygon points="1484,1119 1498,1126 1484,1133 1470,1126" fill="#ffffff" stroke="#444" stroke-width="1.2"/>
+  <text x="1554" y="1130" font-size="11.5" fill="#1f2328">聚合 ◇（部分可独立存在）</text>
+  <line x1="1484" y1="1152" x2="1530" y2="1152" stroke="#444" stroke-width="1.4"/>
+  <polygon points="1484,1145 1498,1152 1484,1159 1470,1152" fill="#444" stroke="#444"/>
+  <text x="1554" y="1156" font-size="11.5" fill="#1f2328">组合 ◆（部分随整体销毁）</text>
+  <line x1="1484" y1="1178" x2="1544" y2="1178" stroke="#444" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrowOpen)"/>
+  <text x="1554" y="1182" font-size="11.5" fill="#1f2328">依赖（虚线：临时调用不持有）</text>
+  <line x1="1484" y1="1204" x2="1540" y2="1204" stroke="#444" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#triHollow)"/>
+  <text x="1554" y="1208" font-size="11.5" fill="#1f2328">实现/继承（规范在父类，斜体=抽象）</text>
+  <text x="1484" y="1228" font-size="11" fill="#1f2328">切页走读：数字键 1-5 / 点页签</text>
+  <text x="1484" y="1252" font-size="11" fill="#1f2328">→ switchPage（多态分发）</text>
+  <text x="1484" y="1276" font-size="11" fill="#1f2328">→ TopNav.setActive 高亮</text>
+  <text x="1484" y="1300" font-size="11" fill="#1f2328">→ onPageShown 生命周期钩子</text>
+  <text x="1484" y="1324" font-size="11" fill="#1f2328">主题：looked-up color 换肤</text>
+  <rect x="40" y="1070" width="1400" height="240" fill="#fbfcfe" stroke="#8c959f" rx="4"/>
+  <text x="54" y="1092" font-size="12" font-weight="bold" fill="#1f2328">UI 体系走读（路由 → 生命周期 → 绑定 → 自绘）</text>
+  <text x="54" y="1114" font-size="11" fill="#1f2328">① 用户按数字键 1-5 或点顶栏页签 → MainShell.installKeyboardShortcuts / TopNav 回调 → switchPage(id)</text>
+  <text x="54" y="1134" font-size="11" fill="#1f2328">② switchPage：目标页 toFront() → TopNav.setActive 高亮 → 多态分发 page.onPageShown()（如 DataPage 恢复采样、SetupPage 刷新参数）</text>
+  <text x="54" y="1154" font-size="11" fill="#1f2328">③ 每个页面构造时绑定 LiveVehicle 只读属性（addListener），遥测变化自动联动刷新，无轮询 UI</text>
+  <text x="54" y="1174" font-size="11" fill="#1f2328">④ 视觉组件全部 Canvas 2D 自绘：MapView 瓦片引擎（LRU+补位+反相）、Drone3DView 软投影、AdiWidget 姿态仪、波形环形缓冲</text>
+  <text x="54" y="1194" font-size="11" fill="#1f2328">⑤ 主题经 looked-up color（-c-* 令牌）全局换肤；Toast/ConfirmDialog 为全局横切组件（危险指令二次确认唯一入口）</text>
+</svg>

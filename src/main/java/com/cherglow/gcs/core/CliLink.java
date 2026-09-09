@@ -4,8 +4,6 @@ import com.cherglow.gcs.model.VehicleSnapshot;
 import com.cherglow.gcs.protocol.cli.CliProtocol;
 import com.cherglow.gcs.serial.SerialTransport;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -44,7 +42,8 @@ public final class CliLink implements ConnectionManager.LinkChannel, CommandLink
     private final SnapshotConsumer out;
     private final VehicleSnapshot.Builder cur = new VehicleSnapshot.Builder();
     private final LinkedBlockingQueue<String> lines = new LinkedBlockingQueue<>();
-    private final Deque<PendingCmd> onDemand = new ArrayDeque<>();
+    /** 按需命令队列：FX 线程 offer / 连接线程 poll，必须线程安全 */
+    private final LinkedBlockingQueue<PendingCmd> onDemand = new LinkedBlockingQueue<>();
 
     /** 待发命令（带输出回调） */
     private record PendingCmd(String cmd, java.util.function.Consumer<String> out) {
@@ -281,6 +280,9 @@ public final class CliLink implements ConnectionManager.LinkChannel, CommandLink
                     cur.sensorsRange = s.range();
                     cur.hasAltitude = s.hasAltitude();
                     cur.magOk = s.magOk();
+                    if (s.temperatureC() != null) { cur.temperatureC = s.temperatureC(); }
+                    if (s.humidityPct() != null)  { cur.humidityPct = s.humidityPct(); }
+                    if (s.pressureHpa() != null)  { cur.pressureHpa = s.pressureHpa(); }
                     changed = true;
                 }
             }
@@ -299,6 +301,8 @@ public final class CliLink implements ConnectionManager.LinkChannel, CommandLink
                 if (sys != null) {
                     cur.chip = sys.chip();
                     cur.temperatureC = sys.temperatureC();
+                    cur.humidityPct = sys.humidityPct();
+                    cur.pressureHpa = sys.pressureHpa();
                     cur.freeHeap = sys.freeHeap();
                     if (sys.loopRate() != null) {
                         cur.loopRate = sys.loopRate();

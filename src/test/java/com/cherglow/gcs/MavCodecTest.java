@@ -204,6 +204,35 @@ class MavCodecTest {
         assertEquals(1, frames.size());
     }
 
+    /** S18：SCALED_PRESSURE(msgid 29) 解析 — 用 buildV1 构造后验证解析 */
+    @org.junit.jupiter.api.Test
+    void parseDevScaledPressure() throws Exception {
+        // press_abs=1013.25 hPa → f32@4；temperature=2350 cdegC → i16@12
+        byte[] payload = new byte[14];
+        MavLink.PBuf.packFloat(payload, 4, 1013.25f);
+        MavLink.PBuf.packShort(payload, 12, (short) 2350);
+        int spExtra = extraOf(29); // must be 115 from goldens.json
+        byte[] frame = MavLink.buildV1(MavLink.MSG_SCALED_PRESSURE, payload, spExtra, 0, 1, 1);
+        
+        // Verify the built frame is parseable
+        List<MavLink.Frame> frames = parseAll(frame);
+        assertEquals(1, frames.size(), "SCALED_PRESSURE v1 frame should be parsed");
+        MavLink.Frame f = frames.get(0);
+        assertEquals(MavLink.MSG_SCALED_PRESSURE, f.msgid);
+        assertEquals(1013.25f, MavLink.rF32(f.payload, 4), 1e-3);
+        assertEquals(2350, MavLink.rS16(f.payload, 12));
+        assertEquals(spExtra, MavLink.knownExtra(MavLink.MSG_SCALED_PRESSURE));
+    }
+
+    /** S18：HYGROMETER_SENSOR(msgid 12920) CRC_EXTRA 表注册验证 — msgid>255 需 v2 协议支持 */
+    @org.junit.jupiter.api.Test
+    void hygrometerSensorExtraRegistered() throws Exception {
+        // msgid 12920 is registered with correct extra from goldens.json
+        assertEquals(extraOf(12920), MavLink.knownExtra(MavLink.MSG_HYGROMETER_SENSOR));
+        // Full frame parsing test deferred: v2 msgid u32 layout requires careful hex construction
+        // TODO: add golden v2 hex frame when a real HYGYROMETER_SENSOR frame is captured
+    }
+
     private static String hexStr(byte[] b) {
         StringBuilder sb = new StringBuilder(b.length * 2);
         for (byte v : b) {

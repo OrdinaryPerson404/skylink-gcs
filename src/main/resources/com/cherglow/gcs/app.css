@@ -771,6 +771,23 @@
     -fx-padding: 6 8 6 8;
 }
 
+.conflict {
+    -fx-text-fill: #ef4444;
+    -fx-font-size: 11px;
+}
+
+/* B7：低电量红色闪烁预警 */
+@keyframes low-batt-blink {
+    from { -fx-text-fill: #ff4d4d; }
+    50%  { -fx-text-fill: #ff4d4d; -fx-opacity: 0.15; }
+    to   { -fx-text-fill: #ff4d4d; }
+}
+.low-batt-blink {
+    -fx-text-fill: #ff4d4d;
+    -fx-font-weight: bold;
+    -fx-animation: low-batt-blink 0.8s infinite;
+}
+
 .wp-badge-sm {
     -fx-background-color: #f0a500;
     -fx-text-fill: #161b22;
@@ -932,6 +949,112 @@
 .frame-desc {
     -fx-text-fill: -c-muted;
     -fx-font-size: 10px;
+}
+
+/* ---- FlyPage 左侧面板与状态栏 ---- */
+.fly-left-panel {
+    -fx-background-color: -c-panel;
+    -fx-border-color: transparent transparent -c-border transparent;
+    -fx-border-width: 0 1 0 0;
+    -fx-padding: 10;
+    -fx-spacing: 8;
+    -fx-pref-width: 280;
+    -fx-min-width: 280;
+    -fx-max-width: 280;
+}
+
+.fly-wp-item {
+    -fx-background-color: -c-bg;
+    -fx-border-color: -c-border;
+    -fx-border-width: 1;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-padding: 4 8 4 8;
+    -fx-spacing: 6;
+}
+
+.fly-wp-item:hover {
+    -fx-background-color: -c-hover;
+}
+
+.fly-status-row {
+    -fx-spacing: 8;
+    -fx-alignment: center-left;
+}
+
+.fly-conn-dot {
+    -fx-background-color: -c-muted;
+    -fx-background-radius: 5;
+    -fx-min-width: 10;
+    -fx-min-height: 10;
+    -fx-max-width: 10;
+    -fx-max-height: 10;
+}
+
+.fly-conn-dot.online {
+    -fx-background-color: #22c55e;
+}
+
+.fly-conn-dot.offline {
+    -fx-background-color: #ef4444;
+}
+
+.fly-gnss-dot {
+    -fx-font-size: 10px;
+    -fx-padding: 1 6 1 6;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+    -fx-font-weight: 600;
+}
+
+.fly-gnss-dot.online {
+    -fx-background-color: rgba(34, 197, 94, 0.15);
+    -fx-text-fill: #22c55e;
+    -fx-border-color: #22c55e;
+}
+
+.fly-gnss-dot.offline {
+    -fx-background-color: rgba(107, 114, 128, 0.1);
+    -fx-text-fill: #6b7280;
+    -fx-border-color: #6b7280;
+}
+
+.fly-clock {
+    -fx-font-family: "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
+    -fx-font-size: 12px;
+    -fx-text-fill: -c-text2;
+}
+
+.fly-signal-bar {
+    -fx-spacing: 2;
+    -fx-alignment: bottom-center;
+}
+
+.fly-signal-bar > .bar {
+    -fx-background-color: -c-muted;
+    -fx-background-radius: 1;
+}
+
+.fly-signal-bar > .bar.on {
+    -fx-background-color: #22c55e;
+}
+
+.fly-signal-bar > .bar.weak {
+    -fx-background-color: #f59e0b;
+}
+
+.fly-signal-bar > .bar.off {
+    -fx-background-color: #ef4444;
+}
+
+.fly-status-bar {
+    -fx-background-color: -c-bg;
+    -fx-border-color: -c-border transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 4 14 4 14;
+    -fx-spacing: 12;
+    -fx-alignment: center-left;
 }
 
 .frame-cls {

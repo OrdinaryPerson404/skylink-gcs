@@ -49,7 +49,7 @@ public final class TileServer {
         if (server != null) {
             return;
         }
-        server = HttpServer.create(new InetSocketAddress("127.0.0.1", PORT), 0);
+        server = HttpServer.create(new InetSocketAddress(PORT), 0); // 0.0.0.0：手机同 AP 可达（S14 连通性验证）
         server.createContext("/", ex -> handle(ex, root));
         server.setExecutor(Executors.newFixedThreadPool(4, r -> {
             Thread t = new Thread(r, "tile-server");
@@ -63,6 +63,14 @@ public final class TileServer {
     private void handle(HttpExchange ex, Path root) throws IOException {
         try {
             String path = ex.getRequestURI().getPath(); // /{source}/{z}/{x}/{y}.png
+
+            // Android 网络验证探测端点：让无外网热点（Drone_WiFi）通过 VALIDATED 验证，
+            // 满足 GPSLogger 等 App 的 WorkManager 发送约束（配合 captive_portal_http_url 指向本端点）
+            if (path.equals("/generate_204") || path.equals("/gen_204")) {
+                ex.sendResponseHeaders(204, -1);
+                return;
+            }
+
             String[] seg = path.split("/");
             byte[] body = null;
             if (seg.length == 5 && (seg[1].equals("vec") || seg[1].equals("sat"))) {

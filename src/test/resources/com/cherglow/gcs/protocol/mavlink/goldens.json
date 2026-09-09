@@ -90,6 +90,14 @@
   "245": {
    "name": "EXTENDED_SYS_STATE",
    "extra": 130
+  },
+  "29": {
+   "name": "SCALED_PRESSURE",
+   "extra": 115
+  },
+  "12920": {
+   "name": "HYGROMETER_SENSOR",
+   "extra": 20
   }
  },
  "crc_extra_legacy_variants": {

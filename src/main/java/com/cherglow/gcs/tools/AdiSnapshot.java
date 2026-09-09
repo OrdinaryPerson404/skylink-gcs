@@ -56,8 +56,7 @@ public class AdiSnapshot extends Application {
             return;
         }
         double[] c = CASES[idx];
-        lv.rollDeg.set(c[0]);
-        lv.pitchDeg.set(c[1]);
+        lv.injectPoseForTool(c[0], c[1], null);
         PauseTransition p = new PauseTransition(Duration.millis(250));
         p.setOnFinished(e -> {
             try {

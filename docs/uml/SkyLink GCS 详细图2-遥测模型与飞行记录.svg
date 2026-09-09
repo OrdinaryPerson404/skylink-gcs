@@ -1,0 +1,206 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1780" height="1390" viewBox="0 0 1780 1390" font-family="Microsoft YaHei, PingFang SC, sans-serif">
+  <defs>
+    <marker id="arrowOpen" markerWidth="12" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L11,5 L0,10" fill="none" stroke="#444" stroke-width="1.4"/>
+    </marker>
+    <marker id="triHollow" markerWidth="18" markerHeight="14" refX="16" refY="7" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M1,1 L16,7 L1,13 Z" fill="#ffffff" stroke="#444" stroke-width="1.3"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1780" height="1390" fill="#ffffff"/>
+  <text x="24" y="32" font-size="19" font-weight="bold" fill="#1f2328">SkyLink GCS 详细图② —— 遥测模型与飞行记录（单例镜像 · 不可变快照 · 线程桥 · 文件读写）</text>
+  <text x="26" y="54" font-size="12" fill="#57606a">LiveVehicle 写侧全部收口于 updateFrom()/updateGps()；跨线程用不可变 VehicleSnapshot 传递；FlightRecorder 监听 armed 自动记录 .skylog 会话</text>
+  <rect x="60" y="96" width="300" height="127.5" fill="#fffdf4" stroke="#a8791b" stroke-width="1.5" rx="6"/>
+  <rect x="60" y="96" width="300" height="26" fill="#fdeeca" stroke="#a8791b" stroke-width="1.5" rx="6"/>
+  <rect x="61" y="113" width="298" height="10" fill="#fdeeca"/>
+  <text x="70" y="114" font-size="12.5" font-weight="bold" fill="#1f2328">CliLink  «链路 · 简引用»</text>
+  <text x="72" y="130" font-size="11" fill="#1f2328">- apply(cmd, text): void</text>
+  <text x="72" y="145.5" font-size="11" fill="#1f2328">  // CliProtocol 正则解析并入 Builder</text>
+  <text x="72" y="161" font-size="11" fill="#1f2328">- 发布限速 40ms（≈25Hz）</text>
+  <line x1="60" y1="177.5" x2="360" y2="177.5" stroke="#a8791b" stroke-width="1"/>
+  <text x="72" y="182.5" font-size="10.2" fill="#57606a">«链路 · 详见详细图①»</text>
+  <rect x="400" y="96" width="300" height="127.5" fill="#fffdf4" stroke="#a8791b" stroke-width="1.5" rx="6"/>
+  <rect x="400" y="96" width="300" height="26" fill="#fdeeca" stroke="#a8791b" stroke-width="1.5" rx="6"/>
+  <rect x="401" y="113" width="298" height="10" fill="#fdeeca"/>
+  <text x="410" y="114" font-size="12.5" font-weight="bold" fill="#1f2328">MavLinkLink  «链路 · 简引用»</text>
+  <text x="412" y="130" font-size="11" fill="#1f2328">- onFrame(f) / - mergeStatus(s)</text>
+  <text x="412" y="145.5" font-size="11" fill="#1f2328">  // MAVLink 帧解析 / SERIAL_CONTROL 桥</text>
+  <text x="412" y="161" font-size="11" fill="#1f2328">- FRD→FLU 姿态转换</text>
+  <line x1="400" y1="177.5" x2="700" y2="177.5" stroke="#a8791b" stroke-width="1"/>
+  <text x="412" y="182.5" font-size="10.2" fill="#57606a">«链路 · 详见详细图①»</text>
+  <rect x="740" y="96" width="300" height="142.5" fill="#f4f8fa" stroke="#4a6572" stroke-width="1.5" rx="6"/>
+  <rect x="740" y="96" width="300" height="26" fill="#e2ebf0" stroke="#4a6572" stroke-width="1.5" rx="6"/>
+  <rect x="741" y="113" width="298" height="10" fill="#e2ebf0"/>
+  <text x="750" y="114" font-size="12.5" font-weight="bold" fill="#1f2328">GpsHttpServer  «服务 · 简引用»</text>
+  <text x="752" y="130" font-size="11" fill="#1f2328">+ parseGpsQuery(query): double[] {static}</text>
+  <text x="752" y="145.5" font-size="11" fill="#1f2328">- DEBOUNCE_MS = 300 {static final}</text>
+  <text x="752" y="161" font-size="11" fill="#1f2328">- fixCount: int {volatile}</text>
+  <line x1="740" y1="177.5" x2="1040" y2="177.5" stroke="#4a6572" stroke-width="1"/>
+  <text x="752" y="182.5" font-size="10.2" fill="#57606a">«服务 · 外部 GNSS 推流»：</text>
+  <text x="752" y="197.5" font-size="10.2" fill="#57606a">GPSLogger → /gps?lat&amp;lon&amp;alt&amp;spd</text>
+  <rect x="1080" y="96" width="320" height="249" fill="#f6fcf7" stroke="#2f8a4e" stroke-width="1.5" rx="6"/>
+  <rect x="1080" y="96" width="320" height="26" fill="#e4f4e8" stroke="#2f8a4e" stroke-width="1.5" rx="6"/>
+  <rect x="1081" y="113" width="318" height="10" fill="#e4f4e8"/>
+  <text x="1090" y="114" font-size="12.5" font-weight="bold" fill="#1f2328">AppState  «实体 · 全局状态»</text>
+  <text x="1092" y="130" font-size="11" fill="#1f2328">- connStatus: ObjectProperty&lt;ConnStatus&gt;</text>
+  <text x="1092" y="145.5" font-size="11" fill="#1f2328">- connDetail: StringProperty</text>
+  <text x="1092" y="161" font-size="11" fill="#1f2328">- missionDirty: BooleanProperty</text>
+  <text x="1092" y="176.5" font-size="11" fill="#1f2328">- missionCount: IntegerProperty</text>
+  <text x="1092" y="192" font-size="11" fill="#1f2328">- missionWaypoints: ObjectProperty&lt;Map&lt;Integer,Waypoint&gt;&gt;</text>
+  <line x1="1080" y1="208.5" x2="1400" y2="208.5" stroke="#2f8a4e" stroke-width="1"/>
+  <text x="1092" y="215.5" font-size="11" fill="#1f2328">+ get(): AppState {static}</text>
+  <text x="1092" y="231" font-size="11" fill="#1f2328">+ connStatusProperty() / connDetailProperty()</text>
+  <text x="1092" y="246.5" font-size="11" fill="#1f2328">+ missionDirtyProperty() / missionCountProperty()</text>
+  <text x="1092" y="262" font-size="11" fill="#1f2328">+ missionWaypointsProperty() / getMissionWaypoints()</text>
+  <text x="1092" y="277.5" font-size="11" fill="#1f2328">+ setMissionWaypoints(wps: Map&lt;Integer,Waypoint&gt;)</text>
+  <text x="1092" y="297" font-size="10.2" fill="#57606a">跨页面全局状态（单例）；嵌套枚举 ConnStatus：</text>
+  <text x="1092" y="312" font-size="10.2" fill="#57606a">DISCONNECTED / CONNECTING / CONNECTED / ERROR</text>
+  <rect x="1440" y="96" width="300" height="125" fill="#f8f9fa" stroke="#6c757d" stroke-width="1.5" rx="6"/>
+  <rect x="1440" y="96" width="300" height="26" fill="#e9ecef" stroke="#6c757d" stroke-width="1.5" rx="6"/>
+  <rect x="1441" y="113" width="298" height="10" fill="#e9ecef"/>
+  <text x="1450" y="114" font-size="12.5" font-weight="bold" fill="#1f2328">FxSafe  «工具 · 线程桥»</text>
+  <text x="1452" y="130" font-size="11" fill="#1f2328">- FxSafe()  // 私有构造</text>
+  <line x1="1440" y1="146.5" x2="1740" y2="146.5" stroke="#6c757d" stroke-width="1"/>
+  <text x="1452" y="153.5" font-size="11" fill="#1f2328">+ run(r: Runnable): void {static}</text>
+  <text x="1452" y="173" font-size="10.2" fill="#57606a">已在 FX 线程 → 直接执行；否则 runLater；</text>
+  <text x="1452" y="188" font-size="10.2" fill="#57606a">FX 未初始化（单测/工具）退化为直执</text>
+  <rect x="60" y="330" width="640" height="357.5" fill="#f6fcf7" stroke="#2f8a4e" stroke-width="1.5" rx="6"/>
+  <rect x="60" y="330" width="640" height="26" fill="#e4f4e8" stroke="#2f8a4e" stroke-width="1.5" rx="6"/>
+  <rect x="61" y="347" width="638" height="10" fill="#e4f4e8"/>
+  <text x="70" y="348" font-size="12.5" font-weight="bold" fill="#1f2328">LiveVehicle  «实体 · 单例遥测镜像»</text>
+  <text x="72" y="364" font-size="11" fill="#1f2328">- INSTANCE: LiveVehicle {static final}</text>
+  <text x="72" y="379.5" font-size="11" fill="#1f2328">【连接/飞行 15 项】connected / armed: ReadOnlyBooleanProperty；</text>
+  <text x="72" y="395" font-size="11" fill="#1f2328">    phase / modeName / controlSource / armingDisabled: ReadOnlyStringProperty；</text>
+  <text x="72" y="410.5" font-size="11" fill="#1f2328">    batteryVoltage / altitude / rollDeg / pitchDeg / yawDeg: ReadOnlyDoubleProperty；</text>
+  <text x="72" y="426" font-size="11" fill="#1f2328">    loopRate: ReadOnlyIntegerProperty；motors / rcChannels: ReadOnlyObjectProperty</text>
+  <text x="72" y="441.5" font-size="11" fill="#1f2328">【S6 扩展 20 项】qw/qx/qy/qz、imuModel、accX/Y/Z、gyroX/Y/Z、params、chip、</text>
+  <text x="72" y="457" font-size="11" fill="#1f2328">    temperatureC / humidityPct / pressureHpa、baroOk / rangeOk / hasAltitude / magOk、</text>
+  <text x="72" y="472.5" font-size="11" fill="#1f2328">    rcLinkUp / webLinkUp / mavLinkUp、linkQuality、batteryPct</text>
+  <text x="72" y="488" font-size="11" fill="#1f2328">【GNSS 5 项】latDeg / lonDeg / spdMps、gpsFix、gnssOnline</text>
+  <text x="72" y="503.5" font-size="11" fill="#1f2328">- 每项一对成员：私有 xxxWrapper（写侧）+ public 只读 Property（读侧）</text>
+  <text x="72" y="519" font-size="11" fill="#1f2328">- GNSS_TIMEOUT_MS = 5000 {static final}   - gnssWatchdog: Timeline</text>
+  <line x1="60" y1="535.5" x2="700" y2="535.5" stroke="#2f8a4e" stroke-width="1"/>
+  <text x="72" y="542.5" font-size="11" fill="#1f2328">+ get(): LiveVehicle {static}</text>
+  <text x="72" y="558" font-size="11" fill="#1f2328">+ setConnected(v: boolean): void</text>
+  <text x="72" y="573.5" font-size="11" fill="#1f2328">+ updateFrom(s: VehicleSnapshot): void   // 唯一遥测写入口</text>
+  <text x="72" y="589" font-size="11" fill="#1f2328">+ updateGps(lat: double, lon: double, spd: double): void  // NaN 不覆盖</text>
+  <text x="72" y="604.5" font-size="11" fill="#1f2328">+ injectPoseForTool(roll, pitch, yaw): void  // 快照自检工具专用</text>
+  <text x="72" y="620" font-size="11" fill="#1f2328">- dispatch(apply: Runnable): void    - ensureGnssWatchdog(): void</text>
+  <text x="72" y="639.5" font-size="10.2" fill="#57606a">写侧全部收口：链路线程只经两个 update 方法进镜像；</text>
+  <text x="72" y="654.5" font-size="10.2" fill="#57606a">gnssOnline 由 5s 看门狗 Timeline 自动复位（多源融合语义）</text>
+  <rect x="740" y="330" width="540" height="311" fill="#f6fcf7" stroke="#2f8a4e" stroke-width="1.5" rx="6"/>
+  <rect x="740" y="330" width="540" height="26" fill="#e4f4e8" stroke="#2f8a4e" stroke-width="1.5" rx="6"/>
+  <rect x="741" y="347" width="538" height="10" fill="#e4f4e8"/>
+  <text x="750" y="348" font-size="12.5" font-weight="bold" fill="#1f2328">VehicleSnapshot  «实体 · 不可变快照 + Builder»</text>
+  <text x="752" y="364" font-size="11" fill="#1f2328">+ 全部字段 public final（不可变 DTO，约 40 项）：</text>
+  <text x="752" y="379.5" font-size="11" fill="#1f2328">    timestampMs: long；latDeg / lonDeg / spdMps；rollDeg / pitchDeg / yawDeg；</text>
+  <text x="752" y="395" font-size="11" fill="#1f2328">    qw / qx / qy / qz；motorFR / FL / RR / RL；rcChannels: int[]；</text>
+  <text x="752" y="410.5" font-size="11" fill="#1f2328">    ctrlRoll / ctrlPitch / ctrlYaw / ctrlThrottle；modeName / controlSource；</text>
+  <text x="752" y="426" font-size="11" fill="#1f2328">    imuModel；imuGyro / imuAcc: double[]；armed / landed / isAirborne: Boolean；</text>
+  <text x="752" y="441.5" font-size="11" fill="#1f2328">    phase / armingDisabled: String；batteryVoltage: double；altitude: Double；</text>
+  <text x="752" y="457" font-size="11" fill="#1f2328">    rcLinkUp / webLinkUp / mavLinkUp: Boolean；crsfLinkQuality: Integer；</text>
+  <text x="752" y="472.5" font-size="11" fill="#1f2328">    sensorsBaro / sensorsRange / hasAltitude / magOk: Boolean；tofStatus: Integer；</text>
+  <text x="752" y="488" font-size="11" fill="#1f2328">    loopRate: int；params: Map&lt;String,Double&gt;；chip: String；</text>
+  <text x="752" y="503.5" font-size="11" fill="#1f2328">    temperatureC / humidityPct / pressureHpa: Double；freeHeap: Long；</text>
+  <text x="752" y="519" font-size="11" fill="#1f2328">    wifiMode / wifiSsid / wifiIp: String；mavlinkConnected: Boolean；upTimeS: double</text>
+  <line x1="740" y1="535.5" x2="1280" y2="535.5" stroke="#2f8a4e" stroke-width="1"/>
+  <text x="752" y="542.5" font-size="11" fill="#1f2328">- VehicleSnapshot(b: Builder)   // 私有构造</text>
+  <text x="752" y="558" font-size="11" fill="#1f2328">+ Builder：全部字段 public（默认 NaN=无源）</text>
+  <text x="752" y="573.5" font-size="11" fill="#1f2328">+ b.build(): VehicleSnapshot   // 唯一出口</text>
+  <text x="752" y="593" font-size="10.2" fill="#57606a">线程不可变载体：链路线程装配、FX 线程只读；</text>
+  <text x="752" y="608" font-size="10.2" fill="#57606a">Builder 合并多命令部分字段，NaN 不覆盖已有值</text>
+  <rect x="60" y="780" width="560" height="311" fill="#fff8f6" stroke="#c0563f" stroke-width="1.5" rx="6"/>
+  <rect x="60" y="780" width="560" height="26" fill="#fde8e4" stroke="#c0563f" stroke-width="1.5" rx="6"/>
+  <rect x="61" y="797" width="558" height="10" fill="#fde8e4"/>
+  <text x="70" y="798" font-size="12.5" font-weight="bold" fill="#1f2328">FlightRecorder  «文件读写 · 飞行记录器»</text>
+  <text x="72" y="814" font-size="11" fill="#1f2328">+ FORMAT_VERSION = 3 {static final}</text>
+  <text x="72" y="829.5" font-size="11" fill="#1f2328">+ LOG_DIR: Path {static final}   // ~/.skylink/logs</text>
+  <text x="72" y="845" font-size="11" fill="#1f2328">- INSTANCE {static final}   - lv: LiveVehicle {final}</text>
+  <text x="72" y="860.5" font-size="11" fill="#1f2328">- listeners: List&lt;Consumer&lt;String&gt;&gt; {final}</text>
+  <text x="72" y="876" font-size="11" fill="#1f2328">- recording: BooleanProperty   - sampler: Timeline</text>
+  <text x="72" y="891.5" font-size="11" fill="#1f2328">- writing: boolean   - startMs: long</text>
+  <text x="72" y="907" font-size="11" fill="#1f2328">- samples: List&lt;double[]&gt; {final}</text>
+  <line x1="60" y1="923.5" x2="620" y2="923.5" stroke="#c0563f" stroke-width="1"/>
+  <text x="72" y="930.5" font-size="11" fill="#1f2328">+ get(): FlightRecorder {static}</text>
+  <text x="72" y="946" font-size="11" fill="#1f2328">+ addListener(l: Consumer&lt;String&gt;): void</text>
+  <text x="72" y="961.5" font-size="11" fill="#1f2328">+ recordingProperty(): BooleanProperty  + isRecording(): boolean</text>
+  <text x="72" y="977" font-size="11" fill="#1f2328">+ stopAndSave(reason: String): void    - start(reason): void {private}</text>
+  <text x="72" y="992.5" font-size="11" fill="#1f2328">+ sessions(): List&lt;Path&gt; {static}   + load(f: Path): Session {static}</text>
+  <text x="72" y="1008" font-size="11" fill="#1f2328">+ exportCsv(session, batteryPct[, target]): Optional&lt;Path&gt; {static}</text>
+  <text x="72" y="1023.5" font-size="11" fill="#1f2328">+ loadCsv(f: Path): Session {static}   - emit(msg): void {private}</text>
+  <text x="72" y="1043" font-size="10.2" fill="#57606a">250ms Timeline 采样：监听 LiveVehicle.armed——解锁自动 start、</text>
+  <text x="72" y="1058" font-size="10.2" fill="#57606a">上锁/断开自动 stopAndSave；会话文件 session_&lt;时间戳&gt;.skylog</text>
+  <rect x="660" y="780" width="430" height="187" fill="#f6fcf7" stroke="#2f8a4e" stroke-width="1.5" rx="6"/>
+  <rect x="660" y="780" width="430" height="26" fill="#e4f4e8" stroke="#2f8a4e" stroke-width="1.5" rx="6"/>
+  <rect x="661" y="797" width="428" height="10" fill="#e4f4e8"/>
+  <text x="670" y="798" font-size="12.5" font-weight="bold" fill="#1f2328">Session  «实体 · 飞行会话»</text>
+  <text x="672" y="814" font-size="11" fill="#1f2328">+ file: Path      + version: int</text>
+  <text x="672" y="829.5" font-size="11" fill="#1f2328">+ startMs: long   + count: int</text>
+  <text x="672" y="845" font-size="11" fill="#1f2328">+ model: String   + samples: List&lt;double[]&gt;</text>
+  <line x1="660" y1="861.5" x2="1090" y2="861.5" stroke="#2f8a4e" stroke-width="1"/>
+  <text x="672" y="868.5" font-size="11" fill="#1f2328">+ displayName(): String   + hasGps(): boolean</text>
+  <text x="672" y="884" font-size="11" fill="#1f2328">+ hasEnv(): boolean   + dateKey(): String</text>
+  <text x="672" y="899.5" font-size="11" fill="#1f2328">（record：组件访问器 file()/version()/… 自动生成）</text>
+  <text x="672" y="919" font-size="10.2" fill="#57606a">«record» 不可变会话载体；</text>
+  <text x="672" y="934" font-size="10.2" fill="#57606a">保存后独立于记录器存在（聚合）</text>
+  <rect x="1130" y="780" width="300" height="202.5" fill="#f7fafd" stroke="#3b6ea5" stroke-width="1.5" rx="6"/>
+  <rect x="1130" y="780" width="300" height="26" fill="#dbe9ff" stroke="#3b6ea5" stroke-width="1.5" rx="6"/>
+  <rect x="1131" y="797" width="298" height="10" fill="#dbe9ff"/>
+  <text x="1140" y="798" font-size="12.5" font-weight="bold" fill="#1f2328">DataPage  «界面 · 消费者»</text>
+  <text x="1142" y="814" font-size="11" fill="#1f2328">- recorder: FlightRecorder {final}</text>
+  <text x="1142" y="829.5" font-size="11" fill="#1f2328">- rings / channels / logPaths …</text>
+  <text x="1142" y="845" font-size="11" fill="#1f2328">- loadedSession: Session</text>
+  <line x1="1130" y1="861.5" x2="1430" y2="861.5" stroke="#3b6ea5" stroke-width="1"/>
+  <text x="1142" y="868.5" font-size="11" fill="#1f2328">+ pageId(): String   // "data"</text>
+  <text x="1142" y="884" font-size="11" fill="#1f2328">+ onPageShown(): void</text>
+  <text x="1142" y="899.5" font-size="11" fill="#1f2328">- sample() / draw() {private}</text>
+  <text x="1142" y="915" font-size="11" fill="#1f2328">- drawLog() / refreshSessions() {private}</text>
+  <text x="1142" y="934.5" font-size="10.2" fill="#57606a">«界面 · 数据页»：波形 250ms 采样、</text>
+  <text x="1142" y="949.5" font-size="10.2" fill="#57606a">CLI 控制台、飞行日志回放与导出</text>
+  <path d="M 210,188 L 210,330" fill="none" stroke="#444" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrowOpen)"/>
+  <path d="M 550,188 L 550,330" fill="none" stroke="#444" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrowOpen)"/>
+  <path d="M 890,188 L 380,240 L 380,330" fill="none" stroke="#444" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrowOpen)"/>
+  <text x="900" y="270" font-size="10.5" fill="#57606a">updateGps（缺参 NaN）</text>
+  <path d="M 760,641 L 760,658 L 560,658 L 560,687" fill="none" stroke="#444" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrowOpen)"/>
+  <text x="566" y="652" font-size="10.5" fill="#57606a">updateFrom(s)</text>
+  <path d="M 700,610 L 710,610 L 710,670 L 1445,670 L 1445,780" fill="none" stroke="#444" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrowOpen)"/>
+  <text x="900" y="692" font-size="10.5" fill="#57606a">dispatch → FxSafe.run（链路线程 → FX 线程）</text>
+  <path d="M 340,780 L 340,687" fill="none" stroke="#444" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrowOpen)"/>
+  <text x="352" y="709" font-size="10.5" fill="#57606a">监听 armed：解锁 start / 上锁 stopAndSave</text>
+  <path d="M 620,910 L 660,910" fill="none" stroke="#444" stroke-width="1.5"/>
+  <polygon points="620,902 634,910 620,918 606,910" fill="#ffffff" stroke="#444" stroke-width="1.3"/>
+  <text x="624" y="888" font-size="10.5" fill="#57606a">◇ 聚合会话</text>
+  <path d="M 1280,982 L 1280,1000 L 340,1000 L 340,1091" fill="none" stroke="#444" stroke-width="1.5" marker-end="url(#arrowOpen)"/>
+  <text x="700" y="994" font-size="10.5" fill="#57606a">会话列表 / 曲线回放 / CSV 导出</text>
+  <path d="M 1130,1022 L 1542,1022 L 1560,1040 L 1560,1127 L 1130,1127 Z" fill="#fffbe8" stroke="#b08800" stroke-width="1.2"/>
+  <path d="M 1542,1022 L 1542,1040 L 1560,1040" fill="none" stroke="#b08800" stroke-width="1.2"/>
+  <text x="672" y="1044" font-size="10.5" fill="#57606a">«文件» .skylog</text>
+  <text x="672" y="1061" font-size="10.5" fill="#57606a">~/.skylink/logs/session_&lt;yyyyMMdd_HHmmss&gt;.skylog</text>
+  <text x="672" y="1078" font-size="10.5" fill="#57606a">首行 JSON 元数据 + CSV 采样行（v3，15 列，兼容 v1/v2）</text>
+  <text x="672" y="1095" font-size="10.5" fill="#57606a">Files.newBufferedWriter 写 / Files.readAllLines 读</text>
+  <rect x="1470" y="780" width="274" height="236" fill="#fbfcfe" stroke="#8c959f" rx="4"/>
+  <text x="1484" y="802" font-size="13" font-weight="bold" fill="#1f2328">图例（答辩速查）</text>
+  <line x1="1484" y1="820" x2="1544" y2="820" stroke="#444" stroke-width="1.4" marker-end="url(#arrowOpen)"/>
+  <text x="1554" y="824" font-size="11.5" fill="#1f2328">关联（实线：长期持有引用）</text>
+  <line x1="1484" y1="846" x2="1530" y2="846" stroke="#444" stroke-width="1.4"/>
+  <polygon points="1484,839 1498,846 1484,853 1470,846" fill="#ffffff" stroke="#444" stroke-width="1.2"/>
+  <text x="1554" y="850" font-size="11.5" fill="#1f2328">聚合 ◇（部分可独立存在）</text>
+  <line x1="1484" y1="872" x2="1530" y2="872" stroke="#444" stroke-width="1.4"/>
+  <polygon points="1484,865 1498,872 1484,879 1470,872" fill="#444" stroke="#444"/>
+  <text x="1554" y="876" font-size="11.5" fill="#1f2328">组合 ◆（部分随整体销毁）</text>
+  <line x1="1484" y1="898" x2="1544" y2="898" stroke="#444" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrowOpen)"/>
+  <text x="1554" y="902" font-size="11.5" fill="#1f2328">依赖（虚线：临时调用不持有）</text>
+  <line x1="1484" y1="924" x2="1540" y2="924" stroke="#444" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#triHollow)"/>
+  <text x="1554" y="928" font-size="11.5" fill="#1f2328">实现/继承（规范在父类，斜体=抽象）</text>
+  <text x="1484" y="948" font-size="11" fill="#1f2328">数据流：链路 → 快照 → 镜像 →</text>
+  <text x="1484" y="972" font-size="11" fill="#1f2328">页面属性监听（无轮询）</text>
+  <text x="1484" y="996" font-size="11" fill="#1f2328">记录流：armed 变化 → 250ms</text>
+  <text x="1484" y="1020" font-size="11" fill="#1f2328">采样 → .skylog 落盘 → 回放</text>
+  <rect x="40" y="1210" width="1700" height="130" fill="#fbfcfe" stroke="#8c959f" rx="4"/>
+  <text x="54" y="1232" font-size="12" font-weight="bold" fill="#1f2328">遥测与记录走读（链路 → 快照 → 镜像 → 界面/文件）</text>
+  <text x="54" y="1254" font-size="11" fill="#1f2328">① 链路线程解析报文 → VehicleSnapshot.Builder 合并（NaN=无源不覆盖）→ build() 产出不可变快照</text>
+  <text x="54" y="1274" font-size="11" fill="#1f2328">② ConnectionService 回调 → FxSafe.run → FX 线程执行 LiveVehicle.updateFrom()：43 项只读属性成对刷新</text>
+  <text x="54" y="1294" font-size="11" fill="#1f2328">③ 全部页面（3D/ADI/HUD/波形/卡片）属性监听联动；missionWaypoints 等 AppState 属性驱动跨页横幅</text>
+  <text x="54" y="1314" font-size="11" fill="#1f2328">④ FlightRecorder 监听 armed：解锁 → 250ms 采样 start；上锁/断开 → stopAndSave 写 session_*.skylog（首行 JSON+CSV）</text>
+  <text x="54" y="1334" font-size="11" fill="#1f2328">⑤ DataPage 飞行日志读回放：sessions()/load() → 8 曲线 Canvas + Slider 标记；exportCsv 导出带 BOM 的标准 CSV</text>
+</svg>

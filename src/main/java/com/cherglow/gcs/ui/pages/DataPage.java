@@ -4,6 +4,7 @@ import com.cherglow.gcs.core.ConnectionService;
 import com.cherglow.gcs.core.FlightRecorder;
 import com.cherglow.gcs.model.LiveVehicle;
 import com.cherglow.gcs.ui.ConfirmDialog;
+import com.cherglow.gcs.ui.Toast;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.collections.FXCollections;
@@ -15,6 +16,7 @@ import javafx.geometry.Pos;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ScrollPane;
@@ -30,11 +32,13 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
+import javafx.stage.FileChooser;
 
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -44,9 +48,14 @@ import java.nio.file.Path;
  * 时间窗 5/10/30/60s、暂停/清空、通道开关侧栏、十字光标 + tooltip。
  * 控制台与飞行日志为 S11 占位。
  */
-public class DataPage extends BorderPane {
+public class DataPage extends BasePage {
 
-    private static final long SAMPLE_MS = 250;
+    @Override
+    public String pageId() {
+        return "data";
+    }
+
+    private long sampleMs = 250; // B6：采样间隔（默认 250ms=4Hz，可配置 1-10s）
     private static final int RING_CAP = 260; // 覆盖 60s 窗口（4Hz）+ 余量
 
     private static final String[] PALETTE = {
@@ -70,8 +79,7 @@ public class DataPage extends BorderPane {
 
     private final Canvas chart = new Canvas(800, 400);
     private final Label counter = new Label("0 通道 · 0 样本");
-    private final Timeline sampler = new Timeline(new KeyFrame(
-            Duration.millis(SAMPLE_MS), e -> sample()));
+    private Timeline sampler = new Timeline(new KeyFrame(Duration.millis(sampleMs), e -> sample()));
     private final Timeline pulse = new Timeline(new KeyFrame(
             Duration.millis(120), e -> {
         if (!paused) {
@@ -95,6 +103,9 @@ public class DataPage extends BorderPane {
     // 飞行日志
     private final FlightRecorder recorder = FlightRecorder.get();
     private javafx.scene.control.ListView<String> logList;
+    private final List<Path> logPaths = new ArrayList<>(); // 与列表项一一对应（记录中占位=null）
+    private ComboBox<String> modelFilter;
+    private ComboBox<String> dateFilter;
     private Label logMeta;
     private final Canvas logCanvas = new Canvas(600, 260);
     private javafx.scene.control.Slider logSlider;
@@ -102,7 +113,6 @@ public class DataPage extends BorderPane {
     private FlightRecorder.Session loadedSession;
 
     public DataPage() {
-        getStyleClass().add("page-root");
         buildChannels(); // 先建通道定义，再构建含数据源侧栏的界面
         setTop(tabBar());
         setCenter(tabHost());
@@ -191,18 +201,17 @@ public class DataPage extends BorderPane {
                         return mo == null ? Double.NaN : mo[idx] * 100;
                     }));
         }
-        for (int c = 0; c < 8; c++) {
-            final int idx = c;
-            channels.add(new Chan("rc" + c, "遥控", "CH" + (c + 1), "%", color(ci++),
-                    () -> {
-                        int[] ch = LiveVehicle.get().rcChannels.get();
-                        return ch == null || idx >= ch.length || ch[idx] < 500
-                                ? Double.NaN : (ch[idx] - 1500) / 5.0;
-                    }));
-        }
-        // 默认启用：姿态 3 + 电压（对齐截图「4 通道」）
+        // 环境组：温度(已有) + 湿度 + 气压
+        channels.add(new Chan("temp", "环境", "温度", "°C", color(ci++),
+                () -> LiveVehicle.get().temperatureC.get()));
+        channels.add(new Chan("humi", "环境", "湿度", "%", color(ci++),
+                () -> LiveVehicle.get().humidityPct.get()));
+        channels.add(new Chan("press", "环境", "气压", "hPa", color(ci++),
+                () -> LiveVehicle.get().pressureHpa.get()));
+        // 默认启用：姿态 3 + 电压 + 环境 3
         for (Chan c : channels) {
-            enabled.put(c.id(), c.group().equals("姿态") || c.id().equals("batv"));
+            enabled.put(c.id(), c.group().equals("姿态") || c.group().equals("环境")
+                    || c.id().equals("batv"));
         }
     }
 
@@ -254,8 +263,36 @@ public class DataPage extends BorderPane {
         Region sp = new Region();
         HBox.setHgrow(sp, Priority.ALWAYS);
         counter.getStyleClass().add("card-sub");
-        bar.getChildren().addAll(pause, clear, sp, counter);
+        bar.getChildren().addAll(pause, clear, sampleCombo(), sp, counter);
         return bar;
+    }
+
+    /** B6：波形采样间隔设置（1-10s），默认不选中保持 250ms。 */
+    private ComboBox<String> sampleCombo() {
+        ComboBox<String> combo = new ComboBox<>();
+        combo.getStyleClass().add("dark-combo");
+        combo.getItems().addAll("采样 1s", "采样 2s", "采样 3s", "采样 5s", "采样 10s");
+        combo.setValue(null);
+        combo.setPromptText("采样间隔");
+        combo.setMaxWidth(120);
+        combo.setOnAction(e -> {
+            String v = combo.getValue();
+            if (v == null) {
+                return;
+            }
+            int sec = Integer.parseInt(v.replaceAll("\\D", ""));
+            setSampleMs(sec * 1000L);
+        });
+        return combo;
+    }
+
+    private void setSampleMs(long ms) {
+        sampleMs = ms;
+        sampler.stop();
+        sampler = new Timeline(new KeyFrame(Duration.millis(sampleMs), e -> sample()));
+        sampler.setCycleCount(Timeline.INDEFINITE);
+        sampler.play();
+        Toast.show("波形采样间隔设为 " + (ms / 1000) + "s", Toast.Type.INFO);
     }
 
     private Region wrapChart() {
@@ -396,6 +433,13 @@ public class DataPage extends BorderPane {
             if (min > max) {
                 continue;
             }
+            // 近平稳数据防噪声放大：span 不足时以中点对称扩展至最小跨度
+            double minSpan = minSpanFor(c.unit());
+            if (max - min < minSpan) {
+                double mid = (min + max) / 2;
+                min = mid - minSpan / 2;
+                max = mid + minSpan / 2;
+            }
             double pad = (max - min) * 0.1 + 0.001;
             min -= pad;
             max += pad;
@@ -476,6 +520,38 @@ public class DataPage extends BorderPane {
             return "—";
         }
         return Math.abs(v) >= 100 ? String.format("%.0f", v) : String.format("%.1f", v);
+    }
+
+    /** 各单位纵轴最小显示跨度；span 不足时以中点对称扩展，避免微噪声被放大至满屏 */
+    private static double minSpanFor(String unit) {
+        if (unit == null) {
+            return 1.0;
+        }
+        return switch (unit) {
+            case "V" -> 0.5;
+            case "°", "%", "°C", "hPa" -> 5.0;
+            default -> 1.0;
+        };
+    }
+
+    /** 从日志 defs 标签名后缀推导单位（多字符后缀须先于单字符判断） */
+    private static String unitOf(String label) {
+        if (label.endsWith("hPa")) {
+            return "hPa";
+        }
+        if (label.endsWith("°C")) {
+            return "°C";
+        }
+        if (label.endsWith("°")) {
+            return "°";
+        }
+        if (label.endsWith("%")) {
+            return "%";
+        }
+        if (label.endsWith("V")) {
+            return "V";
+        }
+        return "";
     }
 
     // ================= CLI 控制台 =================
@@ -625,13 +701,55 @@ public class DataPage extends BorderPane {
         logList = new ListView<>();
         logList.getStyleClass().add("console-out");
         VBox.setVgrow(logList, Priority.ALWAYS);
-        left.getChildren().addAll(listHead, logList);
+        logList.setOnMouseClicked(ev -> {
+            int idx = logList.getSelectionModel().getSelectedIndex();
+            if (idx < 0 || idx >= logPaths.size()) {
+                return;
+            }
+            Path p = logPaths.get(idx);
+            if (p == null) {
+                return; // 记录中占位
+            }
+            loadedSession = FlightRecorder.load(p);
+            logSlider.setMax(Math.max(0, loadedSession.count() - 1));
+            logSlider.setValue(0);
+            drawLog();
+        });
+
+        // B5：按型号 / 日期筛选
+        HBox filterRow = new HBox(6);
+        filterRow.setAlignment(Pos.CENTER_LEFT);
+        modelFilter = new ComboBox<>();
+        dateFilter = new ComboBox<>();
+        modelFilter.getStyleClass().add("dark-combo");
+        dateFilter.getStyleClass().add("dark-combo");
+        modelFilter.setPromptText("型号");
+        dateFilter.setPromptText("日期");
+        modelFilter.setMaxWidth(Double.MAX_VALUE);
+        dateFilter.setMaxWidth(Double.MAX_VALUE);
+        HBox.setHgrow(modelFilter, Priority.ALWAYS);
+        HBox.setHgrow(dateFilter, Priority.ALWAYS);
+        modelFilter.setOnAction(e -> { if (!updatingFilters) refreshSessions(); });
+        dateFilter.setOnAction(e -> { if (!updatingFilters) refreshSessions(); });
+        filterRow.getChildren().addAll(modelFilter, dateFilter);
+
+        left.getChildren().addAll(listHead, filterRow, logList);
 
         VBox detail = new VBox(8);
         detail.setPadding(new Insets(0, 0, 0, 12));
         logMeta = new Label("\u2190 选择左侧飞行记录查看详情");
         logMeta.getStyleClass().add("section-note");
         logMeta.setWrapText(true);
+
+        HBox logTools = new HBox(8);
+        logTools.setAlignment(Pos.CENTER_LEFT);
+        Button backupBtn = new Button("备份 CSV");
+        backupBtn.getStyleClass().add("btn-soft");
+        backupBtn.setOnAction(e -> exportLog());
+        Button restoreBtn = new Button("恢复 CSV");
+        restoreBtn.getStyleClass().add("btn-soft");
+        restoreBtn.setOnAction(e -> restoreLog());
+        logTools.getChildren().addAll(backupBtn, restoreBtn);
 
         logCanvas.setWidth(640);
         logCanvas.setHeight(260);
@@ -640,7 +758,7 @@ public class DataPage extends BorderPane {
         logSlider.valueProperty().addListener((o, a, b) -> drawLog());
         logReadout = new Label(" ");
         logReadout.getStyleClass().add("mono");
-        detail.getChildren().addAll(logMeta, logCanvas, logSlider, logReadout);
+        detail.getChildren().addAll(logTools, logMeta, logCanvas, logSlider, logReadout);
         HBox.setHgrow(detail, Priority.ALWAYS);
 
         root.setLeft(left);
@@ -658,17 +776,112 @@ public class DataPage extends BorderPane {
         if (logList == null) {
             return;
         }
+        refreshFilterOptions();
         var items = FXCollections.<String>observableArrayList();
+        logPaths.clear();
         if (recorder.isRecording()) {
             items.add("\u25cf 记录中\u2026（解锁后自动记录）");
+            logPaths.add(null);
         }
         for (Path f : FlightRecorder.sessions()) {
-            items.add(f.getFileName().toString());
+            FlightRecorder.Session s = FlightRecorder.load(f);
+            if (!matchFilter(s)) {
+                continue;
+            }
+            logPaths.add(f);
+            items.add(s.displayName());
         }
         if (items.isEmpty()) {
             items.add("暂无飞行记录 · 连接飞控后自动记录");
+            loadedSession = null;
+            logMeta.setText("← 选择左侧飞行记录查看详情");
+            logSlider.setMax(1);
+            logSlider.setValue(0);
+            logReadout.setText(" ");
+            drawLog();
         }
         logList.setItems(items);
+    }
+
+    private boolean updatingFilters;
+
+    /** 从所有会话构建型号/日期筛选下拉选项（含"全部"）。 */
+    private void refreshFilterOptions() {
+        if (modelFilter == null || dateFilter == null) {
+            return;
+        }
+        updatingFilters = true;
+        java.util.Set<String> models = new java.util.LinkedHashSet<>(List.of("全部"));
+        java.util.Set<String> dates = new java.util.LinkedHashSet<>(List.of("全部"));
+        for (Path f : FlightRecorder.sessions()) {
+            FlightRecorder.Session s = FlightRecorder.load(f);
+            models.add(s.model().isBlank() ? "未知" : s.model());
+            dates.add(s.dateKey());
+        }
+        String sm = modelFilter.getValue(), sd = dateFilter.getValue();
+        modelFilter.getItems().setAll(models);
+        dateFilter.getItems().setAll(dates);
+        modelFilter.setValue(models.contains(sm) ? sm : "全部");
+        dateFilter.setValue(dates.contains(sd) ? sd : "全部");
+        updatingFilters = false;
+    }
+
+    private boolean matchFilter(FlightRecorder.Session s) {
+        String mv = modelFilter == null ? "全部" : modelFilter.getValue();
+        if (mv != null && !mv.equals("全部")
+                && !mv.equals(s.model().isBlank() ? "未知" : s.model())) {
+            return false;
+        }
+        String dv = dateFilter == null ? "全部" : dateFilter.getValue();
+        return dv == null || dv.equals("全部") || dv.equals(s.dateKey());
+    }
+
+    /** 备份：将当前选中的会话导出为本地 CSV（可选保存位置）。 */
+    private void exportLog() {
+        if (loadedSession == null) {
+            Toast.show("请先在左侧选择一条飞行记录", Toast.Type.WARNING);
+            return;
+        }
+        FileChooser fc = new FileChooser();
+        fc.setTitle("备份飞行日志 → 本地 CSV");
+        fc.setInitialFileName(loadedSession.displayName()
+                .replaceFirst("(?i)\\.skylog$", "") + ".csv");
+        fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV 文件", "*.csv"));
+        File f = fc.showSaveDialog(getScene() == null ? null : getScene().getWindow());
+        if (f == null) {
+            return;
+        }
+        int pct = (int) Math.round(LiveVehicle.get().batteryPct.get());
+        java.util.Optional<Path> out = FlightRecorder.exportCsv(loadedSession, pct, f.toPath());
+        if (out.isPresent()) {
+            Toast.show("已备份 → " + f.getName(), Toast.Type.SUCCESS);
+        } else {
+            Toast.show("备份失败", Toast.Type.ERROR);
+        }
+    }
+
+    /** 恢复：从备份的本地 CSV 读取并回放为会话。 */
+    private void restoreLog() {
+        FileChooser fc = new FileChooser();
+        fc.setTitle("从备份 CSV 恢复飞行日志");
+        fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV 文件", "*.csv"));
+        File f = fc.showOpenDialog(getScene() == null ? null : getScene().getWindow());
+        if (f == null) {
+            return;
+        }
+        FlightRecorder.Session s = FlightRecorder.loadCsv(f.toPath());
+        if (s.samples().isEmpty()) {
+            Toast.show("CSV 无有效数据或格式不支持", Toast.Type.ERROR);
+            return;
+        }
+        loadedSession = s;
+        logMeta.setText("恢复会话 " + f.getName() + "\n"
+                + s.count() + " 点 · " + (s.hasGps() ? "含 GPS" : "无 GPS"));
+        logSlider.setMax(Math.max(0, s.count() - 1));
+        logSlider.setValue(0);
+        logSlider.setMaxWidth(Double.MAX_VALUE);
+        drawLog();
+        Toast.show("已恢复 → " + f.getName() + "（" + s.count() + " 点）", Toast.Type.SUCCESS);
     }
 
     private void drawLog() {
@@ -678,21 +891,34 @@ public class DataPage extends BorderPane {
         g.fillRect(0, 0, w, h);
         FlightRecorder.Session s = loadedSession;
         if (s == null || s.samples().isEmpty()) {
+            logReadout.setText(" ");
             return;
         }
         List<double[]> sm = s.samples();
         int n = sm.size();
         int marker = (int) Math.round(logSlider.getValue());
+        if (marker >= n) {
+            marker = n - 1;
+        }
 
-        Object[][] defs = {
-                {1, Color.web("#f0a500"), "横滚"},
-                {2, Color.web("#4b8bf5"), "俯仰"},
-                {3, Color.web("#22c55e"), "偏航"},
-                {5, Color.web("#8b949e"), "M1"},
-                {6, Color.web("#8b949e"), "M2"},
-                {7, Color.web("#8b949e"), "M3"},
-                {8, Color.web("#8b949e"), "M4"},
-                {4, Color.web("#ef4444"), "电压"}};
+        // ---- defs（v3 会话条件追加环境三曲线） ----
+        List<Object[]> defList = new ArrayList<>(List.of(
+                new Object[]{1, Color.web("#f0a500"), "横滚°"},
+                new Object[]{2, Color.web("#4b8bf5"), "俯仰°"},
+                new Object[]{3, Color.web("#22c55e"), "偏航°"},
+                new Object[]{5, Color.web("#8b949e"), "M1%"},
+                new Object[]{6, Color.web("#a371f7"), "M2%"},
+                new Object[]{7, Color.web("#e3b341"), "M3%"},
+                new Object[]{8, Color.web("#768390"), "M4%"},
+                new Object[]{4, Color.web("#ef4444"), "电压V"}));
+        if (s.version() >= 3) {
+            defList.add(new Object[]{12, Color.web("#84cc16"), "温度°C"});
+            defList.add(new Object[]{13, Color.web("#eab308"), "湿度%"});
+            defList.add(new Object[]{14, Color.web("#14b8a6"), "气压hPa"});
+        }
+        Object[][] defs = defList.toArray(new Object[0][]);
+
+        // ---- 绘制波形 ----
         double pad = 12;
         for (Object[] def : defs) {
             int ci = (Integer) def[0];
@@ -706,6 +932,13 @@ public class DataPage extends BorderPane {
             }
             if (min > max) {
                 continue;
+            }
+            // 近平稳数据防噪声放大：span 不足时以中点对称扩展至最小跨度
+            double minSpan = minSpanFor(unitOf((String) def[2]));
+            if (max - min < minSpan) {
+                double mid = (min + max) / 2;
+                min = mid - minSpan / 2;
+                max = mid + minSpan / 2;
             }
             double p2 = (max - min) * 0.1 + 0.001;
             min -= p2;
@@ -730,12 +963,90 @@ public class DataPage extends BorderPane {
             }
             g.stroke();
         }
-        if (marker < n) {
-            double x = pad + (w - 2 * pad) * marker / (n - 1.0);
-            g.setStroke(Color.web("#f0a500"));
-            g.setLineWidth(1);
-            g.strokeLine(x, 0, x, h);
+
+        // ---- 标记线 ----
+        double markerX = pad + (w - 2 * pad) * marker / (n - 1.0);
+        g.setStroke(Color.web("#f0a500", 0.5));
+        g.setLineWidth(1);
+        g.strokeLine(markerX, 0, markerX, h);
+
+        // ---- 通道图例（左上角） ----
+        g.setFont(Font.font("Segoe UI", 10));
+        double lx = pad + 4, ly = pad + 12;
+        for (Object[] def : defs) {
+            Color col = (Color) def[1];
+            String name = (String) def[2];
+            g.setFill(col);
+            g.fillRect(lx, ly - 8, 10, 10);
+            g.setFill(Color.web("#c9d1d9"));
+            g.fillText(name, lx + 14, ly);
+            lx += 64;
+            if (lx > w - 70) {
+                lx = pad + 4;
+                ly += 16;
+            }
         }
+
+        // ---- 当前数值读数 ----
+        double[] mp = sm.get(marker);
+        StringBuilder ro = new StringBuilder();
+        ro.append("t=").append((long) mp[0]).append("ms");
+        String[] labels = {"", "滚", "仰", "偏", "V", "M1", "M2", "M3", "M4"};
+        for (int ci = 1; ci <= 8; ci++) {
+            double v = mp[ci];
+            if (v == v) {
+                ro.append("  ").append(labels[ci]).append("=")
+                        .append(ci == 4 ? String.format("%.2f", v) : String.format("%.1f", v));
+            }
+        }
+        if (s.hasGps() && mp.length >= 12 && mp[9] == mp[9]) {
+            ro.append("  GPS=").append(String.format("%.6f", mp[9]))
+                    .append(",").append(String.format("%.6f", mp[10]));
+        }
+        if (s.version() >= 3 && mp.length >= 15) {
+            if (mp[12] == mp[12]) ro.append("  温=").append(String.format("%.1f", mp[12]));
+            if (mp[13] == mp[13]) ro.append("  湿=").append(String.format("%.0f", mp[13]));
+            if (mp[14] == mp[14]) ro.append("  气=").append(String.format("%.1f", mp[14]));
+        }
+        logReadout.setText(ro.toString());
+
+        // ---- 飞行统计摘要 ----
+        StringBuilder stats = new StringBuilder();
+        stats.append("会话 ").append(s.displayName());
+        stats.append("\n型号 ").append(s.model().isBlank() ? "未知" : s.model());
+        stats.append(" · ").append(s.count()).append(" 点");
+        stats.append(" · ").append(s.hasGps() ? "含 GPS" : "无 GPS");
+        long durSec = (long) mp[0] / 1000;
+        stats.append(" · 时长 ").append(durSec / 60).append("m").append(durSec % 60).append("s");
+        // 电压范围
+        double vmin = Double.MAX_VALUE, vmax = -Double.MAX_VALUE;
+        for (double[] p : sm) {
+            if (p[4] == p[4]) {
+                vmin = Math.min(vmin, p[4]);
+                vmax = Math.max(vmax, p[4]);
+            }
+        }
+        if (vmin <= vmax) {
+            stats.append("\n电压 ").append(String.format("%.2f", vmin))
+                    .append(" ~ ").append(String.format("%.2f", vmax)).append("V");
+        }
+        // 姿态范围
+        for (int ci = 1; ci <= 3; ci++) {
+            double dmin = Double.MAX_VALUE, dmax = -Double.MAX_VALUE;
+            for (double[] p : sm) {
+                if (p[ci] == p[ci]) {
+                    dmin = Math.min(dmin, p[ci]);
+                    dmax = Math.max(dmax, p[ci]);
+                }
+            }
+            if (dmin <= dmax) {
+                String nm = ci == 1 ? "滚" : ci == 2 ? "仰" : "偏";
+                stats.append("  ").append(nm).append(" ")
+                        .append(String.format("%.1f", dmin)).append("~")
+                        .append(String.format("%.1f", dmax));
+            }
+        }
+        logMeta.setText(stats.toString());
     }
 
     // ================= 环形缓冲 =================

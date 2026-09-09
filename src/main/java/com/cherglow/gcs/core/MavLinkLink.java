@@ -190,6 +190,26 @@ public final class MavLinkLink implements ConnectionManager.LinkChannel, Command
                 cur.imuAcc = new double[]{ax, ay, az}; // m/s² FLU
                 changed = true;
             }
+            case MavLink.MSG_SCALED_PRESSURE -> {
+                // payload 布局兼容 14B(旧库)/16B(新库)：只读前 14 字节，偏移一致
+                double pressAbs = MavLink.rF32(f.payload, 4);          // hPa
+                int tempCdeg = MavLink.rS16(f.payload, 12);            // cdegC
+                cur.pressureHpa = (pressAbs == pressAbs) ? pressAbs : null;
+                if (tempCdeg != Short.MAX_VALUE) {                     // INT16_MAX=无效
+                    cur.temperatureC = tempCdeg / 100.0;               // last-write-wins
+                }
+                changed = true;
+            }
+            case MavLink.MSG_HYGROMETER_SENSOR -> {
+                // payload: temperature i16@0(cdegC) → humidity u16@2(c%) → id u8@4
+                int tempCdeg = MavLink.rS16(f.payload, 0);
+                int humCpct = MavLink.rU16(f.payload, 2);
+                if (tempCdeg != Short.MAX_VALUE) {
+                    cur.temperatureC = tempCdeg / 100.0;
+                }
+                cur.humidityPct = humCpct == 0xFFFF ? null : humCpct / 100.0;
+                changed = true;
+            }
             case MavLink.MSG_RC_CHANNELS_RAW -> {
                 int[] ch = new int[8];
                 for (int i = 0; i < 8; i++) {
@@ -327,6 +347,9 @@ public final class MavLinkLink implements ConnectionManager.LinkChannel, Command
         cur.sensorsRange = s.range();
         cur.hasAltitude = s.hasAltitude();
         cur.magOk = s.magOk();
+        if (s.temperatureC() != null) { cur.temperatureC = s.temperatureC(); }
+        if (s.humidityPct() != null)  { cur.humidityPct = s.humidityPct(); }
+        if (s.pressureHpa() != null)  { cur.pressureHpa = s.pressureHpa(); }
         long now = System.currentTimeMillis();
         cur.timestampMs = now;
         out.accept(cur.build());

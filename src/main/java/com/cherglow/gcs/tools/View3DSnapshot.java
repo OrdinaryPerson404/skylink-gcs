@@ -61,9 +61,7 @@ public class View3DSnapshot extends Application {
             return;
         }
         double[] c = CASES[idx];
-        lv.rollDeg.set(c[0]);
-        lv.pitchDeg.set(c[1]);
-        lv.yawDeg.set(c[2]);
+        lv.injectPoseForTool(c[0], c[1], c[2]);
         view.setAxesVisible(idx == CASES.length - 1);
         PauseTransition p = new PauseTransition(Duration.millis(250));
         p.setOnFinished(e -> {

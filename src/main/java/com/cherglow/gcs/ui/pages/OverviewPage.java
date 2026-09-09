@@ -24,7 +24,12 @@ import javafx.scene.layout.VBox;
  * 上排：3D 模型 / ADI 姿态仪 / 传感器 2x3；下排：遥控输入 CH1-12 / 遥控器模拟 Mode 2 / 电机输出 M1-12。
  * 遥控器模拟杆位由电机实际输出按 X 布局混控反向推演（非假数据）。
  */
-public class OverviewPage extends BorderPane {
+public class OverviewPage extends BasePage {
+
+    @Override
+    public String pageId() {
+        return "overview";
+    }
 
     private static final double TOP_H = 370;
     private static final double BOTTOM_H = 235;
@@ -63,7 +68,6 @@ public class OverviewPage extends BorderPane {
     private final MotorBar[] motorBars = new MotorBar[12];
 
     public OverviewPage() {
-        getStyleClass().add("page-root");
         setPadding(new javafx.geometry.Insets(12));
 
         GridPane grid = new GridPane();

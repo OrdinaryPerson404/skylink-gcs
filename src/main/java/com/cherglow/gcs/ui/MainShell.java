@@ -1,5 +1,6 @@
 package com.cherglow.gcs.ui;
 
+import com.cherglow.gcs.ui.pages.BasePage;
 import com.cherglow.gcs.ui.pages.DataPage;
 import com.cherglow.gcs.ui.pages.FlyPage;
 import com.cherglow.gcs.ui.pages.OverviewPage;
@@ -9,7 +10,6 @@ import javafx.geometry.Insets;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 
 import java.util.HashMap;
@@ -24,16 +24,17 @@ public class MainShell extends BorderPane {
     private final StackPane pageStack = new StackPane();
     private final StackPane toastOverlay = new StackPane();
     private final TopNav topNav;
-    private final Map<String, Pane> pages = new HashMap<>();
+    private final Map<String, BasePage> pages = new HashMap<>();
     private final FlyPage flyPage = new FlyPage();
+    private final PlanPage planPage = new PlanPage();
     private Runnable connectOpener;
 
     public MainShell() {
-        pages.put("overview", new OverviewPage());
-        pages.put("fly", flyPage);
-        pages.put("plan", new PlanPage());
-        pages.put("setup", new SetupPage());
-        pages.put("data", new DataPage());
+        register(new OverviewPage());
+        register(flyPage);
+        register(planPage);
+        register(new SetupPage());
+        register(new DataPage());
         pageStack.getChildren().addAll(pages.values());
         flyPage.setGoToPlan(() -> switchPage("plan"));
 
@@ -60,13 +61,19 @@ public class MainShell extends BorderPane {
 
     /** 页面切换；返回 true 表示路由成功 */
     public boolean switchPage(String id) {
-        Pane page = pages.get(id);
+        BasePage page = pages.get(id);
         if (page == null) {
             return false;
         }
         page.toFront();
         topNav.setActive(id);
+        page.onPageShown(); // 经基类引用多态分发，各页按需覆写
         return true;
+    }
+
+    /** 以 pageId() 为键注册页面（路由 id 与 TopNav.TABS 一致） */
+    private void register(BasePage page) {
+        pages.put(page.pageId(), page);
     }
 
     /** 数字键 1-5 快捷键；TextInputControl 聚焦时屏蔽 */
