@@ -1,8 +1,17 @@
 # SkyLink GCS · CHERGLOW 地面站复刻
 
-JavaFX 桌面无人机地面站（GCS），复刻 [CHERGLOW GCS](https://gc.cherglowtech.com/) 的界面与功能，直连琛光 E1 系自研机（CF-Drone 固件，ESP32）的 CLI 文本协议及 WiFi 接入点的 MAVLink UDP 高频遥测，实现连接、遥测、仪表、飞行指令、任务规划、调参、波形监视、CLI 控制台与飞行日志全链路。
+> ⚠️ **本项目为大学生课程设计最终代码仓库，仅作学术公开用途，不再进行后续维护。**
+
+JavaFX 桌面无人机地面站（GCS）课程实践作品，致敬并复刻 [CHERGLOW GCS](https://gc.cherglowtech.com/) 的界面与交互体验，适配 [琛光（Songge8）E1](https://github.com/songge8/CF-Drone) 系自研机的 CLI 文本协议及 WiFi 接入点 MAVLink UDP 高频遥测，实现连接、遥测、仪表、飞行指令、任务规划、调参、波形监视、CLI 控制台与飞行日志全链路。
 
 > 全部显示数据来自真机，**不使用任何模拟器/假数据**；「遥控器模拟」面板的杆位由电机实际输出反向推演。
+
+## 致谢
+
+- 🛩️ **[琛光 E1 / CF-Drone](https://github.com/songge8/CF-Drone)**：感谢琛光团队开源自研飞控固件（ESP32 + `quaternion.h`/`imu.ino`），为本项目提供了可靠的硬件平台与完整的 CLI 通信协议栈。没有你们的努力，不会有本项目的起点。
+- ✈️ **[CHERGLOW GCS](https://gc.cherglowtech.com/)**：感谢 CHERGLOW 团队设计的优秀地面站界面与功能规范，是本项目复刻的主要灵感来源。其 UI 理念贯穿了本项目的每个页面。
+
+---
 
 ## 目录
 
